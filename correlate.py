@@ -33,12 +33,14 @@ df_steps_active_min = pd.DataFrame(value_steps_active_min, date_steps_active_min
 #print(df_steps)
 #print(df_steps_active_min)
 
-#def json_2_1_feature_df(feature, json_file_path):
-"""
-"""
-dftest = pd.read_json('./exist0/steps.json')  # read json to df
-dftest = dftest.rename(columns={"value": "steps"})  # rename columnname value to steps
-dftest = dftest.set_index('date')  # set date as index
-print(dftest)
+def json_2_1_feature_df(feature, json_file_path):
+    """
+    as name says
+    """
+    df = pd.read_json(json_file_path)  # read json to df
+    df = df.rename(columns={"value": feature})  # rename columnname value to steps
+    df = df.set_index('date')  # set date as index
+    return df
 
-#json_2_1_feature_df(steps, './exist0/steps.json'
+df = json_2_1_feature_df("steps", './exist0/steps.json')
+print(df)
