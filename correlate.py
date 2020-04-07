@@ -58,7 +58,7 @@ corr_matrix = pd.DataFrame.corr(df, method='pearson', min_periods=min_num_entrie
 
 # sort correlation matrix
 s = corr_matrix.unstack()
-so = s.sort_values(kind="quicksort")
+so = s.sort_values(kind="quicksort")  # sort with qicksort
 print(so)
 
 # plot
