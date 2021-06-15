@@ -9,11 +9,16 @@ correlate
 load data form json, into df, correlation matrix, visualize
 """
 path_to_json_files = './ChrisG_dd3d35c4fd41e0386e17b86906d710f6ad86e95c36de734bb4bf7c915d195e8e/'
-verbose =  True
+verbose = False
 compute_correlations = False
 min_num_entries = 20  # skipped if smaller
 
-excludedFiles = ['averages.json','correlations.json','weather_summary.json', 'twitter_username.json','weather_icon.json','mood_note.json','custom.json','location_name.json']
+excludedFiles = ['averages.json', 'correlations.json', 'weather_summary.json', 'twitter_username.json',
+                 'weather_icon.json', 'mood_note.json', 'custom.json', 'location_name.json']
+
+if verbose:
+    print('start running...')
+
 
 def json_2_1_feature_df(json_root, json_file):
     """
@@ -28,7 +33,10 @@ def json_2_1_feature_df(json_root, json_file):
     return df
 
 
-# create df from json files 
+# create df from json files
+if verbose:
+    print('path', (path_to_json_files))
+
 for root, dirs, files in os.walk(path_to_json_files):
     i = 0
     for file in files:  # go through all json files
@@ -40,7 +48,7 @@ for root, dirs, files in os.walk(path_to_json_files):
         # exclude correlations.json
         file_size = os.stat(os.path.join(path_to_json_files, file))[6]
         # TODO: include averages but has different format
-        if file.endswith("_2020.json") and file.startswith(data_)and file not in excludedFiles:
+        if file.endswith("_2019.json") and file.startswith('data_') and file not in excludedFiles:
             if verbose:
                 print('file-size=', file_size)
                 print('json_2_1_feature_df(root, file):', json_2_1_feature_df(root, file))
@@ -57,15 +65,16 @@ for root, dirs, files in os.walk(path_to_json_files):
                     print('/n')
             i += 1
 
-df.to_csv('exist_output.csv')
+df.to_csv('exist_output_2019.csv')
 if verbose:
     print(df)
+print('exist_output_2019.csv written')
 
 # correlate
 if compute_correlations:
     corr_matrix = pd.DataFrame.corr(df, method='pearson', min_periods=min_num_entries)
-    #corr_matrix = np.fill_diagonal(corr_matrix.values, -1)  # drop self-correlation but doesnt work
-    #print(corr_matrix)
+    # corr_matrix = np.fill_diagonal(corr_matrix.values, -1)  # drop self-correlation but doesnt work
+    # print(corr_matrix)
 
     # sort correlation matrix
     s = corr_matrix.unstack()
