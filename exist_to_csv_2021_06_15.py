@@ -47,7 +47,6 @@ for root, dirs, files in os.walk(path_to_json_files):
         # exclude files small files to reduce noise
         # exclude correlations.json
         file_size = os.stat(os.path.join(path_to_json_files, file))[6]
-        # TODO: include averages but has different format
         if file.endswith("_2019.json") and file.startswith('data_') and file not in excludedFiles:
             if verbose:
                 print('file-size=', file_size)
