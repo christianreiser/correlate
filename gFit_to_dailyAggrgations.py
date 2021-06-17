@@ -1,14 +1,16 @@
 import pandas as pd
 import os
-from IPython.display import display
-
-import numpy as np  # needed if self-correlation suppressed
-
 """
+go through csv files
+create aggregation df for each file
+select which aggregation is needed: max, min, mean, sum
+append to data frame
+write dataframe
 """
 path_to_csv_files = './takeout-20210615T090056Z-001/Takeout/Fit/Daily activity metrics/'
 verbose = False
 print('running ...')
+
 
 def csv_2_df(csv_root, csv_file):
     """
@@ -18,17 +20,13 @@ def csv_2_df(csv_root, csv_file):
     if verbose:
         print('feature:', feature)
         print(csv_root, csv_file)
-    df = pd.read_csv(os.path.join(csv_root, csv_file))  # read csv to df
+    google_csv_as_df = pd.read_csv(os.path.join(csv_root, csv_file))  # read csv to df
     if verbose:
-        print('read df:', df)
-    # df = df.rename(columns={"value": feature})  # rename column-name value to feature
-    # if verbose:
-    #     print('renamed df:', df)
-    # df = df.set_index('date')  # set date as index
+        print('read df:', google_csv_as_df)
 
-    aggregated = df.agg(['sum', 'min', 'max', 'mean'], axis=0)
+    aggregated = google_csv_as_df.agg(['sum', 'min', 'max', 'mean'], axis=0)
     if verbose:
-        print('columnn names (aggregated.columns):', aggregated.columns)  # .to_csv('tmp.csv')
+        print('column names (aggregated.columns):', aggregated.columns)
 
     # create dictionary
     daily_aggregation = {'Date': [feature]}
@@ -209,9 +207,10 @@ def csv_2_df(csv_root, csv_file):
     daily_aggregation_df = pd.DataFrame(daily_aggregation)
     return daily_aggregation_df
 
+
 # create df from csv files
 if verbose:
-    print('path', (path_to_csv_files))
+    print('path', path_to_csv_files)
 
 for root, dirs, files in os.walk(path_to_csv_files):
     print(len(files), 'files found')
@@ -249,5 +248,3 @@ print('done! :)')
 
 if verbose:
     print(df)
-
-

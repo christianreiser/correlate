@@ -2,3 +2,6 @@
 *.json
 test.py
 *.csv
+takeout*
+venv/
+*.zip
