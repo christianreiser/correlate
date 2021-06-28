@@ -9,11 +9,29 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
 target_label = 'mood'
-epochs = 2000
-lr = 0.001
+epochs = 3000
+lr = 0.01
 torch.manual_seed(0)
 
+# Define model
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork, self).__init__()
+        # self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(num_features, 24),
+            nn.ReLU(),
+            nn.Linear(24, 8),
+            nn.ReLU(),
+            nn.Linear(8, 4),
+            nn.ReLU(),
+            nn.Linear(4, 1),
+        )
 
+    def forward(self, x):
+        # x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
 
 # df = pd.read_csv('/home/chrei/Dropbox/uni/forschungsmodul1/master_Daily Summaries_mod_clean_2 (test).csv', index_col=0)
 df = pd.read_csv('/home/chrei/Dropbox/uni/forschungsmodul1/master_Daily Summaries_mod_clean_2.csv', index_col=0)
@@ -72,23 +90,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print("Using {} device".format(device))
 
 
-# Define model
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__()
-        # self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(num_features, 4),
-            nn.ReLU(),
-            nn.Linear(4, 6),
-            nn.ReLU(),
-            nn.Linear(6, 1),
-        )
 
-    def forward(self, x):
-        # x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
 
 
 model = NeuralNetwork().to(device)
