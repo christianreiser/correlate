@@ -21,9 +21,9 @@ class NeuralNetwork(nn.Module):
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(num_features, 24),
             nn.ReLU(),
-            nn.Linear(24, 8),
+            nn.Linear(24, 7),
             nn.ReLU(),
-            nn.Linear(8, 4),
+            nn.Linear(7, 4),
             nn.ReLU(),
             nn.Linear(4, 1),
         )
