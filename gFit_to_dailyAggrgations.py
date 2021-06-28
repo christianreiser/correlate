@@ -7,7 +7,8 @@ select which aggregation is needed: max, min, mean, sum
 append to data frame
 write dataframe
 """
-path_to_csv_files = './takeout-20210615T090056Z-001/Takeout/Fit/Daily activity metrics/'
+path_to_csv_files = './takeout-20210625T075514Z-001/Takeout/Fit/Daily activity metrics/'
+outputname = 'google_output_2021_06_25'
 verbose = False
 print('running ...')
 
@@ -243,7 +244,7 @@ df = df.sort_values(by=['Date'])
 
 # print file
 print('writing...')
-df.to_csv('google_output.csv')
+df.to_csv(outputname)
 print('done! :)')
 
 if verbose:
