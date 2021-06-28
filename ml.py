@@ -1,12 +1,19 @@
-import datetime as datetime
+import math
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.utils.data as data_utils
-import datetime
 from torch import nn
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 target_label = 'mood'
+epochs = 2000
+lr = 0.001
+torch.manual_seed(0)
+
+
 
 # df = pd.read_csv('/home/chrei/Dropbox/uni/forschungsmodul1/master_Daily Summaries_mod_clean_2 (test).csv', index_col=0)
 df = pd.read_csv('/home/chrei/Dropbox/uni/forschungsmodul1/master_Daily Summaries_mod_clean_2.csv', index_col=0)
@@ -37,7 +44,6 @@ for attribute_name in df.columns:
 print('df after after missing substitution', df)
 
 # dataframes to tensors
-batch_size = 16
 target_tensor = torch.tensor(df[target_label].values.astype(np.float32))
 target_tensor = torch.unsqueeze(target_tensor, 1)  # due to one dim target tensor
 # print('train_target', train_target)
@@ -52,6 +58,7 @@ test_size = len(tensorDataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(tensorDataset, [train_size, test_size])
 
 # load data
+batch_size = math.floor(train_size)
 train_dataloader = data_utils.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 test_dataloader = data_utils.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
 
@@ -69,19 +76,17 @@ print("Using {} device".format(device))
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
-        self.flatten = nn.Flatten()
+        # self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(num_features, 512),
+            nn.Linear(num_features, 4),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(4, 6),
             nn.ReLU(),
-            nn.Linear(512, 1),
-            nn.ReLU(),
-            # nn.Linear(16, 1),
+            nn.Linear(6, 1),
         )
 
     def forward(self, x):
-        x = self.flatten(x)
+        # x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
 
@@ -89,10 +94,10 @@ class NeuralNetwork(nn.Module):
 model = NeuralNetwork().to(device)
 print(model)
 loss_fn = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters())
+optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
 
-def train(dataloader, model, loss_fn, optimizer):
+def train(dataloader, model, loss_fn, optimizer, epoch):
     size = len(dataloader.dataset)
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -107,12 +112,13 @@ def train(dataloader, model, loss_fn, optimizer):
         optimizer.step()
 
         if batch % 100 == 0:
-            print('batch * len(X)',batch,len(X))
             loss, current = loss.item(), batch * len(X)
             print(f"train loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            writer.add_scalar("Loss/train", loss, epoch)
 
 
-def test(dataloader, model, loss_fn):
+
+def test(dataloader, model, loss_fn, epoch):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     model.eval()
@@ -124,11 +130,33 @@ def test(dataloader, model, loss_fn):
             test_loss += loss_fn(pred, y).item()
     test_loss /= num_batches
     print(f"Avg test loss: {test_loss:>8f} \n")
+    writer.add_scalar("Loss/test", test_loss, epoch)
 
 
-epochs = 500
 for t in range(epochs):
     print(f"Epoch {t + 1}\n-------------------------------")
-    train(train_dataloader, model, loss_fn, optimizer)
-    test(test_dataloader, model, loss_fn)
-print("Done!")
+    train(train_dataloader, model, loss_fn, optimizer, t+1)
+    test(test_dataloader, model, loss_fn, t+1)
+writer.flush()
+writer.close()
+print("Done Training!")
+
+# save model
+torch.save(model.state_dict(), "model.pth")
+print("Saved PyTorch Model State to model.pth")
+
+# load model
+yy0 = y[0]
+
+model = NeuralNetwork()
+model.load_state_dict(torch.load("model.pth"))
+
+model.eval()
+
+for i in range(len(test_dataset)):
+    x = test_dataset[i][0]
+    y = test_dataset[i][1]
+    with torch.no_grad():
+        pred = model(x)
+        predicted, actual = pred[0], y
+        print(f'Predicted: "{predicted}", Actual: "{actual}"')
