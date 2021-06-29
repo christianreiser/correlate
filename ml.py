@@ -11,7 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 writer = SummaryWriter()
 
 target_label = 'mood'
-epochs = 21
+epochs = 6000
 lr = 0.01
 torch.manual_seed(0)
 
@@ -40,7 +40,7 @@ class NeuralNetwork(nn.Module):
 
 
 # df = pd.read_csv('/home/chrei/Dropbox/uni/forschungsmodul1/master_Daily Summaries_mod_clean_2 (test).csv', index_col=0)
-df = pd.read_csv('/home/chrei/Dropbox/uni/forschungsmodul1/master_Daily Summaries_mod_clean_2.csv', index_col=0)
+df = pd.read_csv('/home/chrei/code/quantifiedSelfData/master_Daily Summaries_mod_clean_2.csv', index_col=0)
 
 # drop food and manual logged attributes
 df = df.drop(
