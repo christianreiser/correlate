@@ -22,15 +22,15 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         # self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(num_features, 26),
+            nn.Linear(num_features, 24),
             nn.ReLU(),
-            nn.Linear(26, 16),
+            nn.Linear(24, 16),
             nn.ReLU(),
             nn.Linear(16, 8),
             nn.ReLU(),
-            nn.Linear(8, 4),
+            nn.Linear(8, 3),
             nn.ReLU(),
-            nn.Linear(4, 1),
+            nn.Linear(3, 1),
         )
 
     def forward(self, x):
@@ -86,6 +86,7 @@ input_tensor = torch.tensor(scaler.transform(input_tensor).astype(np.float32))
 tensorDataset = data_utils.TensorDataset(input_tensor, target_tensor)
 
 # train test split
+print('dataset_size:', len(tensorDataset))
 train_size = int(0.9 * len(tensorDataset))
 test_size = len(tensorDataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(tensorDataset, [train_size, test_size])
@@ -106,7 +107,7 @@ print("Using {} device".format(device))
 
 model = NeuralNetwork().to(device)
 print(model)
-loss_fn = nn.MSELoss()
+loss_fn = nn.L1Loss()
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
 
