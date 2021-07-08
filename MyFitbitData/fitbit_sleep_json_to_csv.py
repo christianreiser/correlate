@@ -4,17 +4,11 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-"""
-correlate
-
-load data form json, into df, correlation matrix, visualize
-"""
 path_to_json_files = '/home/chrei/PycharmProjects/correlate/MyFitbitData/ChrisRe/Sleep'
 output_filename = 'fitbit_sleep.csv'
 verbose = False
 
-excludedFiles = ['averages.json', 'correlations.json', 'weather_summary.json', 'twitter_username.json',
-                 'weather_icon.json', 'mood_note.json', 'custom.json', 'location_name.json']
+excludedFiles = ['']
 
 if verbose:
     print('start running...')
@@ -145,7 +139,7 @@ all_files_df = all_files_df.drop_duplicates(subset="logId")
 all_files_df['dateOfSleep'] = pd.to_datetime(all_files_df['dateOfSleep'])
 all_files_df = all_files_df.groupby(all_files_df['dateOfSleep'].dt.date).sum()
 
-all_files_df = all_files_df.drop(['logId', 'mainSleep'], axis=1)
+all_files_df = all_files_df.drop(['logId', 'mainSleep', 'minutesAwake'], axis=1)
 
 all_files_df.to_csv(output_filename)
 if verbose:
