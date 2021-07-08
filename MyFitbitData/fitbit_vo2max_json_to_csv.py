@@ -3,8 +3,6 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-# TODO get from run_vo2_max-2019-02-12.json
-
 path_to_json_files = '/home/chrei/PycharmProjects/correlate/MyFitbitData/ChrisRe/Physical Activity'
 output_filename = 'fitbit_vo2max.csv'
 verbose = True
