@@ -7,9 +7,9 @@ select which aggregation is needed: max, min, mean, sum
 append to data frame
 write dataframe
 """
-path_to_csv_files = './takeout-20210625T075514Z-001/Takeout/Fit/Daily activity metrics/'
-outputname = 'google_output_2021_06_25'
-verbose = False
+path_to_csv_files = '/home/chrei/PycharmProjects/correlate/0_data_raw/weather/'
+outputname = 'weather_extracted.csv'
+verbose = True
 print('running ...')
 
 
@@ -21,11 +21,22 @@ def csv_2_df(csv_root, csv_file):
     if verbose:
         print('feature:', feature)
         print(csv_root, csv_file)
-    google_csv_as_df = pd.read_csv(os.path.join(csv_root, csv_file))  # read csv to df
+    df = pd.read_csv(os.path.join(csv_root, csv_file))  # read csv to df
     if verbose:
-        print('read df:', google_csv_as_df)
+        print('read df:', df)
 
-    aggregated = google_csv_as_df.agg(['sum', 'min', 'max', 'mean'], axis=0)
+    df['dt_iso'] = pd.to_datetime(df['dt_iso'], format='%Y-%m-%d %H:%M:%S +0000 UTC')
+
+    df_sum = df.groupby(df['dt_iso'].dt.date.sum())
+
+
+    # df = df.drop(['2019-02-11', '2019-02-12', '2019-02-12', '2019-02-13'])
+
+    # for i, row in df.iterrows():
+    #     datetime = row['dt_iso']
+    #     print('i')
+
+    aggregated = df.agg(['sum', 'min', 'max', 'mean'], axis=0)
     if verbose:
         print('column names (aggregated.columns):', aggregated.columns)
 
