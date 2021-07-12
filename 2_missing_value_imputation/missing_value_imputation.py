@@ -32,7 +32,9 @@ for attribute_name in df.columns:
     nan_data_true_false = pd.isnull(df[attribute_name])
     nan_numeric_indices = pd.isnull(df[attribute_name]).to_numpy().nonzero()[0]
     nan_dates = nan_data_true_false[nan_numeric_indices].index
-    print('d')
+    if len(nan_dates) >0:
+        atest = nan_dates
+        print('d')
     # for nan_date in nan_dates:
     # substitute = mean[attribute_name][0]
     # df.at[nan_date, attribute_name] = substitute
