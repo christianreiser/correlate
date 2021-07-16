@@ -12,30 +12,32 @@ def main():
     target_label = 'mood'
     show_correlation_matrix = False
     load_precomputed_values = True
+    drop_sparse_days = False
 
     # load data
     df = pd.read_csv('/home/chrei/code/quantifiedSelfData/daily_summaries.csv', index_col=0)
 
-    df = data_cleaning_and_imputation(df, target_label)
+    df = data_cleaning_and_imputation(df, target_label, drop_sparse_days)
 
-    corr_coeff_and_p_val = corr_coeffs_and_p_values(df, target_label, show_correlation_matrix, load_precomputed_values)
+    corr_coefficients_and_p_val = corr_coefficients_and_p_values(df, target_label, show_correlation_matrix,
+                                                                 load_precomputed_values)
 
-    multiple_regression(df, target_label)
+    # multiple_regression(df, target_label)
     print('break')
 
 
 def multiple_regression(df, target_label):
     y = df[target_label]
-    X = df.drop([target_label], axis=1)
-    regr = linear_model.LinearRegression()
-    regr.fit(X, y)
-    # X_lables = X.columns
-    regr_coef_df = pd.DataFrame(index=X.columns, columns=['regrCoef'])
-    regr_coef_df['regrCoef'] = regr.coef_
+    x = df.drop([target_label], axis=1)
+    regression = linear_model.LinearRegression()
+    regression.fit(x, y)
+    # x_labels = X.columns
+    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['regression_coefficients'])
+    regression_coefficient_df['regression_coefficients'] = regression.coef_
     print('break')
 
 
-def pValues(corr_matrix, df, target_label):
+def p_values(corr_matrix, df, target_label):
     # p-values
     p_val_matrix = corr_matrix.copy()
     print('computing p values. TODO: Is there a faster way?')
@@ -46,23 +48,64 @@ def pValues(corr_matrix, df, target_label):
             df_ols = sm.ols(formula='Q("{}") ~ Q("{}")'.format(y, x), data=df).fit()
             p_val_matrix.iloc[i, j] = df_ols.pvalues[1]
     # p_val_matrix = pd.read_csv('/home/chrei/code/quantifiedSelfData/target_p_values.csv')
-    target_p_values = p_val_matrix[target_label]  # get target label from metrix
+    target_p_values = p_val_matrix[target_label]  # get target label from matrix
     target_p_values = target_p_values.drop([target_label])  # drop self correlation
     return target_p_values
 
 
-def corr_coeffs_and_p_values(df, target_label, show_correlation_matrix, load_precomputed_values):
+def visualize_corr_matrix(corr_matrix, df, show):
+    if show:
+        # plot
+        f = plt.figure(figsize=(19, 15))
+        plt.matshow(corr_matrix, fignum=f.number)
+        plt.xticks(range(df.shape[1]), df.columns, fontsize=7, rotation=90)
+        plt.yticks(range(df.shape[1]), df.columns, fontsize=7)
+        cb = plt.colorbar()
+        cb.ax.tick_params(labelsize=7)
+        plt.title('Correlation Matrix', fontsize=12)
+        plt.show()
+
+
+def visualize_corr_and_p_values(corr_coeff_and_p_val, show):
+    if show:
+        # plot
+        corr_coeff_and_p_val = corr_coeff_and_p_val.set_index(['Unnamed: 0'])
+        # corr_coeff_and_p_val = corr_coeff_and_p_val.T
+        # f = plt.figure(figsize=(20, 20))
+        # plt.matshow(corr_coeff_and_p_val.T, fignum=f.number)
+        # plt.yticks(range(0, corr_coeff_and_p_val.shape[1]), corr_coeff_and_p_val.columns, fontsize=7)
+        # plt.xticks(range(0, 2), ['corrCoeff', 'pVal'], fontsize=7,rotation=90)
+        # cb = plt.colorbar()
+        # cb.ax.tick_params(labelsize=7)
+        # plt.title('Correlation Matrix', fontsize=12)
+        # plt.show()
+        headers = corr_coeff_and_p_val.index
+        corr = corr_coeff_and_p_val['corrCoeff']
+        pval = corr_coeff_and_p_val['pVal']
+        plt.plot(corr_coeff_and_p_val.index, corr_coeff_and_p_val['corrCoeff'], 'g^', corr_coeff_and_p_val.index,
+                 corr_coeff_and_p_val['pVal'], 'bs')
+        plt.xticks(rotation=90)
+
+        plt.show()
+
+
+def corr_coefficients_and_p_values(df, target_label, show_correlation_matrix, load_precomputed_values):
+    # load precomputed values
     if load_precomputed_values:
         corr_coeff_and_p_val = pd.read_csv('/home/chrei/code/quantifiedSelfData/corrCoeff_and_pVal.csv')
 
+    # compute correlations and p values
     else:
         # correlate
         corr_matrix = pd.DataFrame.corr(df, method='pearson', min_periods=5)
+        visualize_corr_matrix(corr_matrix, df, show_correlation_matrix)
+
+        # get target values
         target_correlations = corr_matrix[target_label]  # get target label from matrix
         target_correlations = target_correlations.drop([target_label])  # drop self correlation
 
         # compute p values
-        target_p_values = pValues(corr_matrix, df, target_label)
+        target_p_values = p_values(corr_matrix, df, target_label)
 
         # combine to single df
         corr_coeff_and_p_val = pd.DataFrame(index=target_p_values.index, columns=['corrCoeff', 'pVal'])
@@ -73,20 +116,8 @@ def corr_coeffs_and_p_values(df, target_label, show_correlation_matrix, load_pre
         corr_coeff_and_p_val = corr_coeff_and_p_val.sort_values(kind="quicksort", by='pVal')
         corr_coeff_and_p_val.to_csv('/home/chrei/code/quantifiedSelfData/corrCoeff_and_pVal.csv')
 
-    if show_correlation_matrix:
-        # sort correlation matrix
-        correlations = corr_matrix.unstack()
-        correlations = correlations.sort_values(kind="quicksort")
-
-        # plot
-        f = plt.figure(figsize=(19, 15))
-        plt.matshow(corr_matrix, fignum=f.number)
-        plt.xticks(range(df.shape[1]), df.columns, fontsize=7, rotation=90)
-        plt.yticks(range(df.shape[1]), df.columns, fontsize=7)
-        cb = plt.colorbar()
-        cb.ax.tick_params(labelsize=7)
-        plt.title('Correlation Matrix', fontsize=12)
-        plt.show()
+    # visaulaize
+    visualize_corr_and_p_values(corr_coeff_and_p_val, show=True)
 
     return corr_coeff_and_p_val
 
