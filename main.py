@@ -11,7 +11,7 @@ def main():
     # label of interest
     target_label = 'mood'
     show_correlation_matrix = False
-    load_precomputed_values = True
+    load_precomputed_values = False
     drop_sparse_days = False
 
     # load data
@@ -69,7 +69,7 @@ def visualize_corr_matrix(corr_matrix, df, show):
 def visualize_corr_and_p_values(corr_coeff_and_p_val, show):
     if show:
         # plot
-        corr_coeff_and_p_val = corr_coeff_and_p_val.set_index(['Unnamed: 0'])
+        # corr_coeff_and_p_val = corr_coeff_and_p_val.set_index(['Unnamed: 0'])
         # corr_coeff_and_p_val = corr_coeff_and_p_val.T
         # f = plt.figure(figsize=(20, 20))
         # plt.matshow(corr_coeff_and_p_val.T, fignum=f.number)
