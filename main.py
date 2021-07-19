@@ -2,39 +2,42 @@ import pandas as pd
 import statsmodels.formula.api as sm
 from matplotlib import pyplot as plt
 from sklearn import linear_model
+from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
 
-from data_cleaning_and_imputation import data_cleaning_and_imputation
+from data_cleaning_and_imputation import data_cleaning_and_imputation, drop_sparse_days
 
 
 def main():
     # label of interest
     target_label = 'mood'
     show_correlation_matrix = False
-    load_precomputed_values = False
-    drop_sparse_days = False
+    load_precomputed_coefficients_and_p_val = True
 
     # load data
     df = pd.read_csv('/home/chrei/code/quantifiedSelfData/daily_summaries.csv', index_col=0)
 
-    df = data_cleaning_and_imputation(df, target_label, drop_sparse_days)
+    df = data_cleaning_and_imputation(df, target_label)
 
-    corr_coefficients_and_p_val = corr_coefficients_and_p_values(df, target_label, show_correlation_matrix,
-                                                                 load_precomputed_values)
+    results = corr_coefficients_and_p_values(df, target_label, show_correlation_matrix,
+                                             load_precomputed_coefficients_and_p_val)
 
-    # multiple_regression(df, target_label)
+    df = drop_sparse_days(df)
+
+    results = multiple_regression(df, target_label, results)
     print('break')
 
 
-def multiple_regression(df, target_label):
+def multiple_regression(df, target_label, results):
     y = df[target_label]
     x = df.drop([target_label], axis=1)
     regression = linear_model.LinearRegression()
     regression.fit(x, y)
     # x_labels = X.columns
-    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['regression_coefficients'])
-    regression_coefficient_df['regression_coefficients'] = regression.coef_
-    print('break')
+    # regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['regression_coefficients'])
+    results['regression_coefficients'] = regression.coef_
+    results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
+    return results
 
 
 def p_values(corr_matrix, df, target_label):
@@ -47,7 +50,6 @@ def p_values(corr_matrix, df, target_label):
             x = df.columns[j]
             df_ols = sm.ols(formula='Q("{}") ~ Q("{}")'.format(y, x), data=df).fit()
             p_val_matrix.iloc[i, j] = df_ols.pvalues[1]
-    # p_val_matrix = pd.read_csv('/home/chrei/code/quantifiedSelfData/target_p_values.csv')
     target_p_values = p_val_matrix[target_label]  # get target label from matrix
     target_p_values = target_p_values.drop([target_label])  # drop self correlation
     return target_p_values
@@ -92,7 +94,7 @@ def visualize_corr_and_p_values(corr_coeff_and_p_val, show):
 def corr_coefficients_and_p_values(df, target_label, show_correlation_matrix, load_precomputed_values):
     # load precomputed values
     if load_precomputed_values:
-        corr_coeff_and_p_val = pd.read_csv('/home/chrei/code/quantifiedSelfData/corrCoeff_and_pVal.csv')
+        results = pd.read_csv('/home/chrei/code/quantifiedSelfData/results.csv', index_col=0)
 
     # compute correlations and p values
     else:
@@ -108,18 +110,26 @@ def corr_coefficients_and_p_values(df, target_label, show_correlation_matrix, lo
         target_p_values = p_values(corr_matrix, df, target_label)
 
         # combine to single df
-        corr_coeff_and_p_val = pd.DataFrame(index=target_p_values.index, columns=['corrCoeff', 'pVal'])
-        corr_coeff_and_p_val['pVal'] = target_p_values
-        corr_coeff_and_p_val['corrCoeff'] = target_correlations
+        results = pd.DataFrame(index=target_p_values.index, columns=['corrCoeff', 'pVal'])
+        results['pVal'] = target_p_values
+        results['corrCoeff'] = target_correlations
 
         # sort by p Val
-        corr_coeff_and_p_val = corr_coeff_and_p_val.sort_values(kind="quicksort", by='pVal')
-        corr_coeff_and_p_val.to_csv('/home/chrei/code/quantifiedSelfData/corrCoeff_and_pVal.csv')
+        results = results.sort_values(kind="quicksort", by='pVal')
 
-    # visaulaize
-    visualize_corr_and_p_values(corr_coeff_and_p_val, show=True)
+        # Benjamini–Hochberg procedure
+        reject_0_hypothesis, pvals_corrected, alphacSidak, alphacBonf = multipletests(results['pVal'], alpha=0.05,
+                                                                                      method='fdr_bh', is_sorted=False,
+                                                                                      returnsorted=False)
+        results['pvals_corrected'] = pvals_corrected
+        results['reject_0_hypothesis'] = reject_0_hypothesis
 
-    return corr_coeff_and_p_val
+        results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')
+
+    # visualize
+    visualize_corr_and_p_values(results, show=True)
+
+    return results
 
 
 main()
