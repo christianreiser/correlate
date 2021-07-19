@@ -5,39 +5,71 @@ from sklearn import linear_model
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
 
-from data_cleaning_and_imputation import data_cleaning_and_imputation, drop_sparse_days
+from data_cleaning_and_imputation import data_cleaning_and_imputation, \
+    drop_attributes_with_missing_values, drop_days_with_missing_values, drop_days_before__then_drop_col, \
+    missing_value_check
 
 
 def main():
     # label of interest
     target_label = 'mood'
-    show_correlation_matrix = False
+    show_plots = False
     load_precomputed_coefficients_and_p_val = True
 
     # load data
     df = pd.read_csv('/home/chrei/code/quantifiedSelfData/daily_summaries.csv', index_col=0)
 
+    # data cleaning and imputation
     df = data_cleaning_and_imputation(df, target_label)
 
-    results = corr_coefficients_and_p_values(df, target_label, show_correlation_matrix,
+    # correlation and p value
+    results = corr_coefficients_and_p_values(df, target_label, show_plots,
                                              load_precomputed_coefficients_and_p_val)
 
-    df = drop_sparse_days(df)
+    # single linear regression
+    # single_linear_regression(df, target_label, results) # todo: continue implementation
 
-    results = multiple_regression(df, target_label, results)
-    print('break')
+    # multiple linear regression
+    df_longest = drop_attributes_with_missing_values(df)
+    multiple_regression(df_longest, target_label, results, dataset_name='longest')
+
+    df_2019_09_08 = drop_days_before__then_drop_col(df, last_day_to_drop='2019-09-08')
+    multiple_regression(df_2019_09_08, target_label, results, dataset_name='after2019_09_08')
+
+    df_widest = drop_days_with_missing_values(df)
+    multiple_regression(df_widest, target_label, results, dataset_name='widest')
+
+    print('done')
 
 
-def multiple_regression(df, target_label, results):
+def single_linear_regression(df, target_label, results):
+    # todo: continue implementation
+    y = df[target_label]
+    x = df.drop([target_label], axis=1)
+    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['single_reg_coeff'])
+
+    for column in x.columns:
+        regression = linear_model.LinearRegression()
+        xCol = x[column]
+        regression.fit(x[column], y)  # todo there is a bug
+        coef = regression.coef_
+
+    regression_coefficient_df['single_reg_coeff'][column] = regression.coef_
+    results['single_reg_coeff_'] = regression_coefficient_df
+    results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
+
+
+def multiple_regression(df, target_label, results, dataset_name):
+    missing_value_check(df)
     y = df[target_label]
     x = df.drop([target_label], axis=1)
     regression = linear_model.LinearRegression()
     regression.fit(x, y)
     # x_labels = X.columns
-    # regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['regression_coefficients'])
-    results['regression_coefficients'] = regression.coef_
+    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['reg_coeff'])
+    regression_coefficient_df['reg_coeff'] = regression.coef_
+    results['reg_coeff_' + str(dataset_name)] = regression_coefficient_df
     results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
-    return results
 
 
 def p_values(corr_matrix, df, target_label):
@@ -91,7 +123,7 @@ def visualize_corr_and_p_values(corr_coeff_and_p_val, show):
         plt.show()
 
 
-def corr_coefficients_and_p_values(df, target_label, show_correlation_matrix, load_precomputed_values):
+def corr_coefficients_and_p_values(df, target_label, show_plots, load_precomputed_values):
     # load precomputed values
     if load_precomputed_values:
         results = pd.read_csv('/home/chrei/code/quantifiedSelfData/results.csv', index_col=0)
@@ -100,7 +132,7 @@ def corr_coefficients_and_p_values(df, target_label, show_correlation_matrix, lo
     else:
         # correlate
         corr_matrix = pd.DataFrame.corr(df, method='pearson', min_periods=5)
-        visualize_corr_matrix(corr_matrix, df, show_correlation_matrix)
+        visualize_corr_matrix(corr_matrix, df, show_plots)
 
         # get target values
         target_correlations = corr_matrix[target_label]  # get target label from matrix
@@ -127,7 +159,7 @@ def corr_coefficients_and_p_values(df, target_label, show_correlation_matrix, lo
         results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')
 
     # visualize
-    visualize_corr_and_p_values(results, show=True)
+    visualize_corr_and_p_values(results, show_plots)
 
     return results
 

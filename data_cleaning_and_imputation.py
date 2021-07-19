@@ -7,9 +7,7 @@ def data_cleaning_and_imputation(df, target_label):
     """
     drop nutrition
     interpolate weight and VO2Max
-    drop first and last days, as data is missing TODO too much is lost
-    drop days where target data is missing (i.e., mood)
-    check for missing values
+    add yesterdays mood as feature
     """
 
     # drop gps location
@@ -35,25 +33,61 @@ def data_cleaning_and_imputation(df, target_label):
         if df[target_label][day] != df[target_label][day] or df[target_yesterday][day] != df[target_yesterday][day]:
             df = df.drop(day)
 
-    # check for missing values
+    return df
+
+
+def drop_attributes_with_missing_values(df):
+    # drop first and last days where data is not fully available
+    date_list = pd.date_range(start=datetime.strptime('2021-06-15', '%Y-%m-%d'), periods=99).tolist()
+    date_list = [day.strftime('%Y-%m-%d') for day in date_list]
+    date_list.append(['2019-02-12', '2019-02-13'])
+    for date in date_list:
+        try:
+            df = df.drop(date, axis=0)
+        except Exception as e:
+            # print(e)
+            print()
+
+    # drop attributes with missing values
+    attribute_names = df.columns
+    for attribute_name in attribute_names:
+        nan_data_true_false = pd.isnull(df[attribute_name])
+        nan_numeric_indices = pd.isnull(df[attribute_name]).to_numpy().nonzero()[0]
+        nan_dates = nan_data_true_false[nan_numeric_indices].index
+        if len(nan_dates) > 0:
+            df = df.drop(attribute_name, axis=1)
+    return df
+
+
+def drop_days_with_missing_values(df):
     for attribute_name in df.columns:
         nan_data_true_false = pd.isnull(df[attribute_name])
         nan_numeric_indices = pd.isnull(df[attribute_name]).to_numpy().nonzero()[0]
         nan_dates = nan_data_true_false[nan_numeric_indices].index
         if len(nan_dates) > 0:
-            print('WARNING: ', attribute_name, 'entry is missing on', nan_dates, '!')
-
+            df = df.drop(nan_dates, axis=0)
     return df
 
 
-def drop_sparse_days(df):
-    # drop days where too much data is missing TODO too much is lost
-    date_list = pd.date_range(datetime.strptime('2019-02-12', '%Y-%m-%d'), periods=615).tolist()
-    date_list = date_list + pd.date_range(datetime.strptime('2021-06-16', '%Y-%m-%d'), periods=41).tolist()
+def missing_value_check(df):
+    for attribute_name in df.columns:
+        nan_data_true_false = pd.isnull(df[attribute_name])
+        nan_numeric_indices = pd.isnull(df[attribute_name]).to_numpy().nonzero()[0]
+        nan_dates = nan_data_true_false[nan_numeric_indices].index
+        if len(nan_dates) > 0:
+            print('WARNING: missing value ', nan_dates, attribute_name)
+    return df
+
+
+def drop_days_before__then_drop_col(df, last_day_to_drop):
+    # drop days where too much data is missing manually by picking dates
+    date_list = pd.date_range(start=datetime.strptime('2019-02-11', '%Y-%m-%d'), end=last_day_to_drop).tolist()
     date_list = [day.strftime('%Y-%m-%d') for day in date_list]
     for date in date_list:
         try:
             df = df.drop(date, axis=0)
         except Exception as e:
-            print(e)
+            # print('drop_days_before_then_col:', e)
+            print()
+    df = drop_attributes_with_missing_values(df)
     return df
