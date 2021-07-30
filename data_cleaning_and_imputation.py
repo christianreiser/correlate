@@ -5,7 +5,6 @@ import pandas as pd
 
 def data_cleaning_and_imputation(df, target_label):
     """
-    drop nutrition
     interpolate weight and VO2Max
     add yesterdays mood as feature
     """
@@ -13,10 +12,6 @@ def data_cleaning_and_imputation(df, target_label):
     # drop gps location
     # df = df.drop(
     #     ['Low latitude (deg)', 'Low longitude (deg)', 'High latitude (deg)', 'High longitude (deg)'], axis=1)
-
-    # drop nutrition
-    df = df.drop(
-        ['sodium', 'fat', 'carbohydrates', 'protein', 'fibre', 'kcal_in'], axis=1)
 
     # interpolate weight and vo2 max linearly
     df['weight'] = df['weight'].interpolate(method='linear')
@@ -46,7 +41,7 @@ def drop_attributes_with_missing_values(df):
             df = df.drop(date, axis=0)
         except Exception as e:
             # print(e)
-            print()
+            pass
 
     # drop attributes with missing values
     attribute_names = df.columns
@@ -60,6 +55,10 @@ def drop_attributes_with_missing_values(df):
 
 
 def drop_days_with_missing_values(df):
+    # drop nutrition
+    df = df.drop(
+        ['sodium', 'fat', 'carbohydrates', 'protein', 'fibre', 'kcal_in'], axis=1)
+
     for attribute_name in df.columns:
         nan_data_true_false = pd.isnull(df[attribute_name])
         nan_numeric_indices = pd.isnull(df[attribute_name]).to_numpy().nonzero()[0]
@@ -80,6 +79,10 @@ def missing_value_check(df):
 
 
 def drop_days_before__then_drop_col(df, last_day_to_drop):
+    # drop nutrition
+    df = df.drop(
+        ['sodium', 'fat', 'carbohydrates', 'protein', 'fibre', 'kcal_in'], axis=1)
+
     # drop days where too much data is missing manually by picking dates
     date_list = pd.date_range(start=datetime.strptime('2019-02-11', '%Y-%m-%d'), end=last_day_to_drop).tolist()
     date_list = [day.strftime('%Y-%m-%d') for day in date_list]
@@ -87,7 +90,7 @@ def drop_days_before__then_drop_col(df, last_day_to_drop):
         try:
             df = df.drop(date, axis=0)
         except Exception as e:
-            # print('drop_days_before_then_col:', e)
-            print()
+            pass
+
     df = drop_attributes_with_missing_values(df)
     return df
