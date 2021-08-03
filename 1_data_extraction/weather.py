@@ -2,6 +2,9 @@ import os
 from datetime import datetime
 
 import pandas as pd
+from tqdm import tqdm
+
+from helper import histograms
 
 """
 go through csv files
@@ -11,7 +14,7 @@ append to data frame
 write dataframe
 """
 path_to_csv_files = '/home/chrei/PycharmProjects/correlate/0_data_raw/weather/'
-outputname = 'weather_extracted.csv'
+outputname = '/home/chrei/PycharmProjects/correlate/0_data_raw/weather/weather_daily_summaries.csv'
 verbose = False
 excludedFiles = ['weather (another copy).csv', 'weather (copy).csv']
 print('starting ...')
@@ -40,44 +43,46 @@ def csv_2_df(csv_root, csv_file):
 
     print('aggregating')
 
-    df_mean = df.groupby(df['dt_iso']).mean()
-    df_sum = df.groupby(df['dt_iso']).sum()
-    df_min = df.groupby(df['dt_iso']).min()
-    df_max = df.groupby(df['dt_iso']).max()
+    df_mean = df.groupby(df['dt_iso']).mean().round(1)
+    df_sum = df.groupby(df['dt_iso']).sum().round(1)
+    df_min = df.groupby(df['dt_iso']).min().round(1)
+    df_max = df.groupby(df['dt_iso']).max().round(1)
 
     print('building df')
 
     daily_aggregation_df = pd.DataFrame()
-    daily_aggregation_df['w_temp_mean'] = df_mean['temp']
-    daily_aggregation_df['w_temp_min'] = df_min['temp_min']
-    daily_aggregation_df['w_temp_max'] = df_max['temp_max']
-    daily_aggregation_df['w_temp_delta'] = df_max['temp_max'] - df_min['temp_min']
+    daily_aggregation_df['wOutTempMean'] = df_mean['temp']
+    daily_aggregation_df['wOutTempMin'] = df_min['temp_min']
+    daily_aggregation_df['wOutTempMax'] = df_max['temp_max']
+    daily_aggregation_df['wOutTempDelta'] = df_max['temp_max'] - df_min['temp_min']
 
-    daily_aggregation_df['w_temp_feels_mean'] = df_mean['feels_like']
-    daily_aggregation_df['w_temp_feels_min'] = df_min['feels_like']
-    daily_aggregation_df['w_temp_feels_max'] = df_max['feels_like']
-    daily_aggregation_df['w_press_mean'] = df_mean['pressure']
-    daily_aggregation_df['w_press_min'] = df_min['pressure']
-    daily_aggregation_df['w_press_max'] = df_max['pressure']
-    daily_aggregation_df['w_press_delta'] = df_max['pressure'] - df_min['pressure']
-    daily_aggregation_df['w_hum_mean'] = df_mean['humidity']
-    daily_aggregation_df['w_hum_min'] = df_min['humidity']
-    daily_aggregation_df['w_hum_max'] = df_max['humidity']
-    daily_aggregation_df['w_wind_mean'] = df_mean['wind_speed']
-    daily_aggregation_df['w_wind_min'] = df_min['wind_speed']
-    daily_aggregation_df['w_wind_max'] = df_max['wind_speed']
-    daily_aggregation_df['w_cloud_mean'] = df_mean['clouds_all']
-    daily_aggregation_df['w_cloud_min'] = df_min['clouds_all']
-    daily_aggregation_df['w_cloud_max'] = df_max['clouds_all']
-    daily_aggregation_df['w_precipitation'] = df_sum['rain_1h'] + df_sum['rain_3h'] + df_sum['snow_1h'] + df_sum['snow_3h']
+    daily_aggregation_df['wOutTempFeelMean'] = df_mean['feels_like']
+    daily_aggregation_df['wOutTempFeelMin'] = df_min['feels_like']
+    daily_aggregation_df['wOutTempFeelMax'] = df_max['feels_like']
+    daily_aggregation_df['wOutPressMean'] = df_mean['pressure']
+    daily_aggregation_df['wOutPressMin'] = df_min['pressure']
+    daily_aggregation_df['wOutPressMax'] = df_max['pressure']
+    daily_aggregation_df['wOutPressDelta'] = df_max['pressure'] - df_min['pressure']
+    daily_aggregation_df['wOutHumMean'] = df_mean['humidity']
+    daily_aggregation_df['wOutHumMin'] = df_min['humidity']
+    daily_aggregation_df['wOutHumMax'] = df_max['humidity']
+    daily_aggregation_df['wOutWindMean'] = df_mean['wind_speed']
+    daily_aggregation_df['wOutWindMin'] = df_min['wind_speed']
+    daily_aggregation_df['wOutWindMax'] = df_max['wind_speed']
+    daily_aggregation_df['wOutCloudMean'] = df_mean['clouds_all']
+    daily_aggregation_df['wOutCloudMin'] = df_min['clouds_all']
+    daily_aggregation_df['wOutCloudMax'] = df_max['clouds_all']
+    daily_aggregation_df['wOutPrecipit'] = df_sum['rain_1h'] + df_sum['rain_3h'] + df_sum['snow_1h'] + df_sum[
+        'snow_3h']
 
     return daily_aggregation_df
 
 
 for root, dirs, files in os.walk(path_to_csv_files):
     for file in files:  # go through all csv files
-        if file.endswith(".csv") and file.startswith('weather') and file not in excludedFiles:
+        if file.endswith("weather.csv") and file.startswith('weather.csv') and file not in excludedFiles:
             df = csv_2_df(root, file)
+            # histograms(df, '/home/chrei/PycharmProjects/correlate/plots/raw_distributions/')
 
 # print file
 print('writing...')

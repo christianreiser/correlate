@@ -1,5 +1,10 @@
-import pandas as pd
 import os
+
+import pandas as pd
+from tqdm import tqdm
+
+from helper import histograms
+
 """
 go through csv files
 create aggregation df for each file
@@ -7,13 +12,13 @@ select which aggregation is needed: max, min, mean, sum
 append to data frame
 write dataframe
 """
-path_to_csv_files = './takeout-20210625T075514Z-001/Takeout/Fit/Daily activity metrics/'
-outputname = 'google_output_2021_06_25'
+path_to_csv_files = '/home/chrei/PycharmProjects/correlate/0_data_raw/google/takeout-20210625T075514Z-001/Takeout/Fit/Daily activity metrics/'
+outputname = './google_output_2021_06_25_percentile.csv'
 verbose = False
 print('running ...')
 
 
-def csv_2_df(csv_root, csv_file):
+def csv_2_df(csv_root, csv_file, total_agg):
     """
     as name says
     """
@@ -24,8 +29,14 @@ def csv_2_df(csv_root, csv_file):
     google_csv_as_df = pd.read_csv(os.path.join(csv_root, csv_file))  # read csv to df
     if verbose:
         print('read df:', google_csv_as_df)
+    # total_agg = total_agg.append(google_csv_as_df)
 
-    aggregated = google_csv_as_df.agg(['sum', 'min', 'max', 'mean'], axis=0)
+
+
+    # pd.DataFrame.quantile(0.5)
+    # test = google_csv_as_df.agg(['median'], axis=0)
+    aggregated = google_csv_as_df.agg(
+        ['sum', 'min', 'max', 'mean'], axis=0)
     if verbose:
         print('column names (aggregated.columns):', aggregated.columns)
 
@@ -68,6 +79,9 @@ def csv_2_df(csv_root, csv_file):
         elif aggregated.columns[i] == 'Min heart rate (bpm)':
             daily_aggregation[attribute_name] = [
                 aggregated['Min heart rate (bpm)']['min']]
+        elif aggregated.columns[i] == 'Median heart rate (bpm)':
+            daily_aggregation[attribute_name] = [
+                aggregated['Median heart rate (bpm)']['median']]
         elif aggregated.columns[i] == 'Low latitude (deg)':
             daily_aggregation[attribute_name] = [
                 aggregated['Low latitude (deg)']['min']]
@@ -178,7 +192,7 @@ def csv_2_df(csv_root, csv_file):
                 aggregated['Average systolic blood pressure (mmHg)']['mean']]
         elif aggregated.columns[i] == 'Body position':
             daily_aggregation[attribute_name] = [
-                aggregated['Body position']['mean']]  # todo which mean sum min max
+                aggregated['Body position']['mean']]
         elif aggregated.columns[i] == 'Max systolic blood pressure (mmHg)':
             daily_aggregation[attribute_name] = [
                 aggregated['Max systolic blood pressure (mmHg)']['max']]
@@ -206,19 +220,36 @@ def csv_2_df(csv_root, csv_file):
         print('daily_aggregation:', daily_aggregation)
 
     daily_aggregation_df = pd.DataFrame(daily_aggregation)
-    return daily_aggregation_df
+    return daily_aggregation_df, total_agg
 
 
 # create df from csv files
 if verbose:
     print('path', path_to_csv_files)
 
+columns = ['Date', 'Move Minutes count', 'Average systolic blood pressure (mmHg)', 'Max systolic blood pressure (mmHg)',
+           'Min systolic blood pressure (mmHg)', 'Average diastolic blood pressure (mmHg)',
+           'Max diastolic blood pressure (mmHg)', 'Min diastolic blood pressure (mmHg)', 'Body position',
+           'Blood pressure measurement location', 'Calories (kcal)', 'Distance (m)', 'Heart Points', 'Heart Minutes',
+           'Average heart rate (bpm)', 'Max heart rate (bpm)', 'Min heart rate (bpm)', 'Low latitude (deg)',
+           'Low longitude (deg)', 'High latitude (deg)', 'High longitude (deg)', 'Average speed (m/s)',
+           'Max speed (m/s)', 'Min speed (m/s)', 'Step count', 'Average weight (kg)', 'Max weight (kg)',
+           'Min weight (kg)', 'Inactive duration (ms)', 'Walking duration (ms)', 'Running duration (ms)',
+           'Light sleeping duration (ms)', 'Deep sleeping duration (ms)', 'REM sleeping duration (ms)',
+           'Awake mid-sleeping duration (ms)', 'Jogging duration (ms)', 'Sleep duration (ms)', 'Yoga duration (ms)',
+           'Other duration (ms)', 'Biking duration (ms)', 'Treadmill running duration (ms)',
+           'Weight lifting duration (ms)', 'Meditating duration (ms)', 'Rowing machine duration (ms)',
+           'Stair climbing duration (ms)', 'Strength training duration (ms)', 'CrossFit duration (ms)',
+           'Hiking duration (ms)', 'Mountain biking duration (ms)', 'Elliptical duration (ms)',
+           'Swimming duration (ms)', 'Stair climbing machine duration (ms)']
+total_agg = pd.DataFrame(columns=columns)
+
 for root, dirs, files in os.walk(path_to_csv_files):
     print(len(files), 'files found')
     print('aggregating...might take a while...')
 
     i = 0
-    for file in files:  # go through all csv files
+    for file in tqdm(files):  # go through all csv files
         if verbose:
             print('Filename=', file)
             print('root:', root)
@@ -226,17 +257,22 @@ for root, dirs, files in os.walk(path_to_csv_files):
             print('files:', files)
             print('csv_2_df(root, file):', csv_2_df(root, file))
         if i == 0:
-            df_0 = csv_2_df(root, file)
+            df_0, total_agg = csv_2_df(root, file, total_agg)
         elif i == 1:
-            df_1 = csv_2_df(root, file)
+            df_1, total_agg = csv_2_df(root, file, total_agg)
             df = df_0.append(df_1)
         else:
-            df_1 = csv_2_df(root, file)
+            df_1, total_agg = csv_2_df(root, file, total_agg)
             df = df.append(df_1)
             if verbose:
                 print(df)
                 print('/n')
         i += 1
+
+# histograms(total_agg.drop(['Start time', 'End time','Date','Jogging duration (ms)'], axis=1).rename(
+#     columns={"Average speed (m/s)": "Average_speed", "Max speed (m/s)": "Max_speed",
+#              "Min speed (m/s)": "Min_speed"}),
+#     '/home/chrei/PycharmProjects/correlate/plots/raw_distributions/google')
 
 # sort by Date
 print('sorting...')

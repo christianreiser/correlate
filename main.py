@@ -1,17 +1,18 @@
 from datetime import datetime
-
-import numpy as np
+import seaborn
 import pandas as pd
 import statsmodels.formula.api as sm
 from matplotlib import pyplot as plt
 from sklearn import linear_model
+from sklearn.decomposition import PCA
 from sklearn.model_selection import TimeSeriesSplit
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
+import numpy as np
 
-from data_cleaning_and_imputation import missing_value_check, data_cleaning_and_imputation, \
-    drop_attributes_with_missing_values, drop_days_before__then_drop_col, drop_days_with_missing_values
+from data_cleaning_and_imputation import data_cleaning_and_imputation, drop_attributes_with_missing_values, \
+    drop_days_before__then_drop_col, drop_days_with_missing_values
 
 
 def main():
@@ -35,23 +36,75 @@ def main():
     # histograms(df, save_path='/home/chrei/PycharmProjects/correlate/plots/distributions/')
 
     # std normalization preprocessing
-    # df = (df - df.mean()) / df.std()  # built in normalization not used
+    df_mean = df.mean()
+    df_std = df.std()
+    print('df_mean:', df_mean, 'std:', df_std)
+    df = (df - df_mean) / df_std  # built in normalization not used
     # histograms(df, save_path='/home/chrei/PycharmProjects/correlate/plots/distributions_after_normalization/')
 
-    # single linear regression
-    # single_linear_regression(df, target_label, results) # todo: continue implementation
-
-    # multiple linear regression on different datasets
+    # # multiple linear regression on different datasets
     df_longest = drop_attributes_with_missing_values(df)
-    multiple_regression(df_longest, target_label, results, dataset_name='longest')
-
     df_2019_09_08 = drop_days_before__then_drop_col(df, last_day_to_drop='2019-09-08')
-    multiple_regression(df_2019_09_08, target_label, results, dataset_name='after2019_09_08')
-
     df_widest = drop_days_with_missing_values(df)
-    multiple_regression(df_widest, target_label, results, dataset_name='widest')
+    predictions_results = df[target_label].to_frame()
 
+    predictions_results = multiple_regression(df_longest, target_label, results, dataset_name='longest',
+                        predictions_results=predictions_results)
+
+    predictions_results = multiple_regression(df_2019_09_08, target_label, results, dataset_name='after2019_09_08',
+                        predictions_results=predictions_results)
+
+    predictions_results = multiple_regression(df_widest, target_label, results, dataset_name='widest',
+                        predictions_results=predictions_results)
+    predictions_results.to_csv('/home/chrei/code/quantifiedSelfData/predictions_results.csv')  # save to file
+
+    # predictions_results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)]
+
+    # PCA
+    # pca_function(df_longest)
     print('done')
+
+
+def pca_function(df):
+    n_components = len(df.columns)
+    pca = PCA(n_components=n_components)
+    pca.fit(df)
+    PCA(n_components=n_components)
+    print(pca.explained_variance_ratio_)
+
+    plt.plot(pca.explained_variance_ratio_, alpha=0.75)
+    plt.xlabel('component')
+    plt.ylabel('explained variance ratio')
+    plt.title('PCA explained variance ratio')
+    # plt.xlim(40, 160)
+    # plt.ylim(0, 0.03)
+    plt.grid(True)
+    # plt.show()
+
+    plt.savefig('/home/chrei/PycharmProjects/correlate/plots/pca_explained_variance_ratio', dpi=None,
+                facecolor='w',
+                edgecolor='w',
+                orientation='portrait', format=None,
+                transparent=False, bbox_inches=None, pad_inches=0.1,
+                metadata=None)
+    plt.close('all')
+
+    # visualization
+    # fig = plt.figure(figsize=(8, 8))
+    # ax = fig.add_subplot(1, 1, 1)
+    # ax.set_xlabel('Principal Component 1', fontsize=15)
+    # ax.set_ylabel('Principal Component 2', fontsize=15)
+    # ax.set_title('2 component PCA', fontsize=20)
+    # targets = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
+    # colors = ['r', 'g', 'b']
+    # for target, color in zip(targets, colors):
+    #     indicesToKeep = finalDf['target'] == target
+    #     ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1']
+    #                , finalDf.loc[indicesToKeep, 'principal component 2']
+    #                , c=color
+    #                , s=50)
+    # ax.legend(targets)
+    # ax.grid()
 
 
 def drop_days_where_mood_was_tracked_irregularly(df):
@@ -101,51 +154,29 @@ def autocorrelation(df, target_label):
     plt.savefig('/home/chrei/PycharmProjects/correlate/plots/partial_autocorrelation_025lags_' + str(target_label))
 
 
-def histograms(df, save_path):
-    # plot distributions
-    for attribute in df.columns:
-        print(attribute)
-        # attribute = 'VO2Max'
-        n, bins, patches = plt.hist(df[attribute], 50, density=True, facecolor='g', alpha=0.75)
-        # plt.xlabel('#')
-        # plt.ylabel('Probability')
-        plt.title('Histogram of ' + str(attribute))
-        # plt.xlim(40, 160)
-        # plt.ylim(0, 0.03)
-        plt.grid(True)
-        # plt.show()
-        plt.savefig(save_path + str(attribute), dpi=None,
-                    facecolor='w',
-                    edgecolor='w',
-                    orientation='portrait', format=None,
-                    transparent=False, bbox_inches=None, pad_inches=0.1,
-                    metadata=None)
-        plt.close('all')
-
-
 def single_linear_regression(df, target_label, results):
-    # todo: continue implementation
     y = df[target_label]
     x = df.drop([target_label], axis=1)
-    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['single_reg_coeff'])
+    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['single_reg_intercept', 'single_reg_slope'])
 
     for column in x.columns:
-        regression = linear_model.LinearRegression()
-        xCol = x[column]
-        regression.fit(x[column], y)  # todo there is a bug
-        coef = regression.coef_
+        x_y_df = pd.concat([x[column], df[target_label]], axis=1)
+        x_y_df = x_y_df.dropna()
+        regression = linear_model.LinearRegression(fit_intercept=False, normalize=False)
+        print('column', column)
+        regression.fit(x_y_df[column].to_numpy().reshape(-1, 1), x_y_df[target_label], )
+        regression_coefficient_df['single_reg_intercept'][column] = regression.intercept_
+        regression_coefficient_df['single_reg_slope'][column] = regression.coef_[0]
 
-    regression_coefficient_df['single_reg_coeff'][column] = regression.coef_
-    results['single_reg_coeff_'] = regression_coefficient_df
+    results['single_reg_slope'] = regression_coefficient_df['single_reg_slope']
     results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
 
 
-def multiple_regression(df, target_label, results, dataset_name):
+def multiple_regression(df, target_label, results, dataset_name, predictions_results):
     df = drop_days_where_mood_was_tracked_irregularly(df)
-    missing_value_check(df)
+    # missing_value_check(df)
 
     y = df[target_label]
-    predictions_results = y
     X = df.drop([target_label], axis=1)
 
     # time series split
@@ -169,15 +200,17 @@ def multiple_regression(df, target_label, results, dataset_name):
         results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)] = regression_coefficient_df
         results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
         predictions = regression.predict(X_test)
-        predictions = pd.DataFrame(list(zip(y_test.index, predictions)), columns =['date', str(dataset_name) + ' k=' + str(i)])
+        predictions = pd.DataFrame(list(zip(y_test.index, predictions)),
+                                   columns=['date', str(dataset_name) + ' k=' + str(i)])
         predictions = predictions.set_index('date')
         predictions_results = predictions_results.join(predictions)
-        l1_loss = abs(y_test - predictions)
+        l1_loss = abs(y_test - predictions[str(dataset_name) + ' k=' + str(i)])
         mean_l1_loss_for_one_fold = l1_loss.mean(axis=0)
-        print('L1 loss ' + str(dataset_name) + 'k=' + str(i), ': ', mean_l1_loss_for_one_fold)
+        # print('L1 loss ' + str(dataset_name) + 'k=' + str(i), ': ', mean_l1_loss_for_one_fold)
         cross_validation_loss_list.append(mean_l1_loss_for_one_fold)
     cross_validation_loss = np.mean(cross_validation_loss_list)
     print('cross_validation_loss: ', cross_validation_loss)
+    return predictions_results
 
 
 def p_values(corr_matrix, df, target_label):
@@ -269,6 +302,13 @@ def corr_coefficients_and_p_values(df, target_label, show_plots, load_precompute
     # visualize
     visualize_corr_and_p_values(results, show_plots)
 
+    # correlation p value scatter plot
+    results['corr_coeff_abs'] = results['corrCoeff'].abs()
+    seaborn.scatterplot(data=results, x="corr_coeff_abs", y="pvals_corrected")
+    plt.title('Corr pVal scatter plot')
+    # plt.yscale('log')
+    plt.savefig('/home/chrei/PycharmProjects/correlate/plots/corr_pVal_scatter')
+    plt.close('all')
     return results
 
 

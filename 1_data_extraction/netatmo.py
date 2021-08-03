@@ -1,148 +1,159 @@
-import pandas as pd
 from datetime import datetime
-from statistics import mean
 from math import isnan
+from tqdm import tqdm
+from helper import histograms
 
-outputname = '/home/chrei/code/quantifiedSelfData/netatmo.csv'
-df = pd.read_csv('/home/chrei/code/quantifiedSelfData/Indoor_7_5_2021.csv')  # , index_col=0
+import numpy as np
+import pandas as pd
+
+outputname = '/home/chrei/code/quantifiedSelfData/netatmo_daily_summaries.csv'
+df = pd.read_csv('/home/chrei/PycharmProjects/correlate/0_data_raw/weather/Indoor_7_5_2021.csv')  # , index_col=0
+
+# histograms
+histograms(df.drop(['Timestamp','DateTime Berlin'], axis=1), '/home/chrei/PycharmProjects/correlate/plots/raw_distributions/')
 
 currentDay = datetime.strptime(df['DateTime Berlin'][0], '%Y/%m/%d %H:%M:%S').strftime('%Y/%m/%d')
 lastDay = ''
-t_min = []
-t_max = []
-t_mean = []
-humidity_min = []
-humidity_max = []
-humidity_mean = []
-co2_min = []
-co2_max = []
-co2_mean = []
-noise_min = []
-noise_max = []
-noise_mean = []
-pressure_min = []
-pressure_max = []
-pressure_mean = []
+t_min5 = []
+t_max95 = []
+t_median = []
+t_median = []
+humidity_min5 = []
+humidity_max95 = []
+humidity_median = []
+co2_min5 = []
+co2_max95 = []
+co2_median = []
+noise_min5 = []
+noise_max95 = []
+noise_median = []
+pressure_min5 = []
+pressure_max95 = []
+pressure_median = []
 
 date_agg = []
-t_min_agg = []
-t_max_agg = []
-t_mean_agg = []
-humidity_min_agg = []
-humidity_max_agg = []
-humidity_mean_agg = []
-co2_min_agg = []
-co2_max_agg = []
-co2_mean_agg = []
-noise_min_agg = []
-noise_max_agg = []
-noise_mean_agg = []
-pressure_min_agg = []
-pressure_max_agg = []
-pressure_mean_agg = []
+t_min5_agg = []
+t_max95_agg = []
+t_median_agg = []
+t_median_agg = []
+humidity_min5_agg = []
+humidity_max95_agg = []
+humidity_median_agg = []
+co2_min5_agg = []
+co2_max95_agg = []
+co2_median_agg = []
+noise_min5_agg = []
+noise_max95_agg = []
+noise_median_agg = []
+pressure_min5_agg = []
+pressure_max95_agg = []
+pressure_median_agg = []
 
 cold_start = True
-for _, row in df.iterrows():
+for _, row in tqdm(df.iterrows()):
     currentDay = datetime.strptime(row['DateTime Berlin'], '%Y/%m/%d %H:%M:%S').strftime('%Y/%m/%d')
     # ddatetime = row[1]
     if currentDay != lastDay:
-        print(row['DateTime Berlin'])
         if not cold_start:
             """ save daily aggs"""
             date_agg.append(lastDay)
-            t_min_agg.append(min(t_min))
-            t_max_agg.append(max(t_max))
-            t_mean_agg.append(round(mean(t_mean), 1))
-            humidity_min_agg.append(min(humidity_min))
-            humidity_max_agg.append(max(humidity_max))
-            humidity_mean_agg.append(round(mean(humidity_mean), 1))
-            co2_min_agg.append(min(co2_min))
-            co2_max_agg.append(max(co2_max))
-            co2_mean_agg.append(round(mean(co2_mean), 1))
-            noise_min_agg.append(min(noise_min))
-            noise_max_agg.append(max(noise_max))
-            noise_mean_agg.append(round(mean(noise_mean), 1))
-            pressure_min_agg.append(min(pressure_min))
-            pressure_max_agg.append(max(pressure_max))
-            pressure_mean_agg.append(round(mean(pressure_mean), 1))
+            t_min5_agg.append(round(np.percentile(t_min5, 5), 1))
+            t_max95_agg.append(round(np.percentile(t_max95, 95), 1))
+            t_median_agg.append(round(np.percentile(t_median, 50), 1))
+            humidity_min5_agg.append(round(np.percentile(humidity_min5, 5), 1))
+            humidity_max95_agg.append(round(np.percentile(humidity_max95, 95), 1))
+            humidity_median_agg.append(round(np.percentile(humidity_median, 50), 1))
+            co2_min5_agg.append(round(np.percentile(co2_min5, 5), 1))
+            co2_max95_agg.append(round(np.percentile(co2_max95, 95), 1))
+            co2_median_agg.append(round(np.percentile(co2_median, 50), 1))
+            noise_min5_agg.append(round(np.percentile(noise_min5, 5), 1))
+            noise_max95_agg.append(round(np.percentile(noise_max95, 95), 1))
+            noise_median_agg.append(round(np.percentile(noise_median, 50), 1))
+            pressure_min5_agg.append(round(np.percentile(pressure_min5, 5), 1))
+            pressure_max95_agg.append(round(np.percentile(pressure_max95, 95), 1))
+            pressure_median_agg.append(round(np.percentile(pressure_median, 50), 1))
 
         """reset current """
-        t_min = []
-        t_max = []
-        t_mean = []
-        humidity_min = []
-        humidity_max = []
-        humidity_mean = []
-        co2_min = []
-        co2_max = []
-        co2_mean = []
-        noise_min = []
-        noise_max = []
-        noise_mean = []
-        pressure_min = []
-        pressure_max = []
-        pressure_mean = []
+        t_min5 = []
+        t_max95 = []
+        t_median = []
+        t_median = []
+        humidity_min5 = []
+        humidity_max95 = []
+        humidity_median = []
+        co2_min5 = []
+        co2_max95 = []
+        co2_median = []
+        noise_min5 = []
+        noise_max95 = []
+        noise_median = []
+        pressure_min5 = []
+        pressure_max95 = []
+        pressure_median = []
         cold_start = False
 
     """append current"""
     if not isnan(row['Temperature']):
-        t_min.append(float(row['Temperature']))
+        t_min5.append(float(row['Temperature']))
     if not isnan(row['Temperature']):
-        t_max.append(float(row['Temperature']))
+        t_max95.append(float(row['Temperature']))
     if not isnan(row['Temperature']):
-        t_mean.append(float(row['Temperature']))
+        t_median.append(float(row['Temperature']))
+    if not isnan(row['Temperature']):
+        t_median.append(float(row['Temperature']))
     if not isnan(row['Humidity']):
-        humidity_min.append(float(row['Humidity']))
+        humidity_min5.append(float(row['Humidity']))
     if not isnan(row['Humidity']):
-        humidity_max.append(float(row['Humidity']))
+        humidity_max95.append(float(row['Humidity']))
     if not isnan(row['Humidity']):
-        humidity_mean.append(float(row['Humidity']))
+        humidity_median.append(float(row['Humidity']))
     if not isnan(row['CO2']):
-        co2_min.append(float(row['CO2']))
+        co2_min5.append(float(row['CO2']))
     if not isnan(row['CO2']):
-        co2_max.append(float(row['CO2']))
+        co2_max95.append(float(row['CO2']))
     if not isnan(row['CO2']):
-        co2_mean.append(float(row['CO2']))
+        co2_median.append(float(row['CO2']))
     if not isnan(row['Noise']):
-        noise_min.append(float(row['Noise']))
+        noise_min5.append(float(row['Noise']))
     if not isnan(row['Noise']):
-        noise_max.append(float(row['Noise']))
+        noise_max95.append(float(row['Noise']))
     if not isnan(row['Noise']):
-        noise_mean.append(float(row['Noise']))
+        noise_median.append(float(row['Noise']))
     if not isnan(row['Pressure']):
-        pressure_min.append(float(row['Pressure']))
+        pressure_min5.append(float(row['Pressure']))
     if not isnan(row['Pressure']):
-        pressure_max.append(float(row['Pressure']))
+        pressure_max95.append(float(row['Pressure']))
     if not isnan(row['Pressure']):
-        pressure_mean.append(float(row['Pressure']))
+        pressure_median.append(float(row['Pressure']))
 
     lastDay = currentDay
 
 """ save daily aggs"""
 date_agg.append(lastDay)
-t_min_agg.append(min(t_min))
-t_max_agg.append(max(t_max))
-t_mean_agg.append(round(mean(t_mean), 1))
-humidity_min_agg.append(min(humidity_min))
-humidity_max_agg.append(max(humidity_max))
-humidity_mean_agg.append(round(mean(humidity_mean), 1))
-co2_min_agg.append(min(co2_min))
-co2_max_agg.append(max(co2_max))
-co2_mean_agg.append(round(mean(co2_mean), 1))
-noise_min_agg.append(min(noise_min))
-noise_max_agg.append(max(noise_max))
-noise_mean_agg.append(round(mean(noise_mean), 1))
-pressure_min_agg.append(min(pressure_min))
-pressure_max_agg.append(max(pressure_max))
-pressure_mean_agg.append(round(mean(pressure_mean), 1))
+t_min5_agg.append(round(np.percentile(t_min5, 5), 1))
+t_max95_agg.append(round(np.percentile(t_max95, 95), 1))
+t_median_agg.append(round(np.percentile(t_median, 50), 1))
+# t_median_agg.append(round(np.percentile(t_median), 1))
+humidity_min5_agg.append(round(np.percentile(humidity_min5, 5), 1))
+humidity_max95_agg.append(round(np.percentile(humidity_max95, 95), 1))
+humidity_median_agg.append(round(np.percentile(humidity_median, 50), 1))
+co2_min5_agg.append(round(np.percentile(co2_min5, 5), 1))
+co2_max95_agg.append(round(np.percentile(co2_max95, 95), 1))
+co2_median_agg.append(round(np.percentile(co2_median, 50), 1))
+noise_min5_agg.append(round(np.percentile(noise_min5, 5), 1))
+noise_max95_agg.append(round(np.percentile(noise_max95, 95), 1))
+noise_median_agg.append(round(np.percentile(noise_median, 50), 1))
+pressure_min5_agg.append(round(np.percentile(pressure_min5, 5), 1))
+pressure_max95_agg.append(round(np.percentile(pressure_max95, 95), 1))
+pressure_median_agg.append(round(np.percentile(pressure_median, 50), 1))
 
 df = pd.DataFrame(list(
-    zip(date_agg, t_min_agg, t_max_agg, t_mean_agg, humidity_min_agg, humidity_max_agg, humidity_mean_agg,
-        co2_min_agg, co2_max_agg, co2_mean_agg, noise_min_agg, noise_max_agg, noise_mean_agg, pressure_min_agg,
-        pressure_max_agg, pressure_mean_agg)),
-    columns=['date_indoor', 't_min_indoor', 't_max_indoor', 't_mean_indoor', 'humidity_min_indoor',
-             'humidity_max_indoor', 'humidity_mean_indoor', 'co2_min_indoor', 'co2_max_indoor', 'co2_mean_indoor',
-             'noise_min_indoor', 'noise_max_indoor', 'noise_mean_indoor', 'pressure_min_indoor', 'pressure_max_indoor',
-             'pressure_mean_indoor'])
+    zip(date_agg, t_min5_agg, t_max95_agg, t_median_agg, t_median_agg, humidity_min5_agg, humidity_max95_agg, humidity_median_agg,
+        co2_min5_agg, co2_max95_agg, co2_median_agg, noise_min5_agg, noise_max95_agg, noise_median_agg, pressure_min5_agg,
+        pressure_max95_agg, pressure_median_agg)),
+    columns=['wInDate', 'wInTMin5', 'wInTMax95', 'wInTMedian', 'wInHumidityMin5',
+             'wInHumidityMax95', 'wInHumidityMedian', 'wInCO2Min5', 'wInCO2Max95', 'wInCO2Median',
+             'wInNoiseMin5', 'wInNoiseMax95', 'wInNoiseMedian', 'wInPressureMin5', 'wInPressureMax95',
+             'wInPressureMedian'])
 
 df.to_csv(outputname)

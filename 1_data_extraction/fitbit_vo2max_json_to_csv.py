@@ -52,7 +52,7 @@ all_files_df['filteredRunVO2Max'] = filteredRunVO2MaxList
 
 # aggregate when multiple per day
 all_files_df['dateTime'] = pd.to_datetime(all_files_df['dateTime'])
-all_files_df = all_files_df.groupby(all_files_df['dateTime'].dt.date).mean()
+all_files_df = all_files_df.groupby(all_files_df['dateTime'].dt.date).median(skipna=True)
 
 # round
 all_files_df.filteredRunVO2Max = round(all_files_df.filteredRunVO2Max, 1)
