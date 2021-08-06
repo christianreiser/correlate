@@ -6,7 +6,7 @@ import pandas as pd
 def data_cleaning_and_imputation(df, target_label):
     """
     interpolate weight and VO2Max
-    add yesterdays mood as feature
+    add yesterdays and ereyesterdays mood as feature
     """
 
     # drop gps location
@@ -14,18 +14,28 @@ def data_cleaning_and_imputation(df, target_label):
     #     ['Low latitude (deg)', 'Low longitude (deg)', 'High latitude (deg)', 'High longitude (deg)'], axis=1)
 
     # interpolate weight and vo2 max linearly
-    df['weight'] = df['weight'].interpolate(method='linear')
-    df['VO2Max'] = df['VO2Max'].interpolate(method='linear')
+    try:
+        df['weight'] = df['weight'].interpolate(method='linear')
+    except:
+        pass
+    try:
+        df['VO2Max'] = df['VO2Max'].interpolate(method='linear')
+    except:
+        pass
 
     # add yesterdays target
     target_yesterday = str(target_label) + '_yesterday'
+    target_ereyesterday = str(target_label) + '_ereyesterday'
     df[target_yesterday] = df[target_label]
+    df[target_ereyesterday] = df[target_label]
     df[target_yesterday] = df[target_yesterday].shift(periods=1)
+    df[target_ereyesterday] = df[target_ereyesterday].shift(periods=2)
 
     # drop days without target entry or yesterdays target entry
     for day, _ in df.iterrows():
         # checks for NaN
-        if df[target_label][day] != df[target_label][day] or df[target_yesterday][day] != df[target_yesterday][day]:
+        if df[target_label][day] != df[target_label][day] or df[target_yesterday][day] != df[target_yesterday][day] or \
+                df[target_ereyesterday][day] != df[target_ereyesterday][day]:
             df = df.drop(day)
 
     return df

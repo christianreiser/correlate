@@ -1,6 +1,8 @@
 from datetime import datetime
-import seaborn
+
+import numpy as np
 import pandas as pd
+import seaborn
 import statsmodels.formula.api as sm
 from matplotlib import pyplot as plt
 from sklearn import linear_model
@@ -9,10 +11,9 @@ from sklearn.model_selection import TimeSeriesSplit
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
-import numpy as np
 
-from data_cleaning_and_imputation import data_cleaning_and_imputation, drop_attributes_with_missing_values, \
-    drop_days_before__then_drop_col, drop_days_with_missing_values
+from data_cleaning_and_imputation import drop_attributes_with_missing_values, drop_days_before__then_drop_col, \
+    drop_days_with_missing_values, data_cleaning_and_imputation
 
 
 def main():
@@ -49,17 +50,23 @@ def main():
     predictions_results = df[target_label].to_frame()
 
     predictions_results = multiple_regression(df_longest, target_label, results, dataset_name='longest',
-                        predictions_results=predictions_results)
+                                              predictions_results=predictions_results)
 
     predictions_results = multiple_regression(df_2019_09_08, target_label, results, dataset_name='after2019_09_08',
-                        predictions_results=predictions_results)
+                                              predictions_results=predictions_results)
 
     predictions_results = multiple_regression(df_widest, target_label, results, dataset_name='widest',
-                        predictions_results=predictions_results)
+                                              predictions_results=predictions_results)
+    # predictions_results = pd.read_csv('/home/chrei/code/quantifiedSelfData/predictions_results.csv', index_col=0)
+
+    predictions_results['ensemble_prediction'] = 0.1 * predictions_results['longest k=5'] + 0.9 * predictions_results[
+        'after2019_09_08 k=5'] + 0.0 * predictions_results['widest k=5']
+
+    predictions_results['ensemble_loss'] = (
+            predictions_results['ensemble_prediction'] - predictions_results['mood'])**2
     predictions_results.to_csv('/home/chrei/code/quantifiedSelfData/predictions_results.csv')  # save to file
 
-    # predictions_results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)]
-
+    ensemble_average_loss = predictions_results['ensemble_loss'].mean()
     # PCA
     # pca_function(df_longest)
     print('done')
@@ -197,17 +204,19 @@ def multiple_regression(df, target_label, results, dataset_name, predictions_res
         regression_coefficient_df = pd.DataFrame(index=X.columns, columns=['reg_coeff'])
         regression_coefficient_df['reg_coeff'] = regression.coef_
         print('intercept:', regression.intercept_, dataset_name)
-        results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)] = regression_coefficient_df
-        results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
+        if i == 5:
+            results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)] = regression_coefficient_df
+            results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
         predictions = regression.predict(X_test)
         predictions = pd.DataFrame(list(zip(y_test.index, predictions)),
                                    columns=['date', str(dataset_name) + ' k=' + str(i)])
         predictions = predictions.set_index('date')
-        predictions_results = predictions_results.join(predictions)
-        l1_loss = abs(y_test - predictions[str(dataset_name) + ' k=' + str(i)])
-        mean_l1_loss_for_one_fold = l1_loss.mean(axis=0)
-        # print('L1 loss ' + str(dataset_name) + 'k=' + str(i), ': ', mean_l1_loss_for_one_fold)
-        cross_validation_loss_list.append(mean_l1_loss_for_one_fold)
+        if i == 5:
+            predictions_results = predictions_results.join(predictions)
+        l2_loss = (y_test - predictions[str(dataset_name) + ' k=' + str(i)])**2
+        mean_l2_loss_for_one_fold = l2_loss.mean(axis=0)
+        # print('L2 loss ' + str(dataset_name) + 'k=' + str(i), ': ', mean_l2_loss_for_one_fold)
+        cross_validation_loss_list.append(mean_l2_loss_for_one_fold)
     cross_validation_loss = np.mean(cross_validation_loss_list)
     print('cross_validation_loss: ', cross_validation_loss)
     return predictions_results
