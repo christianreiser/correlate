@@ -19,8 +19,10 @@ from data_cleaning_and_imputation import drop_attributes_with_missing_values, dr
 def main():
     # label of interest
     target_label = 'mood'
+    target_lower_bound = 1.0
+    target_upper_bound = 9.0
     show_plots = False
-    load_precomputed_coefficients_and_p_val = True
+    load_precomputed_coefficients_and_p_val = False
 
     # load data
     df = pd.read_csv('/home/chrei/code/quantifiedSelfData/daily_summaries.csv', index_col=0)
@@ -41,6 +43,8 @@ def main():
     df_std = df.std()
     print('df_mean:', df_mean, 'std:', df_std)
     df = (df - df_mean) / df_std  # built in normalization not used
+    target_upper_bound_normalized = (target_upper_bound - df_mean[target_label]) / df_std[target_label]
+    target_lower_bound_normalized = (target_lower_bound - df_mean[target_label]) / df_std[target_label]
     # histograms(df, save_path='/home/chrei/PycharmProjects/correlate/plots/distributions_after_normalization/')
 
     # # multiple linear regression on different datasets
@@ -50,20 +54,27 @@ def main():
     predictions_results = df[target_label].to_frame()
 
     predictions_results = multiple_regression(df_longest, target_label, results, dataset_name='longest',
-                                              predictions_results=predictions_results)
+                                              predictions_results=predictions_results,
+                                              target_lower_bound=target_lower_bound_normalized,
+                                              target_upper_bound=target_upper_bound_normalized)
 
     predictions_results = multiple_regression(df_2019_09_08, target_label, results, dataset_name='after2019_09_08',
-                                              predictions_results=predictions_results)
+                                              predictions_results=predictions_results,
+                                              target_lower_bound=target_lower_bound_normalized,
+                                              target_upper_bound=target_upper_bound_normalized)
 
     predictions_results = multiple_regression(df_widest, target_label, results, dataset_name='widest',
-                                              predictions_results=predictions_results)
+                                              predictions_results=predictions_results,
+                                              target_lower_bound=target_lower_bound_normalized,
+                                              target_upper_bound=target_upper_bound_normalized)
     # predictions_results = pd.read_csv('/home/chrei/code/quantifiedSelfData/predictions_results.csv', index_col=0)
 
-    predictions_results['ensemble_prediction'] = 0.1 * predictions_results['longest k=5'] + 0.9 * predictions_results[
-        'after2019_09_08 k=5'] + 0.0 * predictions_results['widest k=5']
+    predictions_results['ensemble_prediction'] = 0.2 * predictions_results['longest k=5'] + 0.7 * predictions_results[
+        'after2019_09_08 k=5'] + 0.1 * predictions_results['widest k=5']
 
     predictions_results['ensemble_loss'] = (
-            predictions_results['ensemble_prediction'] - predictions_results['mood'])**2
+                                                   predictions_results['ensemble_prediction'] - predictions_results[
+                                               'mood']) ** 2
     predictions_results.to_csv('/home/chrei/code/quantifiedSelfData/predictions_results.csv')  # save to file
 
     ensemble_average_loss = predictions_results['ensemble_loss'].mean()
@@ -161,25 +172,8 @@ def autocorrelation(df, target_label):
     plt.savefig('/home/chrei/PycharmProjects/correlate/plots/partial_autocorrelation_025lags_' + str(target_label))
 
 
-def single_linear_regression(df, target_label, results):
-    y = df[target_label]
-    x = df.drop([target_label], axis=1)
-    regression_coefficient_df = pd.DataFrame(index=x.columns, columns=['single_reg_intercept', 'single_reg_slope'])
-
-    for column in x.columns:
-        x_y_df = pd.concat([x[column], df[target_label]], axis=1)
-        x_y_df = x_y_df.dropna()
-        regression = linear_model.LinearRegression(fit_intercept=False, normalize=False)
-        print('column', column)
-        regression.fit(x_y_df[column].to_numpy().reshape(-1, 1), x_y_df[target_label], )
-        regression_coefficient_df['single_reg_intercept'][column] = regression.intercept_
-        regression_coefficient_df['single_reg_slope'][column] = regression.coef_[0]
-
-    results['single_reg_slope'] = regression_coefficient_df['single_reg_slope']
-    results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
-
-
-def multiple_regression(df, target_label, results, dataset_name, predictions_results):
+def multiple_regression(df, target_label, results, dataset_name, predictions_results, target_upper_bound,
+                        target_lower_bound):
     df = drop_days_where_mood_was_tracked_irregularly(df)
     # missing_value_check(df)
 
@@ -192,34 +186,50 @@ def multiple_regression(df, target_label, results, dataset_name, predictions_res
     cross_validation_loss_list = []
     for train_index, test_index in tscv.split(X):
         i += 1
-        # print("TRAIN:", train_index, "\nTEST:", test_index)
-        X_train = X.iloc[train_index]
-        X_test = X.iloc[test_index]
-        y_train = y.iloc[train_index]
-        y_test = y.iloc[test_index]
+        if i == 5:  # CV in time series neglects too much training data, thus use a simple train test split
+            # print("TRAIN:", train_index, "\nTEST:", test_index)
+            X_train = X.iloc[train_index]
+            X_test = X.iloc[test_index]
+            y_train = y.iloc[train_index]
+            y_test = y.iloc[test_index]
 
-        regression = linear_model.Ridge(alpha=1.0, fit_intercept=True, normalize=False)  # already normalized
-        regression.fit(X_train, y_train)
-        # x_labels = X.columns
-        regression_coefficient_df = pd.DataFrame(index=X.columns, columns=['reg_coeff'])
-        regression_coefficient_df['reg_coeff'] = regression.coef_
-        print('intercept:', regression.intercept_, dataset_name)
-        if i == 5:
+            regression = linear_model.Ridge(alpha=1.0, fit_intercept=True, normalize=False)  # already normalized
+            regression.fit(X_train, y_train)
+            # x_labels = X.columns
+            regression_coefficient_df = pd.DataFrame(index=X.columns, columns=['reg_coeff'])
+            regression_coefficient_df['reg_coeff'] = regression.coef_
+            print('intercept:', regression.intercept_, dataset_name)
             results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)] = regression_coefficient_df
             results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')  # save to file
-        predictions = regression.predict(X_test)
-        predictions = pd.DataFrame(list(zip(y_test.index, predictions)),
-                                   columns=['date', str(dataset_name) + ' k=' + str(i)])
-        predictions = predictions.set_index('date')
-        if i == 5:
+            predictions = regression.predict(X_test)
+            predictions = pd.DataFrame(list(zip(y_test.index, predictions)),
+                                       columns=['date', str(dataset_name) + ' k=' + str(i)])
+            predictions = predictions.set_index('date')
+            predictions = out_of_bound_correction(predictions, target_upper_bound, target_lower_bound)
+
             predictions_results = predictions_results.join(predictions)
-        l2_loss = (y_test - predictions[str(dataset_name) + ' k=' + str(i)])**2
-        mean_l2_loss_for_one_fold = l2_loss.mean(axis=0)
-        # print('L2 loss ' + str(dataset_name) + 'k=' + str(i), ': ', mean_l2_loss_for_one_fold)
-        cross_validation_loss_list.append(mean_l2_loss_for_one_fold)
+            l2_loss = (y_test - predictions[str(dataset_name) + ' k=' + str(i)]) ** 2
+            mean_l2_loss_for_one_fold = l2_loss.mean(axis=0)
+            # print('L2 loss ' + str(dataset_name) + 'k=' + str(i), ': ', mean_l2_loss_for_one_fold)
+            cross_validation_loss_list.append(mean_l2_loss_for_one_fold)
     cross_validation_loss = np.mean(cross_validation_loss_list)
     print('cross_validation_loss: ', cross_validation_loss)
     return predictions_results
+
+
+def out_of_bound_correction(predictions, target_upper_bound, target_lower_bound):
+    # correct if prediction is out of bounds
+    for day, i in predictions.iterrows():
+        prediction = predictions[predictions.columns[0]][day]
+        if prediction > target_upper_bound:
+            prediction = target_upper_bound
+            print('out_of_bound_correction: predictions[i]: ', prediction, 'target_upper_bound:',
+                  target_upper_bound)
+        elif prediction < target_lower_bound:
+            prediction = target_lower_bound
+            print('out_of_bound_correction: predictions[i]: ', prediction, 'target_lower_bound:',
+                  target_lower_bound)
+    return predictions
 
 
 def p_values(corr_matrix, df, target_label):
