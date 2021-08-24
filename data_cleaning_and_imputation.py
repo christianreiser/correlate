@@ -3,7 +3,8 @@ from datetime import datetime
 import pandas as pd
 
 
-def data_cleaning_and_imputation(df, target_label):
+def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, add_yesterdays_target_feature,
+                                 add_ereyesterdays_target_feature):
     """
     interpolate weight and VO2Max
     add yesterdays and ereyesterdays mood as feature
@@ -23,23 +24,29 @@ def data_cleaning_and_imputation(df, target_label):
     except:
         pass
 
-    # add yesterdays target
-    # target_yesterday = str(target_label) + '_yesterday'
-    # df[target_yesterday] = df[target_label].shift(periods=1)
+    if add_all_yesterdays_features:
+        for column in df.columns:
+            name_yesterday = str(column) + '_yesterday'
+            df[name_yesterday] = df[column].shift(periods=1)
 
-    for column in df.columns:
-        name_yesterday = str(column) + '_yesterday'
-        df[name_yesterday] = df[column].shift(periods=1)
+    if add_yesterdays_target_feature:
+        # add yesterdays target
+        target_yesterday = str(target_label) + '_yesterday'
+        df[target_yesterday] = df[target_label].shift(periods=1)
 
-    target_ereyesterday = str(target_label) + '_ereyesterday'
-    df[target_ereyesterday] = df[target_label].shift(periods=2)
+    if add_ereyesterdays_target_feature:
+        target_ereyesterday = str(target_label) + '_ereyesterday'
+        df[target_ereyesterday] = df[target_label].shift(periods=2)
 
     # drop days without target entry or yesterdays target entry
     for day, _ in df.iterrows():
         # checks for NaN
         target_yesterday = str(target_label) + '_yesterday'
-        if df[target_label][day] != df[target_label][day] or df[target_yesterday][day] != df[target_yesterday][day] or \
-                df[target_ereyesterday][day] != df[target_ereyesterday][day]:
+        if add_ereyesterdays_target_feature and df[target_ereyesterday][day] != df[target_ereyesterday][day]:
+            df = df.drop(day)
+        elif add_yesterdays_target_feature and df[target_yesterday][day] != df[target_yesterday][day]:
+            df = df.drop(day)
+        elif df[target_label][day] != df[target_label][day]:
             df = df.drop(day)
 
     return df
@@ -68,13 +75,15 @@ def drop_attributes_with_missing_values(df):
     return df
 
 
-def drop_days_with_missing_values(df):
+def drop_days_with_missing_values(df, add_all_yesterdays_features):
     # drop nutrition
     df = df.drop(
         ['sodium', 'fat', 'carbohydrates', 'protein', 'fibre', 'kcal_in'], axis=1)
 
-    df = df.drop(
-        ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fibre_yesterday', 'kcal_in_yesterday'], axis=1)
+    if add_all_yesterdays_features:
+        df = df.drop(
+            ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fibre_yesterday',
+             'kcal_in_yesterday'], axis=1)
 
     for attribute_name in df.columns:
         nan_data_true_false = pd.isnull(df[attribute_name])
