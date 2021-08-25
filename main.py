@@ -5,6 +5,7 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from config import *
 from correlation import corr_coefficients_and_p_values
 from data_cleaning_and_imputation import *
+from fully_connected import fully_connected_nn_prediction
 from helper import histograms, drop_days_where_mood_was_tracked_irregularly, dataset_creation
 from linear_regression import multiple_linear_regression_ensemble
 
@@ -38,6 +39,7 @@ def main():
                                         target_lower_bound_normalized, target_upper_bound_normalized, target_mean,
                                         target_std)
 
+    fully_connected_nn_prediction(df_widest)
     print('done')
 
 

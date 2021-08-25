@@ -12,6 +12,7 @@ add_ereyesterdays_target_feature = True
 add_all_yesterdays_features = True
 out_of_bound_correction_on = False
 autocorrelation_on = False
+multiple_linear_regression_ensemble_on = False
 pca_on = False
 ensemble_weights = [0, 0.4, 0.6]  # [longest, compromise, widest]
 regularization_strength = 0.12
