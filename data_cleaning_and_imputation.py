@@ -34,8 +34,8 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
         target_yesterday = str(target_label) + '_yesterday'
         df[target_yesterday] = df[target_label].shift(periods=1)
 
+    target_ereyesterday = str(target_label) + '_ereyesterday'
     if add_ereyesterdays_target_feature:
-        target_ereyesterday = str(target_label) + '_ereyesterday'
         df[target_ereyesterday] = df[target_label].shift(periods=2)
 
     # drop days without target entry or yesterdays target entry

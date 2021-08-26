@@ -5,33 +5,33 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from config import add_all_yesterdays_features
+from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions
 from data_cleaning_and_imputation import drop_attributes_with_missing_values, drop_days_before__then_drop_col, \
     drop_days_with_missing_values
 
 
 def histograms(df, save_path):
-    # plot distributions
-    for attribute in df.columns:
-        print(attribute)
+    if plot_distributions:
+        for attribute in df.columns:
+            print(attribute)
 
-        sns.set(style="ticks")
+            sns.set(style="ticks")
 
-        x = df[attribute]  # .to_numpy()
+            x = df[attribute]  # .to_numpy()
 
-        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
-                                            gridspec_kw={"height_ratios": (.15, .85)})
+            f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
+                                                gridspec_kw={"height_ratios": (.15, .85)})
 
-        sns.boxplot(x=x, ax=ax_box, showmeans=True)
-        sns.histplot(x=x, bins=50, kde=True)
+            sns.boxplot(x=x, ax=ax_box, showmeans=True)
+            sns.histplot(x=x, bins=50, kde=True)
 
-        ax_box.set(yticks=[])
-        sns.despine(ax=ax_hist)
-        sns.despine()
+            ax_box.set(yticks=[])
+            sns.despine(ax=ax_hist)
+            sns.despine()
 
-        plt.savefig(save_path + str(attribute))
-        plt.close('all')
-        print('')
+            plt.savefig(save_path + str(attribute))
+            plt.close('all')
+            print('')
 
 
 def plot_prediction_w_ci_interval(df, ci, target_mean, target_std):
@@ -79,21 +79,21 @@ def drop_days_where_mood_was_tracked_irregularly(df):
     return df
 
 
-def out_of_bound_correction(predictions, target_upper_bound, target_lower_bound, on):
-    if on:
+def out_of_bound_correction(predictions, target_bounds_normalized):
+    if out_of_bound_correction_on:
         # correct if prediction is out of bounds
         for day, i in predictions.iterrows():
             prediction = predictions[predictions.columns[0]][day]
-            if prediction > target_upper_bound:
+            if prediction > target_bounds_normalized[1]:
                 print('out_of_bound_correction: predictions[i]: ', prediction, 'target_upper_bound:',
-                      target_upper_bound)
-                correction = target_upper_bound
+                      target_bounds_normalized[1])
+                correction = target_bounds_normalized[1]
                 predictions[predictions.columns[0]][day] = correction
 
-            elif prediction < target_lower_bound:
+            elif prediction < target_bounds_normalized[0]:
                 print('out_of_bound_correction: predictions[i]: ', prediction, 'target_lower_bound:',
-                      target_lower_bound)
-                correction = target_lower_bound
+                      target_bounds_normalized[0])
+                correction = target_bounds_normalized[0]
                 predictions[predictions.columns[0]][day] = correction
     return predictions
 
