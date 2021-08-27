@@ -58,7 +58,7 @@ def multiple_linear_regression_ensemble(df, df_longest, df_2019_09_08, df_widest
         prediction_results['CI_low'] = prediction_results['ensemble_prediction'] - ensemble_average_residual
         prediction_results['CI_high'] = prediction_results['ensemble_prediction'] + ensemble_average_residual
         ci = np.percentile(prediction_results['ensemble_residuals'].dropna(), 95)
-        print('prediction 95% confidence interval: ', ci)
+        print('prediction 95% confidence interqval: ', ci)
         plot_prediction_w_ci_interval(prediction_results, ci, target_mean, target_std)
 
         # l2

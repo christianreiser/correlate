@@ -78,11 +78,11 @@ def drop_attributes_with_missing_values(df):
 def drop_days_with_missing_values(df, add_all_yesterdays_features):
     # drop nutrition
     df = df.drop(
-        ['sodium', 'fat', 'carbohydrates', 'protein', 'fibre', 'kcal_in'], axis=1)
+        ['sodium', 'fat', 'carbohydrates', 'protein', 'fiber', 'kcal_in'], axis=1)
 
     if add_all_yesterdays_features:
         df = df.drop(
-            ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fibre_yesterday',
+            ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fiber_yesterday',
              'kcal_in_yesterday'], axis=1)
 
     for attribute_name in df.columns:
@@ -107,7 +107,7 @@ def missing_value_check(df):
 def drop_days_before__then_drop_col(df, last_day_to_drop):
     # drop nutrition
     df = df.drop(
-        ['sodium', 'fat', 'carbohydrates', 'protein', 'fibre', 'kcal_in'], axis=1)
+        ['sodium', 'fat', 'carbohydrates', 'protein', 'fiber', 'kcal_in'], axis=1)
 
     # drop days where too much data is missing manually by picking dates
     date_list = pd.date_range(start=datetime.strptime('2019-02-11', '%Y-%m-%d'), end=last_day_to_drop).tolist()
