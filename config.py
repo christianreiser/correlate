@@ -22,13 +22,13 @@ add_all_yesterdays_features = True
 
 # multiple regression
 multiple_linear_regression_ensemble_on = True
-regularization_strengths = [1, 0.07, 0.12]
+regularization_strengths = [0.07, 0.07, 0.12]
 l1_ratios = [1, 0.9, 1]
 out_of_bound_correction_on = True
 ensemble_weights = [0, 0.4, 0.6]  # [longest, compromise, widest]
 
 # NN
-fully_connected_nn_prediction_on = True
+fully_connected_nn_prediction_on = False
 
 # PCA
 pca_on = True

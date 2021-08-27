@@ -76,14 +76,17 @@ def drop_attributes_with_missing_values(df):
 
 
 def drop_days_with_missing_values(df, add_all_yesterdays_features):
+    nutrition = ['sodium', 'fat', 'carbohydrates', 'protein', 'fiber', 'kcal_in', 'sugar', 'cholesterol']
     # drop nutrition
-    df = df.drop(
-        ['sodium', 'fat', 'carbohydrates', 'protein', 'fiber', 'kcal_in'], axis=1)
+    df = df.drop(nutrition, axis=1)
 
     if add_all_yesterdays_features:
-        df = df.drop(
-            ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fiber_yesterday',
-             'kcal_in_yesterday'], axis=1)
+        nutrition_yesterday = [s + '_yesterday' for s in nutrition]
+
+        # df = df.drop(
+        #     ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fiber_yesterday',
+        #      'kcal_in_yesterday'], axis=1)
+        df = df.drop(nutrition_yesterday, axis=1)
 
     for attribute_name in df.columns:
         nan_data_true_false = pd.isnull(df[attribute_name])

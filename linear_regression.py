@@ -9,8 +9,15 @@ from helper import histograms, plot_prediction_w_ci_interval, drop_days_where_mo
     out_of_bound_correction
 
 
-def multiple_linear_regression_ensemble(df, df_longest, df_2019_09_08, df_widest, results, target_mean, target_std,
-                                        target_bounds_normalized):
+def multiple_linear_regression_ensemble(df,
+                                        df_longest,
+                                        df_2019_09_08,
+                                        df_widest,
+                                        results,
+                                        target_mean,
+                                        target_std,
+                                        target_bounds_normalized,
+                                        ):
     if multiple_linear_regression_ensemble_on:
         # multiple linear regression on different datasets
         prediction_results = df[target_label].to_frame()
