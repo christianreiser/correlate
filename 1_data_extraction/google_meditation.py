@@ -54,7 +54,6 @@ for root, dirs, files in os.walk(path_to_json_files):
 
 
 # aggregate when multiple per day
-test = all_df['startTime']
 all_df['startTime'] = pd.to_datetime(all_df['startTime'])
 all_df = all_df.groupby(all_df['startTime'].dt.date).sum()
 
