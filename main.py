@@ -27,7 +27,7 @@ def main():
     results = corr_coefficients_and_p_values(df, target_label)
 
     # normalization
-    df, target_bounds_normalized, target_mean, target_std = normalization(df)
+    df, target_bounds_normalized, target_mean, target_std, df_mean, df_std = normalization(df)
 
     # dataset_creation
     df_longest, df_2019_09_08, df_widest = dataset_creation(df)
@@ -40,7 +40,8 @@ def main():
                                         results=results,
                                         target_mean=target_mean,
                                         target_std=target_std,
-                                        target_bounds_normalized=target_bounds_normalized)
+                                        target_bounds_normalized=target_bounds_normalized, df_mean=df_mean,
+                                        df_std=df_std)
 
     # NN
     fully_connected_nn_prediction(df_widest)
@@ -57,7 +58,7 @@ def normalization(df):
     print('target_std:', target_std)
     target_bounds_normalized = [(target_scale_bounds[0] - df_mean[target_label]) / df_std[target_label],
                                 (target_scale_bounds[1] - df_mean[target_label]) / df_std[target_label]]
-    return df, target_bounds_normalized, target_mean, target_std
+    return df, target_bounds_normalized, target_mean, target_std, df_mean, df_std
 
 
 def pca_function(df):

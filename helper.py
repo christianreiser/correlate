@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -49,14 +50,40 @@ def plot_prediction_w_ci_interval(df, ci, target_mean, target_std):
                  xerr=np.ones(len(df.loc[:, 'Date'])) * ci * target_std)
     # plt.legend(labels=['legendEntry1', 'legendEntry2'])
 
-    import matplotlib.patches as mpatches
     red_patch = mpatches.Patch(color='#bb3f3f', label='prediction')
-    black_patch = mpatches.Patch(color='#009152', label='ground truth')
-    plt.legend(handles=[red_patch, black_patch], loc="upper left")
+    green_patch = mpatches.Patch(color='#009152', label='ground truth')
+    blue_patch = mpatches.Patch(color='#3045ba', label='95% confidence interval')
+
+    plt.legend(handles=[red_patch, green_patch, blue_patch], loc="upper left")
 
     plt.tight_layout()
     plt.xlim(0.9, 9.1)
     plt.savefig('/home/chrei/PycharmProjects/correlate/plots/predictions', dpi=200)
+    plt.close('all')
+
+
+def prediction_visualization(df, ci, target_mean, target_std):
+    df = df.copy().dropna()
+    df.reset_index(level=0, inplace=True)
+    df['prediction_not_normalized'] = df['ensemble_prediction'].multiply(target_std).add(target_mean)
+    df['mood_not_normalized'] = df['mood'] * target_std + target_mean
+    sns.set_theme(style="darkgrid")
+    sns.set(rc={'figure.figsize': (11.7, 2.5)})
+
+    df = df.head(1)
+    sns.pointplot(x="prediction_not_normalized", y="Date", data=df, join=False, color='r',
+                  label="prediction_not_normalized")
+    plt.errorbar(df['prediction_not_normalized'], df['Date'],
+                 xerr=np.ones(len(df.loc[:, 'Date'])) * ci * target_std)
+    # plt.legend(labels=['legendEntry1', 'legendEntry2'])
+
+    red_patch = mpatches.Patch(color='#bb3f3f', label='prediction')
+    blue_patch = mpatches.Patch(color='#3045ba', label='95% confidence interval')
+    # plt.legend(handles=[red_patch,blue_patch], loc="upper left")
+
+    plt.tight_layout()
+    plt.xlim(0.9, 9.1)
+    plt.savefig('/home/chrei/PycharmProjects/correlate/plots/one_prediction', dpi=200)
     plt.close('all')
 
 
@@ -103,3 +130,16 @@ def dataset_creation(df):
     df_2019_09_08 = drop_days_before__then_drop_col(df, last_day_to_drop='2019-09-08')
     df_widest = drop_days_with_missing_values(df, add_all_yesterdays_features)
     return df_longest, df_2019_09_08, df_widest
+
+
+def write_csv_for_phone_visualization(ci95, ci68, target_mean, prediction, scale_bounds, feature_weights,
+                                      feature_values, df, df_mean, df_std, target_label):
+    ci68=ci68*df_std[target_label]
+    ci95=ci95*df_std[target_label]
+    prediction = prediction*df_std[target_label]+df_mean[target_label]
+    scale_bounds = [df_std[target_label]*x for x in scale_bounds]
+    scale_bounds[0] = scale_bounds[0]+ df_mean[target_label]
+    scale_bounds[1] = scale_bounds[1]+ df_mean[target_label]
+
+    feature_values = np.array(feature_values, dtype=float)*np.array(df_std, dtype=float)+np.array(df_mean, dtype=float)
+    print(target_mean,prediction,ci95,ci68,scale_bounds,feature_weights,feature_values,df, df_mean, df_std)

@@ -6,7 +6,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from config import target_label, ensemble_weights, multiple_linear_regression_ensemble_on, \
     regularization_strengths, l1_ratios
 from helper import histograms, plot_prediction_w_ci_interval, drop_days_where_mood_was_tracked_irregularly, \
-    out_of_bound_correction
+    out_of_bound_correction, prediction_visualization, write_csv_for_phone_visualization
 
 
 def multiple_linear_regression_ensemble(df,
@@ -16,8 +16,7 @@ def multiple_linear_regression_ensemble(df,
                                         results,
                                         target_mean,
                                         target_std,
-                                        target_bounds_normalized,
-                                        ):
+                                        target_bounds_normalized, df_mean, df_std):
     if multiple_linear_regression_ensemble_on:
         # multiple linear regression on different datasets
         prediction_results = df[target_label].to_frame()
@@ -65,8 +64,17 @@ def multiple_linear_regression_ensemble(df,
         prediction_results['CI_low'] = prediction_results['ensemble_prediction'] - ensemble_average_residual
         prediction_results['CI_high'] = prediction_results['ensemble_prediction'] + ensemble_average_residual
         ci = np.percentile(prediction_results['ensemble_residuals'].dropna(), 95)
+        ci68 = np.percentile(prediction_results['ensemble_residuals'].dropna(), 68)
         print('prediction 95% confidence interqval: ', ci)
         plot_prediction_w_ci_interval(prediction_results, ci, target_mean, target_std)
+        prediction_visualization(prediction_results, ci, target_mean, target_std)
+
+        write_csv_for_phone_visualization(ci95=ci, ci68=ci68, target_mean=target_mean,
+                                          prediction=prediction_results['widest k=5'],
+                                          scale_bounds=target_bounds_normalized,
+                                          feature_weights=results['reg_coeff_widestk=5'],
+                                          feature_values=df_widest, df=df, df_mean=df_mean, df_std=df_std,
+                                          target_label=target_label)
 
         # l2
         prediction_results['ensemble_loss'] = prediction_results['ensemble_diff'] ** 2
@@ -85,7 +93,7 @@ def multiple_regression(df, results, dataset_name, prediction_results, regulariz
     y = df[target_label]
     X = df.drop([target_label], axis=1)
 
-    # time series split
+    # time series split for cv
     tscv = TimeSeriesSplit(gap=0, max_train_size=None, n_splits=5, test_size=None)
     i = 0
     cross_validation_loss_list = []
