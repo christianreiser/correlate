@@ -1,12 +1,14 @@
 from datetime import datetime
 from math import isnan
 from tqdm import tqdm
+
+from config import private_folder_path
 from helper import histograms
 
 import numpy as np
 import pandas as pd
 
-outputname = '/home/chrei/code/quantifiedSelfData/netatmo_daily_summaries.csv'
+outputname = str(private_folder_path)+'netatmo_daily_summaries.csv'
 df = pd.read_csv('/home/chrei/PycharmProjects/correlate/0_data_raw/weather/Indoor_7_5_2021.csv')  # , index_col=0
 
 # histograms

@@ -12,7 +12,7 @@ from linear_regression import multiple_linear_regression_ensemble
 
 def main():
     # load data
-    df = pd.read_csv('/home/chrei/code/quantifiedSelfData/daily_summaries_all.csv', index_col=0)
+    df = pd.read_csv(str(private_folder_path)+'daily_summaries_all.csv', index_col=0)
 
     # histograms
     histograms(df, save_path='/home/chrei/PycharmProjects/correlate/plots/distributions/')
@@ -27,7 +27,7 @@ def main():
     results = corr_coefficients_and_p_values(df, target_label)
 
     # normalization
-    df, target_bounds_normalized, target_mean, target_std, df_mean, df_std = normalization(df)
+    df, df_not_normalized, target_scale_bounds_normalized, target_mean, target_std, df_mean, df_std = normalization(df)
 
     # dataset_creation
     df_longest, df_2019_09_08, df_widest = dataset_creation(df)
@@ -36,29 +36,30 @@ def main():
     pca_function(df_2019_09_08)
 
     # multiple regression
-    multiple_linear_regression_ensemble(df=df, df_longest=df_longest, df_2019_09_08=df_2019_09_08, df_widest=df_widest,
+    multiple_linear_regression_ensemble(df=df, df_not_normalized=df_not_normalized, df_longest=df_longest,
+                                        df_2019_09_08=df_2019_09_08, df_widest=df_widest,
                                         results=results,
                                         target_mean=target_mean,
                                         target_std=target_std,
-                                        target_bounds_normalized=target_bounds_normalized, df_mean=df_mean,
+                                        target_scale_bounds_normalized=target_scale_bounds_normalized, df_mean=df_mean,
                                         df_std=df_std)
 
     # NN
     fully_connected_nn_prediction(df_widest)
 
 
-def normalization(df):
+def normalization(df_not_normalized):
     # std normalization preprocessing
-    df_mean = df.mean()
-    df_std = df.std()
+    df_mean = df_not_normalized.mean()
+    df_std = df_not_normalized.std()
     target_mean = df_mean[target_label]
     target_std = df_std[target_label]
-    df = (df - df_mean) / df_std  # built in normalization not used
+    df_normalized = (df_not_normalized - df_mean) / df_std  # built in normalization not used
     print('target_mean:', target_mean)
     print('target_std:', target_std)
-    target_bounds_normalized = [(target_scale_bounds[0] - df_mean[target_label]) / df_std[target_label],
-                                (target_scale_bounds[1] - df_mean[target_label]) / df_std[target_label]]
-    return df, target_bounds_normalized, target_mean, target_std, df_mean, df_std
+    target_scale_bounds_normalized = [(target_scale_bounds[0] - df_mean[target_label]) / df_std[target_label],
+                                      (target_scale_bounds[1] - df_mean[target_label]) / df_std[target_label]]
+    return df_normalized, df_not_normalized, target_scale_bounds_normalized, target_mean, target_std, df_mean, df_std
 
 
 def pca_function(df):

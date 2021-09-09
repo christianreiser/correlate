@@ -1,6 +1,9 @@
 """
 config parameters
 """
+# paths
+private_folder_path = '/home/chrei/code/quantifiedSelfData/'
+
 # target
 target_label = 'mood'  # label of interest
 target_scale_bounds = [1.0, 9.0]

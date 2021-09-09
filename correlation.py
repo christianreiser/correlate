@@ -6,13 +6,13 @@ from matplotlib import pyplot as plt
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
 
-from config import show_plots, load_precomputed_coefficients_and_p_val
+from config import show_plots, load_precomputed_coefficients_and_p_val, private_folder_path
 
 
 def corr_coefficients_and_p_values(df, target_label):
     # load precomputed values
     if load_precomputed_coefficients_and_p_val:
-        results = pd.read_csv('/home/chrei/code/quantifiedSelfData/results.csv', index_col=0)
+        results = pd.read_csv(str(private_folder_path)+'results.csv', index_col=0)
 
     # compute correlations and p values
     else:
@@ -45,7 +45,7 @@ def corr_coefficients_and_p_values(df, target_label):
         results['pvals_corrected'] = pvals_corrected
         results['reject_0_hypothesis'] = reject_0_hypothesis
 
-        results.to_csv('/home/chrei/code/quantifiedSelfData/results.csv')
+        results.to_csv(str(private_folder_path)+'results.csv')
 
     # visualize
     visualize_corr_and_p_values(results)

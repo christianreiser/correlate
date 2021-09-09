@@ -3,7 +3,9 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-output_name = '/home/chrei/code/quantifiedSelfData/mfp_daily_summaries.csv'
+from config import private_folder_path
+
+output_name = str(private_folder_path)+'mfp_daily_summaries.csv'
 df = pd.read_csv('/home/chrei/PycharmProjects/correlate/0_data_raw/MFP/meals.csv')  # , index_col=0
 currentDay = datetime.strptime(df.columns[0], '%B %d, %Y')
 first_date = currentDay

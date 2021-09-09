@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions
+from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions, private_folder_path
 from data_cleaning_and_imputation import drop_attributes_with_missing_values, drop_days_before__then_drop_col, \
     drop_days_with_missing_values
 
@@ -132,14 +132,30 @@ def dataset_creation(df):
     return df_longest, df_2019_09_08, df_widest
 
 
-def write_csv_for_phone_visualization(ci95, ci68, target_mean, prediction, scale_bounds, feature_weights,
-                                      feature_values, df, df_mean, df_std, target_label):
-    ci68=ci68*df_std[target_label]
-    ci95=ci95*df_std[target_label]
-    prediction = prediction*df_std[target_label]+df_mean[target_label]
-    scale_bounds = [df_std[target_label]*x for x in scale_bounds]
-    scale_bounds[0] = scale_bounds[0]+ df_mean[target_label]
-    scale_bounds[1] = scale_bounds[1]+ df_mean[target_label]
+def write_csv_for_phone_visualization(ci95,
+                                      ci68,
+                                      target_mean,
+                                      target_std_dev,
+                                      prediction,
+                                      scale_bounds,
+                                      feature_weights,
+                                      feature_values_not_normalized):
+    last_prediction_date = prediction.dropna().index.array[prediction.dropna().index.array.size - 1]
 
-    feature_values = np.array(feature_values, dtype=float)*np.array(df_std, dtype=float)+np.array(df_mean, dtype=float)
-    print(target_mean,prediction,ci95,ci68,scale_bounds,feature_weights,feature_values,df, df_mean, df_std)
+    prediction_dict = {
+        "prediction": round(prediction[last_prediction_date] * target_std_dev + target_mean, 1),
+        "ci68": round(ci68 * target_std_dev, 1),
+        "ci95": round(ci95 * target_std_dev, 1),
+        "scale_bounds": list(np.around(np.array(scale_bounds), 1)),
+    }
+    import json
+    with open(str(private_folder_path) + 'phone_io/prediction.json', 'w') as f:
+        json.dump(prediction_dict, f)
+
+    with open(str(private_folder_path) + 'phone_io/feature_values.json', 'w') as f:
+        json.dump(feature_values_not_normalized.loc[last_prediction_date].to_dict(), f)
+
+    with open(str(private_folder_path) + 'phone_io/feature_weights.json', 'w') as f:
+        json.dump(feature_weights.to_dict(), f)
+
+    print(target_mean, prediction, ci95, ci68, scale_bounds, feature_weights)
