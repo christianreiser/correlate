@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import matplotlib.patches as mpatches
@@ -138,24 +139,67 @@ def write_csv_for_phone_visualization(ci95,
                                       target_std_dev,
                                       prediction,
                                       scale_bounds,
-                                      feature_weights,
+                                      feature_weights_normalized,
+                                      feature_values_normalized,
                                       feature_values_not_normalized):
     last_prediction_date = prediction.dropna().index.array[prediction.dropna().index.array.size - 1]
+    prediction = prediction[last_prediction_date]
 
+    # feature weights
+
+    # drop zeros
+    feature_weights_normalized = feature_weights_normalized[feature_weights_normalized != 0]
+    feature_weights_not_normalized = feature_weights_normalized*target_std_dev
+
+
+    # feature values
+    feature_values_not_normalized = feature_values_not_normalized.loc[last_prediction_date]
+    feature_values_normalized = feature_values_normalized.loc[last_prediction_date]
+    features_df = pd.DataFrame(index=feature_values_normalized.index,
+                               columns=['weights', 'values_normalized', 'values_not_normalized', 'contribution',
+                                        'contribution_abs'])
+    features_df['weights'] = feature_weights_not_normalized
+    features_df['values_not_normalized'] = feature_values_not_normalized
+    features_df['values_normalized'] = feature_values_normalized
+
+    features_df['contribution'] = features_df['weights'].multiply(features_df['values_normalized'])
+    features_df = features_df.dropna(subset=['weights'])
+
+    features_df['contribution_abs'] = abs(features_df['contribution'])
+    features_df = features_df.sort_values(by='contribution_abs', ascending=False)
+
+    # check prediction reverse engineering works
+    fake_prediction = target_mean + (features_df['contribution'].sum())*(1.1)
+
+    # prediction values
     prediction_dict = {
-        "prediction": round(prediction[last_prediction_date] * target_std_dev + target_mean, 1),
-        "ci68": round(ci68 * target_std_dev, 1),
-        "ci95": round(ci95 * target_std_dev, 1),
-        "scale_bounds": list(np.around(np.array(scale_bounds), 1)),
+        "prediction": round(fake_prediction, 2),  #round(prediction * target_std_dev + target_mean, 2), #
+        "ci68": round(ci68 * target_std_dev, 2),
+        "ci95": round(ci95 * target_std_dev, 2),
+        "scale_bounds": list(np.around(np.array(scale_bounds), 2)),
+        "target_mean": round(target_mean, 2),
     }
-    import json
     with open(str(private_folder_path) + 'phone_io/prediction.json', 'w') as f:
         json.dump(prediction_dict, f)
 
-    with open(str(private_folder_path) + 'phone_io/feature_values.json', 'w') as f:
-        json.dump(feature_values_not_normalized.loc[last_prediction_date].to_dict(), f)
+    feature_data_df = pd.DataFrame(index=features_df.index,
+                                   columns=['start_contribution', 'end_contribution', 'positive_effect'])
+    previous_end = target_mean
+    for i, row in features_df.iterrows():
+        feature_data_df.loc[i, 'start_contribution'] = previous_end
+        feature_data_df.loc[i, 'end_contribution'] = previous_end + features_df.loc[i, 'contribution']
+        if (previous_end <= previous_end + features_df.loc[i, 'contribution']):
+            feature_data_df.loc[i, 'positive_effect'] = True
+        else:
+            feature_data_df.loc[i, 'positive_effect'] = False
+            tmp = feature_data_df.loc[i, 'start_contribution']
+            feature_data_df.loc[i, 'start_contribution'] = feature_data_df.loc[i, 'end_contribution']
+            feature_data_df.loc[i, 'end_contribution'] = tmp
+        previous_end = previous_end + features_df.loc[i, 'contribution']
+        feature_data_df.loc[i, 'start_contribution'] = round(feature_data_df.loc[i, 'start_contribution'], 2)
+        feature_data_df.loc[i, 'end_contribution'] = round(feature_data_df.loc[i, 'end_contribution'], 2)
+    print('explained mean: ', previous_end)
 
-    with open(str(private_folder_path) + 'phone_io/feature_weights.json', 'w') as f:
-        json.dump(feature_weights.to_dict(), f)
+    feature_data_df.to_csv(str(private_folder_path) + 'phone_io/feature_data.csv', line_terminator='\r\n')
 
-    print(target_mean, prediction, ci95, ci68, scale_bounds, feature_weights)
+    print(target_mean, prediction, ci95, ci68, scale_bounds, feature_weights_not_normalized)

@@ -73,8 +73,10 @@ def multiple_linear_regression_ensemble(df,
         write_csv_for_phone_visualization(ci95=ci, ci68=ci68, target_mean=target_mean,
                                           prediction=prediction_results['widest k=5'],
                                           scale_bounds=target_scale_bounds,
-                                          feature_weights=results['reg_coeff_widestk=5'],
-                                          feature_values_not_normalized=df_not_normalized, target_std_dev=target_std)
+                                          feature_weights_normalized=results['reg_coeff_widestk=5'],
+                                          feature_values_not_normalized=df_not_normalized,
+                                          feature_values_normalized=df,
+                                          target_std_dev=target_std)
 
         # l2
         prediction_results['ensemble_loss'] = prediction_results['ensemble_diff'] ** 2
