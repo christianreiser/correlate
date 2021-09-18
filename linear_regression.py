@@ -6,7 +6,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from config import target_label, ensemble_weights, multiple_linear_regression_ensemble_on, \
     regularization_strengths, l1_ratios, target_scale_bounds, private_folder_path
 from helper import histograms, plot_prediction_w_ci_interval, drop_days_where_mood_was_tracked_irregularly, \
-    out_of_bound_correction, prediction_visualization, write_csv_for_phone_visualization
+    out_of_bound_correction, write_csv_for_phone_visualization
 
 
 def multiple_linear_regression_ensemble(df,
@@ -68,7 +68,6 @@ def multiple_linear_regression_ensemble(df,
         ci68 = np.percentile(prediction_results['ensemble_residuals'].dropna(), 68)
         print('prediction 95% confidence interval: ', ci)
         plot_prediction_w_ci_interval(prediction_results, ci, target_mean, target_std)
-        prediction_visualization(prediction_results, ci, target_mean, target_std)
 
         write_csv_for_phone_visualization(ci95=ci, ci68=ci68, target_mean=target_mean,
                                           prediction=prediction_results['widest k=5'],

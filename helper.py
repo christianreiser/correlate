@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions, private_folder_path
+from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions
 from data_cleaning_and_imputation import drop_attributes_with_missing_values, drop_days_before__then_drop_col, \
     drop_days_with_missing_values
 
@@ -60,31 +60,6 @@ def plot_prediction_w_ci_interval(df, ci, target_mean, target_std):
     plt.tight_layout()
     plt.xlim(0.9, 9.1)
     plt.savefig('/home/chrei/PycharmProjects/correlate/plots/predictions', dpi=200)
-    plt.close('all')
-
-
-def prediction_visualization(df, ci, target_mean, target_std):
-    df = df.copy().dropna()
-    df.reset_index(level=0, inplace=True)
-    df['prediction_not_normalized'] = df['ensemble_prediction'].multiply(target_std).add(target_mean)
-    df['mood_not_normalized'] = df['mood'] * target_std + target_mean
-    sns.set_theme(style="darkgrid")
-    sns.set(rc={'figure.figsize': (11.7, 2.5)})
-
-    df = df.head(1)
-    sns.pointplot(x="prediction_not_normalized", y="Date", data=df, join=False, color='r',
-                  label="prediction_not_normalized")
-    plt.errorbar(df['prediction_not_normalized'], df['Date'],
-                 xerr=np.ones(len(df.loc[:, 'Date'])) * ci * target_std)
-    # plt.legend(labels=['legendEntry1', 'legendEntry2'])
-
-    red_patch = mpatches.Patch(color='#bb3f3f', label='prediction')
-    blue_patch = mpatches.Patch(color='#3045ba', label='95% confidence interval')
-    # plt.legend(handles=[red_patch,blue_patch], loc="upper left")
-
-    plt.tight_layout()
-    plt.xlim(0.9, 9.1)
-    plt.savefig('/home/chrei/PycharmProjects/correlate/plots/one_prediction', dpi=200)
     plt.close('all')
 
 
@@ -145,61 +120,119 @@ def write_csv_for_phone_visualization(ci95,
     last_prediction_date = prediction.dropna().index.array[prediction.dropna().index.array.size - 1]
     prediction = prediction[last_prediction_date]
 
-    # feature weights
+    # somehow weights_not_notmalized * value_normalized != predction by library
+    fake_factor = 1.1  # todo: proper fix 
 
     # drop zeros
     feature_weights_normalized = feature_weights_normalized[feature_weights_normalized != 0]
-    feature_weights_not_normalized = feature_weights_normalized*target_std_dev
-
+    feature_weights_not_normalized = feature_weights_normalized * target_std_dev * fake_factor
 
     # feature values
     feature_values_not_normalized = feature_values_not_normalized.loc[last_prediction_date]
     feature_values_normalized = feature_values_normalized.loc[last_prediction_date]
-    features_df = pd.DataFrame(index=feature_values_normalized.index,
-                               columns=['weights', 'values_normalized', 'values_not_normalized', 'contribution',
-                                        'contribution_abs'])
+
+    # get_features_df
+    features_df = get_features_df(feature_values_normalized,
+                                  feature_weights_not_normalized,
+                                  feature_values_not_normalized,
+                                  target_mean,
+                                  scale_bounds)
+
+    # write_wvc_chart_file
+    write_wvc_chart_file(features_df)
+
+    # write_gantt_chart_file
+    previous_end = write_gantt_chart_file(features_df, scale_bounds)
+
+    # write_prediction_file
+    write_prediction_file(previous_end, ci68, ci95, target_std_dev, scale_bounds, target_mean)
+
+    print(target_mean, prediction, ci95, ci68, scale_bounds, feature_weights_not_normalized)
+
+
+def get_features_df(feature_values_normalized, feature_weights_not_normalized, feature_values_not_normalized,
+                    target_mean, scale_bounds):
+    features_df = pd.DataFrame(
+        index=np.concatenate([feature_values_normalized.index.to_numpy(), np.array(['average_mood'])]),
+        columns=['weights', 'values_normalized', 'values_not_normalized', 'contribution',
+                 'contribution_abs'])
     features_df['weights'] = feature_weights_not_normalized
     features_df['values_not_normalized'] = feature_values_not_normalized
     features_df['values_normalized'] = feature_values_normalized
 
     features_df['contribution'] = features_df['weights'].multiply(features_df['values_normalized'])
-    features_df = features_df.dropna(subset=['weights'])
+    features_df.loc['average_mood', 'contribution'] = target_mean - np.mean(scale_bounds)
+
+    features_df = features_df.dropna(subset=['contribution'])
 
     features_df['contribution_abs'] = abs(features_df['contribution'])
     features_df = features_df.sort_values(by='contribution_abs', ascending=False)
+    return features_df
 
-    # check prediction reverse engineering works
-    fake_prediction = target_mean + (features_df['contribution'].sum())*(1.1)
 
-    # prediction values
-    prediction_dict = {
-        "prediction": round(fake_prediction, 2),  #round(prediction * target_std_dev + target_mean, 2), #
-        "ci68": round(ci68 * target_std_dev, 2),
-        "ci95": round(ci95 * target_std_dev, 2),
-        "scale_bounds": list(np.around(np.array(scale_bounds), 2)),
-        "target_mean": round(target_mean, 2),
-    }
-    with open(str(private_folder_path) + 'phone_io/prediction.json', 'w') as f:
-        json.dump(prediction_dict, f)
-
-    feature_data_df = pd.DataFrame(index=features_df.index,
-                                   columns=['start_contribution', 'end_contribution', 'positive_effect'])
-    previous_end = target_mean
+def write_gantt_chart_file(features_df, scale_bounds):
+    gantt_chart_df = pd.DataFrame(index=features_df.index,
+                                  columns=['start_contribution', 'end_contribution', 'positive_effect'])
+    previous_end = np.mean(scale_bounds)
     for i, row in features_df.iterrows():
-        feature_data_df.loc[i, 'start_contribution'] = previous_end
-        feature_data_df.loc[i, 'end_contribution'] = previous_end + features_df.loc[i, 'contribution']
-        if (previous_end <= previous_end + features_df.loc[i, 'contribution']):
-            feature_data_df.loc[i, 'positive_effect'] = True
+        gantt_chart_df.loc[i, 'start_contribution'] = previous_end
+        gantt_chart_df.loc[i, 'end_contribution'] = previous_end + features_df.loc[i, 'contribution']
+        if previous_end <= previous_end + features_df.loc[i, 'contribution']:
+            gantt_chart_df.loc[i, 'positive_effect'] = True
         else:
-            feature_data_df.loc[i, 'positive_effect'] = False
-            tmp = feature_data_df.loc[i, 'start_contribution']
-            feature_data_df.loc[i, 'start_contribution'] = feature_data_df.loc[i, 'end_contribution']
-            feature_data_df.loc[i, 'end_contribution'] = tmp
+            gantt_chart_df.loc[i, 'positive_effect'] = False
+            tmp = gantt_chart_df.loc[i, 'start_contribution']
+            gantt_chart_df.loc[i, 'start_contribution'] = gantt_chart_df.loc[i, 'end_contribution']
+            gantt_chart_df.loc[i, 'end_contribution'] = tmp
         previous_end = previous_end + features_df.loc[i, 'contribution']
-        feature_data_df.loc[i, 'start_contribution'] = round(feature_data_df.loc[i, 'start_contribution'], 2)
-        feature_data_df.loc[i, 'end_contribution'] = round(feature_data_df.loc[i, 'end_contribution'], 2)
+        gantt_chart_df.loc[i, 'start_contribution'] = round(gantt_chart_df.loc[i, 'start_contribution'], 3)
+        gantt_chart_df.loc[i, 'end_contribution'] = round(gantt_chart_df.loc[i, 'end_contribution'], 3)
     print('explained mean: ', previous_end)
+    gantt_chart_df.to_csv('/home/chrei/code/insight_me/assets/tmp_phone_io/gantt_chart.csv', line_terminator='\r\n')
+    return previous_end
 
-    feature_data_df.to_csv(str(private_folder_path) + 'phone_io/feature_data.csv', line_terminator='\r\n')
 
-    print(target_mean, prediction, ci95, ci68, scale_bounds, feature_weights_not_normalized)
+def write_wvc_chart_file(features_df):
+    """
+    WVC: weight_value_contribution
+    """
+    features_df = features_df.drop(['average_mood'], axis=0)
+    WVC_chart_df = pd.DataFrame(index=features_df.index,
+                                columns=['contribution', 'weight', 'value_today_not_normalized',
+                                         'value_today_normalized', 'extrema'])
+    WVC_chart_df['contribution'] = features_df['contribution']
+    WVC_chart_df['weight'] = features_df['weights']
+    WVC_chart_df['value_today_not_normalized'] = features_df['values_not_normalized']
+    WVC_chart_df['value_today_normalized'] = features_df['values_normalized']
+
+    for i, row in features_df.iterrows():
+        # WVC_chart_df.loc[i, 'contribution'] = previous_end
+        # WVC_chart_df.loc[i, 'contribution'] = previous_end + features_df.loc[i, 'contribution']
+        # if previous_end <= previous_end + features_df.loc[i, 'contribution']:
+        #     WVC_chart_df.loc[i, 'positive_effect'] = True
+        # else:
+        #     WVC_chart_df.loc[i, 'positive_effect'] = False
+        #     tmp = WVC_chart_df.loc[i, 'contribution']
+        #     WVC_chart_df.loc[i, 'contribution'] = WVC_chart_df.loc[i, 'contribution']
+        #     WVC_chart_df.loc[i, 'contribution'] = tmp
+        # previous_end = previous_end + features_df.loc[i, 'contribution']
+        WVC_chart_df.loc[i, 'contribution'] = round(WVC_chart_df.loc[i, 'contribution'], 3)
+        WVC_chart_df.loc[i, 'weight'] = round(WVC_chart_df.loc[i, 'weight'], 3)
+        WVC_chart_df.loc[i, 'value_today_not_normalized'] = round(WVC_chart_df.loc[i, 'value_today_not_normalized'], 3)
+    WVC_chart_df.loc[i, 'value_today_normalized'] = round(WVC_chart_df.loc[i, 'value_today_normalized'], 3)
+    normalized_df = WVC_chart_df.drop(['value_today_not_normalized'], axis=1)
+    WVC_chart_df.loc[WVC_chart_df.index.to_numpy()[0], 'extrema'] = normalized_df.max().max()
+    WVC_chart_df.loc[WVC_chart_df.index.to_numpy()[1], 'extrema'] = normalized_df.min().min()
+    WVC_chart_df.to_csv('/home/chrei/code/insight_me/assets/tmp_phone_io/wvc_chart.csv', line_terminator='\r\n')
+
+
+def write_prediction_file(previous_end, ci68, ci95, target_std_dev, scale_bounds, target_mean):
+    prediction_dict = {
+        "prediction": round(previous_end, 3),
+        "ci68": round(ci68 * target_std_dev, 3),
+        "ci95": round(ci95 * target_std_dev, 3),
+        "scale_bounds": list(np.around(np.array(scale_bounds), 2)),
+        "target_mean": round(target_mean, 3),
+    }
+    with open('/home/chrei/code/insight_me/assets/tmp_phone_io/prediction.json', 'w') as f:
+        json.dump(prediction_dict, f)
