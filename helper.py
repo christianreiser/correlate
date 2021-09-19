@@ -220,9 +220,20 @@ def write_wvc_chart_file(features_df):
         WVC_chart_df.loc[i, 'weight'] = round(WVC_chart_df.loc[i, 'weight'], 3)
         WVC_chart_df.loc[i, 'value_today_not_normalized'] = round(WVC_chart_df.loc[i, 'value_today_not_normalized'], 3)
     WVC_chart_df.loc[i, 'value_today_normalized'] = round(WVC_chart_df.loc[i, 'value_today_normalized'], 3)
+
+
+    # normalize columns
+    for column in WVC_chart_df:
+    #     WVC_chart_df[column] = (WVC_chart_df[column] - WVC_chart_df[column].min()) / (
+    #                 WVC_chart_df[column].max() - WVC_chart_df[column].min())
+        WVC_chart_df[column] = (WVC_chart_df[column] - WVC_chart_df[column].mean()) / (
+                    WVC_chart_df[column].std())
+
+    # get min max ofr scale bounds
     normalized_df = WVC_chart_df.drop(['value_today_not_normalized'], axis=1)
     WVC_chart_df.loc[WVC_chart_df.index.to_numpy()[0], 'extrema'] = normalized_df.max().max()
     WVC_chart_df.loc[WVC_chart_df.index.to_numpy()[1], 'extrema'] = normalized_df.min().min()
+
     WVC_chart_df.to_csv('/home/chrei/code/insight_me/assets/tmp_phone_io/wvc_chart.csv', line_terminator='\r\n')
 
 
