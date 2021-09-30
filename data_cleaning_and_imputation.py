@@ -16,7 +16,7 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
 
     # interpolate weight and vo2 max linearly
     try:
-        df['weight'] = df['weight'].interpolate(method='linear')
+        df['Weight'] = df['Weight'].interpolate(method='linear')
     except:
         pass
     try:
@@ -26,22 +26,22 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
 
     if add_all_yesterdays_features:
         for column in df.columns:
-            name_yesterday = str(column) + '_yesterday'
+            name_yesterday = str(column) + 'Yesterday'
             df[name_yesterday] = df[column].shift(periods=1)
 
     if add_yesterdays_target_feature:
         # add yesterdays target
-        target_yesterday = str(target_label) + '_yesterday'
+        target_yesterday = str(target_label) + 'Yesterday'
         df[target_yesterday] = df[target_label].shift(periods=1)
 
-    target_ereyesterday = str(target_label) + '_ereyesterday'
+    target_ereyesterday = str(target_label) + 'Ereyesterday'
     if add_ereyesterdays_target_feature:
         df[target_ereyesterday] = df[target_label].shift(periods=2)
 
     # drop days without target entry or yesterdays target entry
     for day, _ in df.iterrows():
         # checks for NaN
-        target_yesterday = str(target_label) + '_yesterday'
+        target_yesterday = str(target_label) + 'Yesterday'
         if add_ereyesterdays_target_feature and df[target_ereyesterday][day] != df[target_ereyesterday][day]:
             df = df.drop(day)
         elif add_yesterdays_target_feature and df[target_yesterday][day] != df[target_yesterday][day]:
@@ -76,16 +76,16 @@ def drop_attributes_with_missing_values(df):
 
 
 def drop_days_with_missing_values(df, add_all_yesterdays_features):
-    nutrition = ['sodium', 'fat', 'carbohydrates', 'protein', 'fiber', 'kcal_in', 'sugar', 'cholesterol']
+    nutrition = ['Sodium', 'Fat', 'Carbs', 'Protein', 'Fiber', 'KCalIn', 'Sugar', 'Cholesterol']
     # drop nutrition
     df = df.drop(nutrition, axis=1)
 
     if add_all_yesterdays_features:
-        nutrition_yesterday = [s + '_yesterday' for s in nutrition]
+        nutrition_yesterday = [s + 'Yesterday' for s in nutrition]
 
         # df = df.drop(
-        #     ['sodium_yesterday', 'fat_yesterday', 'carbohydrates_yesterday', 'protein_yesterday', 'fiber_yesterday',
-        #      'kcal_in_yesterday'], axis=1)
+        #     ['sodiumYesterday', 'fatYesterday', 'carbohydratesYesterday', 'proteinYesterday', 'fiberYesterday',
+        #      'kcal_inYesterday'], axis=1)
         df = df.drop(nutrition_yesterday, axis=1)
 
     for attribute_name in df.columns:
@@ -110,7 +110,7 @@ def missing_value_check(df):
 def drop_days_before__then_drop_col(df, last_day_to_drop):
     # drop nutrition
     df = df.drop(
-        ['sodium', 'fat', 'carbohydrates', 'protein', 'fiber', 'kcal_in'], axis=1)
+        ['Sodium', 'Fat', 'Carbs', 'Protein', 'Fiber', 'KCalIn', 'Sugar', 'Cholesterol'], axis=1)
 
     # drop days where too much data is missing manually by picking dates
     date_list = pd.date_range(start=datetime.strptime('2019-02-11', '%Y-%m-%d'), end=last_day_to_drop).tolist()

@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions
+from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions, target_label
 from data_cleaning_and_imputation import drop_attributes_with_missing_values, drop_days_before__then_drop_col, \
     drop_days_with_missing_values
 
@@ -40,7 +40,7 @@ def plot_prediction_w_ci_interval(df, ci, target_mean, target_std):
     df = df.copy().dropna()
     df.reset_index(level=0, inplace=True)
     df['prediction_not_normalized'] = df['ensemble_prediction'].multiply(target_std).add(target_mean)
-    df['mood_not_normalized'] = df['mood'] * target_std + target_mean
+    df['mood_not_normalized'] = df[target_label] * target_std + target_mean
     sns.set_theme(style="darkgrid")
     sns.set(rc={'figure.figsize': (11.7, 8.27)})
 
@@ -223,11 +223,11 @@ def write_wvc_chart_file(features_df):
 
 
     # normalize columns
-    for column in WVC_chart_df:
+    # for column in WVC_chart_df:
     #     WVC_chart_df[column] = (WVC_chart_df[column] - WVC_chart_df[column].min()) / (
     #                 WVC_chart_df[column].max() - WVC_chart_df[column].min())
-        WVC_chart_df[column] = (WVC_chart_df[column] - WVC_chart_df[column].mean()) / (
-                    WVC_chart_df[column].std())
+    #     WVC_chart_df[column] = (WVC_chart_df[column] ) / (
+    #                 WVC_chart_df[column].std())
 
     # get min max ofr scale bounds
     normalized_df = WVC_chart_df.drop(['value_today_not_normalized'], axis=1)

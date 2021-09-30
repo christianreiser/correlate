@@ -1,3 +1,5 @@
+from multiprocessing.pool import ThreadPool as Pool
+
 import numpy as np
 import pandas as pd
 import seaborn
@@ -5,6 +7,7 @@ import statsmodels.formula.api as sm
 from matplotlib import pyplot as plt
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
+
 
 from config import show_plots, load_precomputed_coefficients_and_p_val, private_folder_path
 
@@ -60,16 +63,34 @@ def corr_coefficients_and_p_values(df, target_label):
     return results
 
 
+def worker1(i,df,p_val_matrix):
+    for j in range(df.shape[1]):
+        y = df.columns[i]
+        x = df.columns[j]
+        df_ols = sm.ols(formula='Q("{}") ~ Q("{}")'.format(y, x), data=df).fit()
+        p_val_matrix.iloc[i, j] = df_ols.pvalues[1]
+
+
 def p_values(corr_matrix, df, target_label):
     # p-values
     p_val_matrix = corr_matrix.copy()
     print('computing p values. TODO: Is there a faster way?')
-    for i in tqdm(range(df.shape[1])):  # rows are the number of rows in the matrix.
-        for j in range(df.shape[1]):
-            y = df.columns[i]
-            x = df.columns[j]
-            df_ols = sm.ols(formula='Q("{}") ~ Q("{}")'.format(y, x), data=df).fit()
-            p_val_matrix.iloc[i, j] = df_ols.pvalues[1]
+
+
+
+
+    pool_size = 12  # your "parallelness"
+    pool = Pool(pool_size)
+    i=-1
+    for column in tqdm(df.columns):  # rows are the number of rows in the matrix.
+        i+=1
+        pool.apply_async(worker1(i,df,p_val_matrix), (column,))
+
+    pool.close()
+    pool.join()
+
+
+
     target_p_values = p_val_matrix[target_label]  # get target label from matrix
     target_p_values = target_p_values.drop([target_label])  # drop self correlation
     return target_p_values

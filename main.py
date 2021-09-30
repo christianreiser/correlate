@@ -95,7 +95,7 @@ def autocorrelation(df):
         target_df = drop_days_where_mood_was_tracked_irregularly(target_df)
 
         # Autocorrelation 654 lags
-        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval', lags=654,
+        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval', lags=652,
                  alpha=.05)
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_650lags_' + str(target_label))
@@ -113,7 +113,7 @@ def autocorrelation(df):
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_050lags_' + str(target_label))
 
         # partial Autocorrelation 326 lags
-        plot_pacf(target_df, lags=326, alpha=.05,
+        plot_pacf(target_df, lags=325, alpha=.05,
                   title=str(target_label) + ' partial autocorrelation with 95% confidence interval')
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/partial_autocorrelation_326lags_' + str(

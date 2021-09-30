@@ -51,7 +51,7 @@ def multiple_linear_regression_ensemble(df,
                                                     ] + ensemble_weights[2] * prediction_results['widest k=5']
 
         # diff
-        prediction_results['ensemble_diff'] = prediction_results['mood'] - prediction_results[
+        prediction_results['ensemble_diff'] = prediction_results[target_label] - prediction_results[
             'ensemble_prediction']
         histograms(prediction_results['ensemble_diff'].to_frame(),
                    save_path='/home/chrei/PycharmProjects/correlate/plots/prediction_diff/')
