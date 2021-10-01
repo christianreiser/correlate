@@ -6,7 +6,8 @@ from sklearn.model_selection import TimeSeriesSplit
 from config import target_label, ensemble_weights, multiple_linear_regression_ensemble_on, \
     regularization_strengths, l1_ratios, target_scale_bounds, private_folder_path
 from helper import histograms, plot_prediction_w_ci_interval, drop_days_where_mood_was_tracked_irregularly, \
-    out_of_bound_correction, write_csv_for_phone_visualization
+    out_of_bound_correction
+from phone_io import write_csv_for_phone_visualization
 
 
 def multiple_linear_regression_ensemble(df,
@@ -17,7 +18,7 @@ def multiple_linear_regression_ensemble(df,
                                         results,
                                         target_mean,
                                         target_std,
-                                        target_scale_bounds_normalized, df_mean, df_std, ):
+                                        target_scale_bounds_normalized):
     if multiple_linear_regression_ensemble_on:
         # multiple linear regression on different datasets
         prediction_results = df[target_label].to_frame()
@@ -83,7 +84,7 @@ def multiple_linear_regression_ensemble(df,
         print('ensemble_average_loss: ', ensemble_average_loss)
 
         # save
-        prediction_results.to_csv(str(private_folder_path)+'prediction_results.csv')  # save to file
+        prediction_results.to_csv(str(private_folder_path) + 'prediction_results.csv')  # save to file
 
 
 def multiple_regression(df, results, dataset_name, prediction_results, regularization_strength, l1_ratio,
@@ -115,7 +116,7 @@ def multiple_regression(df, results, dataset_name, prediction_results, regulariz
             regression_coefficient_df['reg_coeff'] = regression.coef_
             # print('intercept:', regression.intercept_, dataset_name)
             results['reg_coeff_' + str(dataset_name) + 'k=' + str(i)] = regression_coefficient_df
-            results.to_csv(str(private_folder_path)+'results.csv')  # save to file
+            results.to_csv(str(private_folder_path) + 'results.csv')  # save to file
             predictions = regression.predict(X_test)
             predictions = pd.DataFrame(list(zip(y_test.index, predictions)),
                                        columns=['date', str(dataset_name) + ' k=' + str(i)])

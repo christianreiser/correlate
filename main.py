@@ -41,8 +41,7 @@ def main():
                                         results=results,
                                         target_mean=target_mean,
                                         target_std=target_std,
-                                        target_scale_bounds_normalized=target_scale_bounds_normalized, df_mean=df_mean,
-                                        df_std=df_std)
+                                        target_scale_bounds_normalized=target_scale_bounds_normalized)
 
     # NN
     fully_connected_nn_prediction(df_widest)
