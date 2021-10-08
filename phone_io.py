@@ -3,6 +3,8 @@ import json
 import numpy as np
 import pandas as pd
 
+from helper import bound
+
 
 def write_csv_for_phone_visualization(ci95,
                                       ci68,
@@ -49,7 +51,7 @@ def write_csv_for_phone_visualization(ci95,
 def get_features_df(feature_values_normalized, feature_weights_not_normalized, feature_values_not_normalized,
                     target_mean, scale_bounds):
     features_df = pd.DataFrame(
-        index=np.concatenate([feature_values_normalized.index.to_numpy(), np.array(['average_mood'])]),
+        index=np.concatenate([feature_values_normalized.index.to_numpy(), np.array(['MoodAverage()'])]),
         columns=['weights', 'values_normalized', 'values_not_normalized', 'contribution',
                  'contribution_abs'])
     features_df['weights'] = feature_weights_not_normalized
@@ -57,7 +59,7 @@ def get_features_df(feature_values_normalized, feature_weights_not_normalized, f
     features_df['values_normalized'] = feature_values_normalized
 
     features_df['contribution'] = features_df['weights'].multiply(features_df['values_normalized'])
-    features_df.loc['average_mood', 'contribution'] = target_mean - np.mean(scale_bounds)
+    features_df.loc['MoodAverage()', 'contribution'] = target_mean - np.mean(scale_bounds)
 
     features_df = features_df.dropna(subset=['contribution'])
 
@@ -92,7 +94,7 @@ def write_wvc_chart_file(features_df):
     """
     WVC: weight_value_contribution
     """
-    features_df = features_df.drop(['average_mood'], axis=0)
+    features_df = features_df.drop(['MoodAverage()'], axis=0)
     WVC_chart_df = pd.DataFrame(index=features_df.index,
                                 columns=['contribution', 'weight', 'value_today_not_normalized',
                                          'value_today_normalized', 'extrema'])
@@ -123,10 +125,18 @@ def write_wvc_chart_file(features_df):
 
 
 def write_prediction_file(previous_end, ci68, ci95, target_std_dev, scale_bounds, target_mean):
+    ci95_not_normalized = ci95 * target_std_dev
+    ci95 = [
+        # math.ceil(
+        round(bound(scale_bounds[0], scale_bounds[1], previous_end - ci95_not_normalized), 3),
+        # ),math.floor(
+        round(bound(scale_bounds[0], scale_bounds[1], previous_end + ci95_not_normalized), 3)
+        # )
+    ]
     prediction_dict = {
         "prediction": round(previous_end, 3),
         "ci68": round(ci68 * target_std_dev, 3),
-        "ci95": round(ci95 * target_std_dev, 3),
+        "ci95": ci95,
         "scale_bounds": list(np.around(np.array(scale_bounds), 2)),
         "target_mean": round(target_mean, 3),
     }

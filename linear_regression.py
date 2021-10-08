@@ -6,7 +6,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from config import target_label, ensemble_weights, multiple_linear_regression_ensemble_on, \
     regularization_strengths, l1_ratios, target_scale_bounds, private_folder_path
 from helper import histograms, plot_prediction_w_ci_interval, drop_days_where_mood_was_tracked_irregularly, \
-    out_of_bound_correction
+    out_of_bound_correction, generate_sample_weights
 from phone_io import write_csv_for_phone_visualization
 
 
@@ -110,7 +110,7 @@ def multiple_regression(df, results, dataset_name, prediction_results, regulariz
 
             regression = ElasticNet(alpha=regularization_strength, l1_ratio=l1_ratio, fit_intercept=True,
                                     normalize=False)  # already normalized
-            regression.fit(X_train, y_train)
+            regression.fit(X_train, y_train, sample_weight=generate_sample_weights(y_train))
             # x_labels = X.columns
             regression_coefficient_df = pd.DataFrame(index=X.columns, columns=['reg_coeff'])
             regression_coefficient_df['reg_coeff'] = regression.coef_

@@ -9,7 +9,7 @@ target_label = 'Mood'  # label of interest
 target_scale_bounds = [1.0, 9.0]
 
 # plots
-show_plots = True  # corr matrix
+show_plots = False  # corr matrix
 plot_distributions = False
 
 # autocorrelation
@@ -26,6 +26,7 @@ add_all_yesterdays_features = True
 # multiple regression
 multiple_linear_regression_ensemble_on = True
 regularization_strengths = [0.07, 0.07, 0.12]
+sample_weights_on = True
 l1_ratios = [1, 0.9, 1]
 out_of_bound_correction_on = True
 ensemble_weights = [0, 0.4, 0.6]  # [longest, compromise, widest]
@@ -34,7 +35,7 @@ ensemble_weights = [0, 0.4, 0.6]  # [longest, compromise, widest]
 fully_connected_nn_prediction_on = False
 
 # PCA
-pca_on = True
+pca_on = False
 
 # check config
 if not sum(ensemble_weights) == 1.0:
