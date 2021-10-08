@@ -6,7 +6,6 @@ private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 
 # target
 target_label = 'Mood'  # label of interest
-target_scale_bounds = [1.0, 9.0]
 
 # plots
 show_plots = False  # corr matrix

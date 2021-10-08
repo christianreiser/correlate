@@ -12,7 +12,7 @@ from linear_regression import multiple_linear_regression_ensemble
 
 def main():
     # load data
-    df = pd.read_csv(str(private_folder_path)+'daily_summaries_all.csv', index_col=0)
+    df = pd.read_csv(str(private_folder_path) + 'daily_summaries_all.csv', index_col=0)
 
     # histograms
     histograms(df, save_path='/home/chrei/PycharmProjects/correlate/plots/distributions/')
@@ -20,6 +20,9 @@ def main():
     # cleaning and imputation
     df = data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, add_yesterdays_target_feature,
                                       add_ereyesterdays_target_feature)
+
+    min_max = df.agg(['min', 'max','mean'])
+
     # autocorrelation
     autocorrelation(df)
 
@@ -27,7 +30,8 @@ def main():
     results = corr_coefficients_and_p_values(df, target_label)
 
     # normalization
-    df, df_not_normalized, target_scale_bounds_normalized, target_mean, target_std, df_mean, df_std = normalization(df)
+    df, df_not_normalized, target_scale_bounds_normalized, target_mean, target_std, df_mean, df_std = normalization(
+        df_not_normalized=df, min_max=min_max)
 
     # dataset_creation
     df_longest, df_2019_09_08, df_widest = dataset_creation(df)
@@ -41,13 +45,14 @@ def main():
                                         results=results,
                                         target_mean=target_mean,
                                         target_std=target_std,
-                                        target_scale_bounds_normalized=target_scale_bounds_normalized)
+                                        target_scale_bounds_normalized=target_scale_bounds_normalized,
+                                        min_max=min_max)
 
     # NN
     fully_connected_nn_prediction(df_widest)
 
 
-def normalization(df_not_normalized):
+def normalization(df_not_normalized, min_max):
     # std normalization preprocessing
     df_mean = df_not_normalized.mean()
     df_std = df_not_normalized.std()
@@ -56,8 +61,8 @@ def normalization(df_not_normalized):
     df_normalized = (df_not_normalized - df_mean) / df_std  # built in normalization not used
     print('target_mean:', target_mean)
     print('target_std:', target_std)
-    target_scale_bounds_normalized = [(target_scale_bounds[0] - df_mean[target_label]) / df_std[target_label],
-                                      (target_scale_bounds[1] - df_mean[target_label]) / df_std[target_label]]
+    target_scale_bounds_normalized = [(min_max[target_label][0] - df_mean[target_label]) / df_std[target_label],
+                                      (min_max[target_label][1] - df_mean[target_label]) / df_std[target_label]]
     return df_normalized, df_not_normalized, target_scale_bounds_normalized, target_mean, target_std, df_mean, df_std
 
 

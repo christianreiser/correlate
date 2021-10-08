@@ -4,7 +4,7 @@ from sklearn.linear_model import ElasticNet
 from sklearn.model_selection import TimeSeriesSplit
 
 from config import target_label, ensemble_weights, multiple_linear_regression_ensemble_on, \
-    regularization_strengths, l1_ratios, target_scale_bounds, private_folder_path
+    regularization_strengths, l1_ratios, private_folder_path
 from helper import histograms, plot_prediction_w_ci_interval, drop_days_where_mood_was_tracked_irregularly, \
     out_of_bound_correction, generate_sample_weights
 from phone_io import write_csv_for_phone_visualization
@@ -18,7 +18,8 @@ def multiple_linear_regression_ensemble(df,
                                         results,
                                         target_mean,
                                         target_std,
-                                        target_scale_bounds_normalized):
+                                        target_scale_bounds_normalized,
+                                        min_max):
     if multiple_linear_regression_ensemble_on:
         # multiple linear regression on different datasets
         prediction_results = df[target_label].to_frame()
@@ -72,11 +73,12 @@ def multiple_linear_regression_ensemble(df,
 
         write_csv_for_phone_visualization(ci95=ci, ci68=ci68, target_mean=target_mean,
                                           prediction=prediction_results['widest k=5'],
-                                          scale_bounds=target_scale_bounds,
+                                          scale_bounds=min_max[target_label],
                                           feature_weights_normalized=results['reg_coeff_widestk=5'],
                                           feature_values_not_normalized=df_not_normalized,
                                           feature_values_normalized=df,
-                                          target_std_dev=target_std)
+                                          target_std_dev=target_std,
+                                          min_max=min_max)
 
         # l2
         prediction_results['ensemble_loss'] = prediction_results['ensemble_diff'] ** 2

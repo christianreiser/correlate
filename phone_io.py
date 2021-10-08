@@ -14,7 +14,8 @@ def write_csv_for_phone_visualization(ci95,
                                       scale_bounds,
                                       feature_weights_normalized,
                                       feature_values_normalized,
-                                      feature_values_not_normalized):
+                                      feature_values_not_normalized,
+                                      min_max):
     last_prediction_date = prediction.dropna().index.array[prediction.dropna().index.array.size - 1]
     prediction = prediction[last_prediction_date]
 
@@ -37,7 +38,7 @@ def write_csv_for_phone_visualization(ci95,
                                   scale_bounds)
 
     # write_wvc_chart_file
-    write_wvc_chart_file(features_df)
+    write_wvc_chart_file(features_df,min_max)
 
     # write_gantt_chart_file
     previous_end = write_gantt_chart_file(features_df, scale_bounds)
@@ -90,36 +91,33 @@ def write_gantt_chart_file(features_df, scale_bounds):
     return previous_end
 
 
-def write_wvc_chart_file(features_df):
+def write_wvc_chart_file(features_df,min_max):
     """
     WVC: weight_value_contribution
     """
     features_df = features_df.drop(['MoodAverage()'], axis=0)
     WVC_chart_df = pd.DataFrame(index=features_df.index,
                                 columns=['contribution', 'weight', 'value_today_not_normalized',
-                                         'value_today_normalized', 'extrema'])
+                                         'value_today_normalized', 'min', 'max', 'mean'])
     WVC_chart_df['contribution'] = features_df['contribution']
     WVC_chart_df['weight'] = features_df['weights']
     WVC_chart_df['value_today_not_normalized'] = features_df['values_not_normalized']
     WVC_chart_df['value_today_normalized'] = features_df['values_normalized']
+    min_max = min_max.T
+    WVC_chart_df['min'] = min_max['min']
+    WVC_chart_df['max'] = min_max['max']
+    WVC_chart_df['mean'] = min_max['mean']
 
+    # round
     for i, row in features_df.iterrows():
         WVC_chart_df.loc[i, 'contribution'] = round(WVC_chart_df.loc[i, 'contribution'], 3)
         WVC_chart_df.loc[i, 'weight'] = round(WVC_chart_df.loc[i, 'weight'], 3)
         WVC_chart_df.loc[i, 'value_today_not_normalized'] = round(WVC_chart_df.loc[i, 'value_today_not_normalized'], 3)
+        WVC_chart_df.loc[i, 'min'] = round(WVC_chart_df.loc[i, 'min'], 3)
+        WVC_chart_df.loc[i, 'max'] = round(WVC_chart_df.loc[i, 'max'], 3)
+        WVC_chart_df.loc[i, 'mean'] = round(WVC_chart_df.loc[i, 'mean'], 3)
+
     WVC_chart_df.loc[i, 'value_today_normalized'] = round(WVC_chart_df.loc[i, 'value_today_normalized'], 3)
-
-    # normalize columns
-    # for column in WVC_chart_df:
-    #     WVC_chart_df[column] = (WVC_chart_df[column] - WVC_chart_df[column].min()) / (
-    #                 WVC_chart_df[column].max() - WVC_chart_df[column].min())
-    #     WVC_chart_df[column] = (WVC_chart_df[column] ) / (
-    #                 WVC_chart_df[column].std())
-
-    # get min max ofr scale bounds
-    normalized_df = WVC_chart_df.drop(['value_today_not_normalized'], axis=1)
-    WVC_chart_df.loc[WVC_chart_df.index.to_numpy()[0], 'extrema'] = normalized_df.max().max()
-    WVC_chart_df.loc[WVC_chart_df.index.to_numpy()[1], 'extrema'] = normalized_df.min().min()
 
     WVC_chart_df.to_csv('/home/chrei/code/insight_me/assets/tmp_phone_io/wvc_chart.csv', line_terminator='\r\n')
 
