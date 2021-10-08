@@ -3,6 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 
+from config import target_label, phone_vis_height_width
 from helper import bound
 
 
@@ -38,7 +39,7 @@ def write_csv_for_phone_visualization(ci95,
                                   scale_bounds)
 
     # write_wvc_chart_file
-    write_wvc_chart_file(features_df,min_max)
+    write_wvc_chart_file(features_df, min_max)
 
     # write_gantt_chart_file
     previous_end = write_gantt_chart_file(features_df, scale_bounds)
@@ -91,19 +92,28 @@ def write_gantt_chart_file(features_df, scale_bounds):
     return previous_end
 
 
-def write_wvc_chart_file(features_df,min_max):
+def write_wvc_chart_file(features_df, min_max):
     """
     WVC: weight_value_contribution
     """
     features_df = features_df.drop(['MoodAverage()'], axis=0)
     WVC_chart_df = pd.DataFrame(index=features_df.index,
-                                columns=['contribution', 'weight', 'value_today_not_normalized',
-                                         'value_today_normalized', 'min', 'max', 'mean'])
+                                columns=['mean_x', 'mean_y', 'dosage',
+                                         'response'])
+    min_max = min_max.T
+    scale_size = min_max['max'] - min_max['min']
+    WVC_chart_df['mean_y'] = (scale_size[target_label] - (min_max['mean'][target_label] - min_max['min'][target_label])) \
+                             * phone_vis_height_width[0] / scale_size[target_label]
+    WVC_chart_df['mean_x'] = (scale_size - (min_max['mean'] - min_max['min'])) \
+                              / np.array(scale_size, dtype=int) * phone_vis_height_width[1]
+
+    WVC_chart_df['dosage'] = (scale_size - (min_max['mean'] - min_max['min'])) \
+                              / np.array(scale_size, dtype=int) * phone_vis_height_width[1]
+
+
     WVC_chart_df['contribution'] = features_df['contribution']
-    WVC_chart_df['weight'] = features_df['weights']
     WVC_chart_df['value_today_not_normalized'] = features_df['values_not_normalized']
     WVC_chart_df['value_today_normalized'] = features_df['values_normalized']
-    min_max = min_max.T
     WVC_chart_df['min'] = min_max['min']
     WVC_chart_df['max'] = min_max['max']
     WVC_chart_df['mean'] = min_max['mean']
