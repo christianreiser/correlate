@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from config import target_label, phone_vis_height_width
+from config import target_label, phone_vis_height_width, survey_value_manipulation
 from helper import bound
 
 
@@ -17,7 +17,7 @@ def write_csv_for_phone_visualization(ci95,
                                       feature_values_normalized,
                                       feature_values_not_normalized,
                                       min_max):
-    last_prediction_date = prediction.dropna().index.array[prediction.dropna().index.array.size - 1]
+    last_prediction_date = prediction.dropna().index.array[prediction.dropna().index.array.size - 1]  # date to vis
     prediction = prediction[last_prediction_date]
 
     # somehow weights_not_notmalized * value_normalized != predction by library
@@ -38,8 +38,8 @@ def write_csv_for_phone_visualization(ci95,
                                   target_mean,
                                   scale_bounds)
 
-    # write_wvc_chart_file
-    write_wvc_chart_file(features_df, min_max)
+    # write_regression_triangle_chart_file
+    write_regression_triangle_chart_file(features_df, min_max)
 
     # write_gantt_chart_file
     previous_end = write_gantt_chart_file(features_df, scale_bounds)
@@ -55,7 +55,7 @@ def get_features_df(feature_values_normalized, feature_weights_not_normalized, f
     features_df = pd.DataFrame(
         index=np.concatenate([feature_values_normalized.index.to_numpy(), np.array(['MoodAverage()'])]),
         columns=['weights', 'values_normalized', 'values_not_normalized', 'contribution',
-                 'contribution_abs'])
+                 'contribution_abs', 'scale_size_time_phone_viz_height'])
     features_df['weights'] = feature_weights_not_normalized
     features_df['values_not_normalized'] = feature_values_not_normalized
     features_df['values_normalized'] = feature_values_normalized
@@ -92,44 +92,52 @@ def write_gantt_chart_file(features_df, scale_bounds):
     return previous_end
 
 
-def write_wvc_chart_file(features_df, min_max):
+def write_regression_triangle_chart_file(features_df, min_max):
     """
-    WVC: weight_value_contribution
+    regression_triangle: weight_value_contribution
     """
     features_df = features_df.drop(['MoodAverage()'], axis=0)
-    WVC_chart_df = pd.DataFrame(index=features_df.index,
-                                columns=['mean_x', 'mean_y', 'dosage',
-                                         'response'])
+    regression_triangle_chart_df = pd.DataFrame(index=features_df.index,
+                                                columns=['mean_x_coord', 'mean_y_coord', 'dosage_coord',
+                                                         'response_coord', 'scale_size', 'phone_width_factor'])
     min_max = min_max.T
-    scale_size = min_max['max'] - min_max['min']
-    WVC_chart_df['mean_y'] = (scale_size[target_label] - (min_max['mean'][target_label] - min_max['min'][target_label])) \
-                             * phone_vis_height_width[0] / scale_size[target_label]
-    WVC_chart_df['mean_x'] = (scale_size - (min_max['mean'] - min_max['min'])) \
-                              / np.array(scale_size, dtype=int) * phone_vis_height_width[1]
+    regression_triangle_chart_df['scale_size'] = min_max['max'] - min_max['min']
+    scale_size_target = min_max['max'][target_label] - min_max['min'][target_label]
+    phone_height_factor = phone_vis_height_width[0] / scale_size_target
 
-    WVC_chart_df['dosage'] = (scale_size - (min_max['mean'] - min_max['min'])) \
-                              / np.array(scale_size, dtype=int) * phone_vis_height_width[1]
+    for i, row in regression_triangle_chart_df.iterrows():
+        regression_triangle_chart_df.loc[i, 'phone_width_factor'] = phone_vis_height_width[1] / \
+                                                                    regression_triangle_chart_df.loc[i, 'scale_size']
 
+    regression_triangle_chart_df['mean_y_coord'] = (scale_size_target - (
+                min_max['mean'][target_label] - min_max['min'][target_label])) \
+                                                   * phone_height_factor
+    regression_triangle_chart_df['mean_x_coord'] = (regression_triangle_chart_df['scale_size'] - (
+                min_max['max'] - min_max['mean'])) \
+                                                   * regression_triangle_chart_df['phone_width_factor']
 
-    WVC_chart_df['contribution'] = features_df['contribution']
-    WVC_chart_df['value_today_not_normalized'] = features_df['values_not_normalized']
-    WVC_chart_df['value_today_normalized'] = features_df['values_normalized']
-    WVC_chart_df['min'] = min_max['min']
-    WVC_chart_df['max'] = min_max['max']
-    WVC_chart_df['mean'] = min_max['mean']
+    for i, row in regression_triangle_chart_df.iterrows():
+        regression_triangle_chart_df.loc[i, 'dosage_coord'] = (features_df.loc[i, 'values_not_normalized'] -
+                                                               min_max.loc[i, 'min']) * \
+                                                              regression_triangle_chart_df.loc[i, 'phone_width_factor']
+        regression_triangle_chart_df.loc[i, 'response_coord'] = regression_triangle_chart_df.loc[i, 'mean_y_coord'] - \
+                                                                features_df.loc[i, 'contribution'] * phone_height_factor
+
+    regression_triangle_chart_df = regression_triangle_chart_df.drop(['phone_width_factor', 'scale_size'], axis=1)
 
     # round
     for i, row in features_df.iterrows():
-        WVC_chart_df.loc[i, 'contribution'] = round(WVC_chart_df.loc[i, 'contribution'], 3)
-        WVC_chart_df.loc[i, 'weight'] = round(WVC_chart_df.loc[i, 'weight'], 3)
-        WVC_chart_df.loc[i, 'value_today_not_normalized'] = round(WVC_chart_df.loc[i, 'value_today_not_normalized'], 3)
-        WVC_chart_df.loc[i, 'min'] = round(WVC_chart_df.loc[i, 'min'], 3)
-        WVC_chart_df.loc[i, 'max'] = round(WVC_chart_df.loc[i, 'max'], 3)
-        WVC_chart_df.loc[i, 'mean'] = round(WVC_chart_df.loc[i, 'mean'], 3)
+        regression_triangle_chart_df.loc[i, 'mean_x_coord'] = round(regression_triangle_chart_df.loc[i, 'mean_x_coord'],
+                                                                    3)
+        regression_triangle_chart_df.loc[i, 'mean_y_coord'] = round(regression_triangle_chart_df.loc[i, 'mean_y_coord'],
+                                                                    3)
+        regression_triangle_chart_df.loc[i, 'dosage_coord'] = round(regression_triangle_chart_df.loc[i, 'dosage_coord'],
+                                                                    3)
+        regression_triangle_chart_df.loc[i, 'response_coord'] = round(
+            regression_triangle_chart_df.loc[i, 'response_coord'], 3)
 
-    WVC_chart_df.loc[i, 'value_today_normalized'] = round(WVC_chart_df.loc[i, 'value_today_normalized'], 3)
-
-    WVC_chart_df.to_csv('/home/chrei/code/insight_me/assets/tmp_phone_io/wvc_chart.csv', line_terminator='\r\n')
+    regression_triangle_chart_df.to_csv('/home/chrei/code/insight_me/assets/tmp_phone_io/regression_triangle_chart.csv',
+                                        line_terminator='\r\n')
 
 
 def write_prediction_file(previous_end, ci68, ci95, target_std_dev, scale_bounds, target_mean):

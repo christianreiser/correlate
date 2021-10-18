@@ -14,6 +14,9 @@ def main():
     # load data
     df = pd.read_csv(str(private_folder_path) + 'daily_summaries_all.csv', index_col=0)
 
+    if survey_value_manipulation:
+        df.loc['2021-06-14','DistractingScreentime'] = 658
+
     # histograms
     histograms(df, save_path='/home/chrei/PycharmProjects/correlate/plots/distributions/')
 
