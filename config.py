@@ -30,7 +30,7 @@ l1_ratios = [1, 0.9, 1]
 out_of_bound_correction_on = True
 ensemble_weights = [0, 0.4, 0.6]  # [longest, compromise, widest]
 phone_vis_height_width = [407, 370]
-survey_value_manipulation = True  # todo remove after survey
+survey_value_manipulation = False  # todo remove after survey
 
 # NN
 fully_connected_nn_prediction_on = False

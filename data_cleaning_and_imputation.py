@@ -16,7 +16,7 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
 
     # interpolate weight and vo2 max linearly
     try:
-        df['Weight'] = df['Weight'].interpolate(method='linear')
+        df['BodyWeight'] = df['BodyWeight'].interpolate(method='linear')
     except:
         pass
     try:
