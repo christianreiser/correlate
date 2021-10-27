@@ -102,32 +102,32 @@ def autocorrelation(df):
         target_df = drop_days_where_mood_was_tracked_irregularly(target_df)
 
         # Autocorrelation 654 lags
-        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval', lags=652,
-                 alpha=.05)
+        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval', lags=651,
+                 alpha=.05, zero=False)
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_650lags_' + str(target_label))
 
         # Autocorrelation 250 lags
         plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval', lags=250,
-                 alpha=.05)
+                 alpha=.05, zero=False)
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_250lags_' + str(target_label))
 
         # Autocorrelation 50 lags
         plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval', lags=50,
-                 alpha=.05)
+                 alpha=.05, zero=False)
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_050lags_' + str(target_label))
 
         # partial Autocorrelation 326 lags
-        plot_pacf(target_df, lags=325, alpha=.05,
+        plot_pacf(target_df, lags=325, alpha=.05, zero=False,
                   title=str(target_label) + ' partial autocorrelation with 95% confidence interval')
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/partial_autocorrelation_326lags_' + str(
                 target_label))
 
         # partial Autocorrelation 25 lags
-        plot_pacf(target_df, lags=25, alpha=.05,
+        plot_pacf(target_df, lags=25, alpha=.05, zero=False,
                   title=str(target_label) + ' partial autocorrelation with 95% confidence interval')
         plt.savefig(
             '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/partial_autocorrelation_025lags_' + str(

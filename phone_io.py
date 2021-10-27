@@ -47,7 +47,6 @@ def write_csv_for_phone_visualization(ci95,
     # write_prediction_file
     write_prediction_file(previous_end, ci68, ci95, target_std_dev, scale_bounds, target_mean)
 
-    print(target_mean, prediction, ci95, ci68, scale_bounds, feature_weights_not_normalized)
 
 
 def get_features_df(feature_values_normalized, feature_weights_not_normalized, feature_values_not_normalized,

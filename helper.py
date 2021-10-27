@@ -15,7 +15,7 @@ from data_cleaning_and_imputation import drop_attributes_with_missing_values, dr
 def histograms(df, save_path):
     if plot_distributions:
         for attribute in df.columns:
-            print(attribute)
+            print('histogram:', attribute)
 
             sns.set(style="ticks")
 

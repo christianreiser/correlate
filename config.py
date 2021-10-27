@@ -12,7 +12,7 @@ show_plots = False  # corr matrix
 plot_distributions = False
 
 # autocorrelation
-autocorrelation_on = False
+autocorrelation_on = True
 
 # correlations
 load_precomputed_coefficients_and_p_val = True
