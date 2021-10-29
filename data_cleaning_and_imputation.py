@@ -24,16 +24,18 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
     except:
         pass
 
+    # add_all_yesterdays_features
     if add_all_yesterdays_features:
         for column in df.columns:
             name_yesterday = str(column) + 'Yesterday'
             df[name_yesterday] = df[column].shift(periods=1)
 
+    # add yesterdays target
     if add_yesterdays_target_feature:
-        # add yesterdays target
         target_yesterday = str(target_label) + 'Yesterday'
         df[target_yesterday] = df[target_label].shift(periods=1)
 
+    # add ere yesterdays and 3 days ago target
     target_ereyesterday = str(target_label) + 'Ereyesterday'
     target_3DaysAgo = str(target_label) + '3DaysAgo'
     if add_ereyesterdays_target_feature:
@@ -53,6 +55,19 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
         elif df[target_label][day] != df[target_label][day]:
             df = df.drop(day)
 
+    return df
+
+
+def mean_imputation(df):
+    # fill missing values with mean value
+    mean = df.agg(['mean'], axis=0)  # get mean value
+    for attribute_name in df.columns:
+        nan_data_true_false = pd.isnull(df[attribute_name])
+        nan_numeric_indices = pd.isnull(df[attribute_name]).to_numpy().nonzero()[0]
+        nan_dates = nan_data_true_false[nan_numeric_indices].index
+        for nan_date in nan_dates:
+            substitute = mean[attribute_name][0]
+            df.at[nan_date, attribute_name] = substitute
     return df
 
 
@@ -86,10 +101,6 @@ def drop_days_with_missing_values(df, add_all_yesterdays_features):
 
     if add_all_yesterdays_features:
         nutrition_yesterday = [s + 'Yesterday' for s in nutrition]
-
-        # df = df.drop(
-        #     ['sodiumYesterday', 'fatYesterday', 'carbohydratesYesterday', 'proteinYesterday', 'fiberYesterday',
-        #      'kcal_inYesterday'], axis=1)
         df = df.drop(nutrition_yesterday, axis=1)
 
     for attribute_name in df.columns:

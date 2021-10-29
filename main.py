@@ -40,7 +40,7 @@ def main():
     df_longest, df_2019_09_08, df_widest = dataset_creation(df)
 
     # PCA
-    pca_function(df_2019_09_08)
+    pca_function(df_widest)
 
     # multiple regression
     multiple_linear_regression_ensemble(df=df, df_not_normalized=df_not_normalized, df_longest=df_longest,

@@ -12,7 +12,7 @@ show_plots = False  # corr matrix
 plot_distributions = False
 
 # autocorrelation
-autocorrelation_on = True
+autocorrelation_on = False
 
 # correlations
 load_precomputed_coefficients_and_p_val = True
@@ -24,7 +24,7 @@ add_all_yesterdays_features = True
 
 # multiple regression
 multiple_linear_regression_ensemble_on = True
-regularization_strengths = [0.07, 0.07, 0.12]
+regularization_strengths = [0.07, 0.07, 0.12]  # 0.07, 0.07, 0.12
 sample_weights_on = True
 l1_ratios = [1, 0.9, 1]
 out_of_bound_correction_on = True
@@ -36,7 +36,7 @@ survey_value_manipulation = False  # todo remove after survey
 fully_connected_nn_prediction_on = False
 
 # PCA
-pca_on = False
+pca_on = True
 
 # check config
 if not sum(ensemble_weights) == 1.0:
