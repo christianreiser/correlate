@@ -1,0 +1,5 @@
+- NN
+- feature selection: see if feature is worth it? with youtube vid OR colinearity?
+- residuals
+
+
