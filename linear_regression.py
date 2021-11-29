@@ -112,7 +112,8 @@ def multiple_regression(df, results, dataset_name, prediction_results, regulariz
 
             regression = ElasticNet(alpha=regularization_strength, l1_ratio=l1_ratio, fit_intercept=True,
                                     normalize=False)  # already normalized
-            regression.fit(X_train, y_train, sample_weight=generate_sample_weights(y_train))
+            sample_weight = generate_sample_weights(y_train)
+            regression.fit(X_train, y_train, sample_weight=sample_weight)
             # x_labels = X.columns
             regression_coefficient_df = pd.DataFrame(index=X.columns, columns=['reg_coeff'])
             regression_coefficient_df['reg_coeff'] = regression.coef_

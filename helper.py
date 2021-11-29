@@ -114,7 +114,7 @@ def generate_sample_weights(y_train):
         else:
             sample_weight.append(1)
     sample_weight = sample_weight[::-1]  # reverse list
-    plt.plot(sample_weight)
+    plt.plot(sample_weight[::-1])
     plt.xlabel("Days ago")
     plt.ylabel("Regression Sample Weight")
     plt.title('max(14.7498 - 13.2869 * (x+30) ** 0.0101585,0). \nReaches zero after 82 ~years.')

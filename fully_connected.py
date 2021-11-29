@@ -11,10 +11,10 @@ from config import target_label, fully_connected_nn_prediction_on
 
 writer = SummaryWriter()
 
-epochs = 1000
+epochs = 4115
 lr = 0.0001
 torch.manual_seed(0)
-weight_decay = 1
+weight_decay = 0.101
 
 
 # Define model
@@ -24,14 +24,14 @@ class NeuralNetwork(nn.Module):
         # self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(num_features, 16),
-            # nn.ReLU(),
-            # nn.Linear(num_features, 16),
-            # nn.ReLU(),
+            nn.LeakyReLU(),
+            nn.Linear(16, 8),
+            # nn.LeakyReLU(),
             # nn.Linear(16, 8),
-            # nn.ReLU(),
+            # nn.LeakyReLU(),
             # nn.Linear(8, 3),
-            nn.ReLU(),
-            nn.Linear(16, 1),
+            nn.LeakyReLU(),
+            nn.Linear(8, 1),
         )
 
     def forward(self, x):
@@ -107,7 +107,7 @@ def fully_connected_nn_prediction(df):
             with torch.no_grad():
                 pred = model(x)
                 predicted, actual = pred[0], y
-                print(f'Predicted: {predicted}; Actual: {actual[0]}')
+                # print(f'Predicted: {predicted}; Actual: {actual[0]}')
 
 
 def train(dataloader, model, loss_fn, optimizer, epoch, device):

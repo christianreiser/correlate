@@ -23,7 +23,7 @@ add_ereyesterdays_target_feature = True
 add_all_yesterdays_features = True
 
 # multiple regression
-multiple_linear_regression_ensemble_on = True
+multiple_linear_regression_ensemble_on = False
 regularization_strengths = [0.07, 0.07, 0.12]  # 0.07, 0.07, 0.12
 sample_weights_on = True
 l1_ratios = [1, 0.9, 1]
@@ -33,10 +33,10 @@ phone_vis_height_width = [407, 370]
 survey_value_manipulation = False  # todo remove after survey
 
 # NN
-fully_connected_nn_prediction_on = False
+fully_connected_nn_prediction_on = True
 
 # PCA
-pca_on = True
+pca_on = False
 
 # check config
 if not sum(ensemble_weights) == 1.0:
