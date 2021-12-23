@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 
 import matplotlib.patches as mpatches
@@ -5,15 +6,17 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
+from sklearn.decomposition import PCA
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
-from config import add_all_yesterdays_features, out_of_bound_correction_on, plot_distributions, target_label, \
-    sample_weights_on
+from config import add_all_yesterdays_features_on, out_of_bound_correction_on, target_label, \
+    sample_weights_on, pca_on, autocorrelation_on, histograms_on
 from data_cleaning_and_imputation import drop_attributes_with_missing_values, drop_days_before__then_drop_col, \
     drop_days_with_missing_values
 
 
 def histograms(df, save_path):
-    if plot_distributions:
+    if histograms_on:
         for attribute in df.columns:
             print('histogram:', attribute)
 
@@ -126,5 +129,91 @@ def generate_sample_weights(y_train):
 def dataset_creation(df):
     df_longest = drop_attributes_with_missing_values(df)
     df_2019_09_08 = drop_days_before__then_drop_col(df, last_day_to_drop='2019-09-08')
-    df_widest = drop_days_with_missing_values(df, add_all_yesterdays_features)
+    df_widest = drop_days_with_missing_values(df, add_all_yesterdays_features_on)
     return df_longest, df_2019_09_08, df_widest
+
+
+def normalization(df_not_normalized, min_max):
+    # std normalization preprocessing
+    df_mean = df_not_normalized.mean()
+    df_std = df_not_normalized.std()
+    target_mean = df_mean[target_label]
+    target_std = df_std[target_label]
+    df_normalized = (df_not_normalized - df_mean) / df_std  # built in normalization not used
+    print('target_mean:', target_mean)
+    print('target_std:', target_std)
+    target_scale_bounds_normalized = [(min_max[target_label][0] - df_mean[target_label]) / df_std[target_label],
+                                      (min_max[target_label][1] - df_mean[target_label]) / df_std[target_label]]
+    return df_normalized, df_not_normalized, target_scale_bounds_normalized, target_mean, target_std, df_mean, df_std
+
+
+def pca_function(df):
+    if pca_on:
+        n_components = len(df.columns)
+        pca = PCA(n_components=n_components)
+        pca.fit(df)
+        PCA(n_components=n_components)
+        print(pca.explained_variance_ratio_)
+
+        plt.plot(pca.explained_variance_ratio_, alpha=0.75)
+        plt.xlabel('component')
+        plt.ylabel('explained variance ratio')
+        plt.title('PCA explained variance ratio')
+        # plt.xlim(40, 160)
+        # plt.ylim(0, 0.03)
+        plt.grid(True)
+        # plt.show()
+
+        plt.savefig('/home/chrei/PycharmProjects/correlate/plots/pca_explained_variance_ratio', dpi=None,
+                    facecolor='w',
+                    edgecolor='w',
+                    orientation='portrait', format=None,
+                    transparent=False, bbox_inches=None, pad_inches=0.1,
+                    metadata=None)
+        plt.close('all')
+
+
+def autocorrelation(df):
+    if autocorrelation_on:
+        target_df = df[target_label]
+
+        target_df = drop_days_where_mood_was_tracked_irregularly(target_df)
+
+        # Autocorrelation max lags
+        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval',
+                 lags=target_df.shape[0] - 1,
+                 alpha=.05, zero=False)
+        plt.savefig(
+            '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_' + str(
+                target_df.shape[0] - 1) + 'lags_' + str(target_label))
+
+        # Autocorrelation max/2
+        # lags
+        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval',
+                 lags=math.floor(target_df.shape[0] / 2),
+                 alpha=.05, zero=False)
+        plt.savefig(
+            '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_' + str(
+                math.floor(target_df.shape[0] / 2)) + 'lags_' + str(target_label))
+
+        # Autocorrelation 50 lags
+        plot_acf(target_df, title=str(target_label) + ' autocorrelation with 95% confidence interval',
+                 lags=50,
+                 alpha=.05, zero=False)
+        plt.savefig(
+            '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/autocorrelation_050lags_' + str(target_label))
+
+        # partial Autocorrelation max lags
+        plot_pacf(target_df, lags=math.floor(target_df.shape[0] / 2)-1, alpha=.05, zero=False,
+                  title=str(target_label) + ' partial autocorrelation with 95% confidence interval')
+        plt.savefig(
+            '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/partial_autocorrelation_' + str(
+                math.floor(target_df.shape[0] / 2)-1) + 'lags_' + str(
+                target_label))
+
+        # partial Autocorrelation 25 lags
+        plot_pacf(target_df, lags=25, alpha=.05, zero=False,
+                  title=str(target_label) + ' partial autocorrelation with 95% confidence interval')
+        plt.savefig(
+            '/home/chrei/PycharmProjects/correlate/plots/autocorrelation/partial_autocorrelation_025lags_' + str(
+                target_label))

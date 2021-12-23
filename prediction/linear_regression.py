@@ -110,8 +110,8 @@ def multiple_regression(df, results, dataset_name, prediction_results, regulariz
             y_train = y.iloc[train_index]
             y_test = y.iloc[test_index]
 
-            regression = ElasticNet(alpha=regularization_strength, l1_ratio=l1_ratio, fit_intercept=True,
-                                    normalize=False)  # already normalized
+            regression = ElasticNet(alpha=regularization_strength, l1_ratio=l1_ratio,
+                                    fit_intercept=True)
             sample_weight = generate_sample_weights(y_train)
             regression.fit(X_train, y_train, sample_weight=sample_weight)
             # x_labels = X.columns

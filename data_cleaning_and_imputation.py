@@ -39,10 +39,11 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
     target_ereyesterday = str(target_label) + 'Ereyesterday'
     target_3DaysAgo = str(target_label) + '3DaysAgo'
     if add_ereyesterdays_target_feature:
+        df = df.copy()  # de-fragment df to increase performance
         df[target_ereyesterday] = df[target_label].shift(periods=2)
         df[target_3DaysAgo] = df[target_label].shift(periods=3)
 
-    # drop days without target entry or yesterdays target entry
+    # drop days without target entry or yesterday's target entry
     for day, _ in df.iterrows():
         # checks for NaN
         target_yesterday = str(target_label) + 'Yesterday'
