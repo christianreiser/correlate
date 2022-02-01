@@ -2,7 +2,7 @@
 
 ## use `%matplotlib notebook` for interactive figures
 # plt.style.use('ggplot')
-import datetime
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -46,12 +46,12 @@ def remove_nan_seq_from_top_and_bot(df):
         # print remaining nans
         remaining_nans = df.loc[pd.isna(df[column]), :].index.values
         if len(remaining_nans) > 0:
-            print('remaining Nans in '+str(column)+': ', remaining_nans)
+            print('remaining Nans in ' + str(column) + ': ', remaining_nans)
 
     return df
 
 
-def non_contemporary_tie_series_generation(df1):
+def non_contemporary_time_series_generation(df1):
     """
     so far works only when var 1 happens before far 2. E.G. sleep, exercise
 
@@ -64,6 +64,9 @@ def non_contemporary_tie_series_generation(df1):
     dataframe with format: 2 rows per day
     """
     # insert blanc row after every row
+    df1['Date'] = pd.to_datetime(df1['Date'], format='%Y-%m-%d %H:%M')
+
+    # df1['Date'] = datetime.strptime(df1['Date'], '%Y-%m-%dT% H:%M:%S.%f')
     df1.index = range(1, 2 * len(df1) + 1, 2)
     df = df1.reindex(index=range(2 * len(df1)))
 
@@ -75,14 +78,14 @@ def non_contemporary_tie_series_generation(df1):
     for i, row in df.iterrows():
         if i % 2 == 0:
             if i != 0:
-                df.loc[i, df.columns[0]] = df.loc[i - 1, df.columns[0]] + datetime.timedelta(hours=7, minutes=0)
+                df.loc[i, df.columns[0]] = df.loc[i - 1, df.columns[0]] + timedelta(hours=7, minutes=0)
                 df.loc[i, df.columns[2]] = df.loc[i - 1, df.columns[2]]
             if i < len(df):
                 df.loc[i, df.columns[1]] = df.loc[i + 1, df.columns[1]]
 
         else:  # i % 2 == 1:
             # df.loc[i, 'SleepEfficiency'] = df.loc[i+1, 'SleepEfficiency']
-            df.loc[i, df.columns[0]] = df.loc[i, df.columns[0]] + datetime.timedelta(hours=23, minutes=0)
+            df.loc[i, df.columns[0]] = df.loc[i, df.columns[0]] + timedelta(hours=23, minutes=0)
 
         # df.loc[i, 'HeartPoints'] = 1.0#df.loc[i-1, 'HeartPoints']
         # df.loc[i, 'SleepEfficiency'] = 1.0#df.loc[i+1, 'SleepEfficiency']

@@ -15,7 +15,7 @@ histograms_on = False
 autocorrelation_on = False
 
 # correlations
-load_precomputed_coefficients_and_p_val = False
+load_precomputed_coefficients_and_p_val = True
 
 # features
 add_yesterdays_target_feature_on = False
@@ -41,9 +41,10 @@ pca_on = False
 # causal discovery
 causal_discovery_on = True
 tau_max = 32
-alpha_level = 0.01
+alpha_level = 0.05
 corr_threshold = 0.07
 verbosity = 0
+pc_alpha = 0.01
 
 # check config
 if not sum(ensemble_weights) == 1.0:
