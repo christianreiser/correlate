@@ -40,7 +40,7 @@ pca_on = False
 
 # causal discovery
 causal_discovery_on = True
-tau_max = 32
+tau_max = 5
 alpha_level = 0.05
 corr_threshold = 0.07
 verbosity = 0
