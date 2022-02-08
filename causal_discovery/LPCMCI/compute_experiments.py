@@ -3,10 +3,10 @@ import pickle
 import time
 
 import numpy as np
-import scipy
 # Imports from tigramite package available on https://github.com/jakobrunge/tigramite
 import tigramite.data_processing as pp
 from matplotlib import pyplot
+from tigramite import plotting as tp
 from tigramite.independence_tests import ParCorr, GPDC, CMIknn
 
 # Imports from code inside directory
@@ -16,15 +16,13 @@ import utilities as utilities
 from discG2 import DiscG2
 from lpcmci import LPCMCI
 from simulate_discrete_scm import discretized_scp
-from svarfci import SVARFCI
-from svarrfci import SVARRFCI
 
 # Directory to save results
 folder_name = "results/"
 
 # Arguments passed via command line
 # arg = sys.argv
-arg = [0, 2, 2, 'random_lineargaussian-3-3-0.2-0.8-0.9-0.3-0.3-3-100-par_corr-lpcmci_nprelim2-0.05-5']
+arg = [0, 2, 2, 'random_lineargaussian-3-3-0.2-0.8-0.9-0.3-0.3-3-100-par_corr-lpcmci_nprelim4-0.05-5']
 samples = int(arg[1])  # int number of time series realizations to generate
 verbosity = int(arg[2])  # verbosity
 config_list = list(arg)[3:]  # string that identifies a particular experiment consisting of a model and method.
@@ -38,27 +36,51 @@ else:
     plot_data = False
 
 
+def remove_last_item_from_tuple_in_lists_in_dict_values(my_dict):
+    """
+    input format s.th. like
+    my_dict = {0: [((0, -1), 0.85, 'removeme'),
+               ((1, 0), -0.5, 'removeme'),
+               ((2, -1), 0.7, 'removeme')],
+           1: [((1, -1), 0.8, 'removeme'),
+               ((2, 0), 0.7, 'removeme')],
+           2: [((2, -1), 0.9, 'removeme')],
+           3: [((3, -1), 0.8, 'removeme'),
+               ((0, -2), 0.4, 'removeme')]}
+    """
+    for key in my_dict:
+        my_list = my_dict[key]
+        len_my_list = len(my_list)
+        modified_list = []
+        for list_index in range(len_my_list):
+            my_tuple = my_list[list_index]
+            modified_tuple = my_tuple[:-1]
+            modified_list.append(modified_tuple)
+        my_dict.update({key: modified_list})
+    return my_dict
+
+
 def calculate(para_setup):
     para_setup_string, sam = para_setup
 
     paras = para_setup_string.split('-')
     paras = [w.replace("'", "") for w in paras]
 
-    model = str(paras[0])
-    N = int(paras[1])
-    n_links = int(paras[2])
-    min_coeff = float(paras[3])
-    coeff = float(paras[4])
-    auto = float(paras[5])
-    contemp_fraction = float(paras[6])
-    frac_unobserved = float(paras[7])
-    max_true_lag = int(paras[8])
-    T = int(paras[9])
+    model = str(paras[0])  # e.g. random_lineargaussian
+    N = int(paras[1])  # 3
+    n_links = int(paras[2])  # 3
+    min_coeff = float(paras[3])  # 0.2
+    coeff = float(paras[4])  # 0.8
+    auto = float(paras[5])  # auto-dependency (auto-correlation) 0.9
+    contemp_fraction = float(paras[6])  # 0.3
+    frac_unobserved = float(paras[7])  # 0.3
+    max_true_lag = int(paras[8])  # 3
+    T = int(paras[9])  # 100
 
-    ci_test = str(paras[10])
-    method = str(paras[11])
-    pc_alpha = float(paras[12])
-    tau_max = int(paras[13])
+    ci_test = str(paras[10])  # parr_corr
+    method = str(paras[11])  # lpcmci_nprelim4
+    pc_alpha = float(paras[12])  # 0.05
+    tau_max = int(paras[13])  # 5
 
     #############################################
     ##  Data
@@ -70,49 +92,26 @@ def calculate(para_setup):
     def f2(x):
         return (x + 5. * x ** 2 * np.exp(-x ** 2 / 20.))
 
-    if model == 'autobidirected':
-        if verbosity > 999:
-            model_seed = verbosity - 1000
-        else:
-            model_seed = sam
-
-        random_state = np.random.RandomState(model_seed)
-
-        links = {
-            0: [((0, -1), auto, lin_f), ((1, -1), coeff, lin_f)],
-            1: [],
-            2: [((2, -1), auto, lin_f), ((1, -1), coeff, lin_f)],
-            3: [((3, -1), auto, lin_f), ((2, -1), min_coeff, lin_f)],
-        }
-        observed_vars = [0, 2, 3]
-
-        noises = [random_state.randn for j in range(len(links))]
-
-        data_all, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-            links=links, T=T, noises=noises, random_state=random_state)
-        data = data_all[:, observed_vars]
-
-    elif 'random' in model:
+    if 'random' in model:
         if 'lineargaussian' in model:
-
             coupling_funcs = [lin_f]
 
             noise_types = ['gaussian']  # , 'weibull', 'uniform']
             noise_sigma = (0.5, 2)
 
-        elif 'nonlinearmixed' in model:
+        # elif 'nonlinearmixed' in model:
+        #
+        #     coupling_funcs = [lin_f, f2]
+        #
+        #     noise_types = ['gaussian', 'gaussian', 'weibull']
+        #     noise_sigma = (0.5, 2)
 
-            coupling_funcs = [lin_f, f2]
-
-            noise_types = ['gaussian', 'gaussian', 'weibull']
-            noise_sigma = (0.5, 2)
-
-        if coeff < min_coeff:
+        if coeff < min_coeff:  # correct coeff if to small
             min_coeff = coeff
-        couplings = list(np.arange(min_coeff, coeff + 0.1, 0.1))
-        couplings += [-c for c in couplings]
+        couplings = list(np.arange(min_coeff, coeff + 0.1, 0.1))  # coupling strength
+        couplings += [-c for c in couplings]  # add negative coupling strength
 
-        auto_deps = list(np.arange(max(0., auto - 0.3), auto + 0.01, 0.05))
+        auto_deps = list(np.arange(max(0., auto - 0.3), auto + 0.01, 0.05))  # auto-correlations
 
         # Models may be non-stationary. Hence, we iterate over a number of seeds
         # to find a stationary one regarding network topology, noises, etc
@@ -122,12 +121,11 @@ def calculate(para_setup):
             model_seed = sam
 
         for ir in range(1000):
-            # np.random.seed(model_seed)
             random_state = np.random.RandomState(model_seed)
 
-            N_all = math.floor((N / (1. - frac_unobserved)))
-            n_links_all = math.ceil(n_links / N * N_all)
-            observed_vars = np.sort(random_state.choice(range(N_all),
+            N_all = math.floor((N / (1. - frac_unobserved)))  # 4
+            n_links_all = math.ceil(n_links / N * N_all)  # 4
+            observed_vars = np.sort(random_state.choice(range(N_all),  # [1,2,3]
                                                         size=math.ceil((1. - frac_unobserved) * N_all),
                                                         replace=False)).tolist()
 
@@ -141,7 +139,7 @@ def calculate(para_setup):
                 # num_trials=1000,  
                 random_state=random_state)
 
-            class noise_model:
+            class NoiseModel:
                 def __init__(self, sigma=1):
                     self.sigma = sigma
 
@@ -149,26 +147,26 @@ def calculate(para_setup):
                     # Get zero-mean unit variance gaussian distribution
                     return self.sigma * random_state.randn(T)
 
-                def weibull(self, T):
-                    # Get zero-mean sigma variance weibull distribution
-                    a = 2
-                    mean = scipy.special.gamma(1. / a + 1)
-                    variance = scipy.special.gamma(2. / a + 1) - scipy.special.gamma(1. / a + 1) ** 2
-                    return self.sigma * (random_state.weibull(a=a, size=T) - mean) / np.sqrt(variance)
-
-                def uniform(self, T):
-                    # Get zero-mean sigma variance uniform distribution
-                    mean = 0.5
-                    variance = 1. / 12.
-                    return self.sigma * (random_state.uniform(size=T) - mean) / np.sqrt(variance)
+                # def weibull(self, T):
+                #     # Get zero-mean sigma variance weibull distribution
+                #     a = 2
+                #     mean = scipy.special.gamma(1. / a + 1)
+                #     variance = scipy.special.gamma(2. / a + 1) - scipy.special.gamma(1. / a + 1) ** 2
+                #     return self.sigma * (random_state.weibull(a=a, size=T) - mean) / np.sqrt(variance)
+                #
+                # def uniform(self, T):
+                #     # Get zero-mean sigma variance uniform distribution
+                #     mean = 0.5
+                #     variance = 1. / 12.
+                #     return self.sigma * (random_state.uniform(size=T) - mean) / np.sqrt(variance)
 
             noises = []
             for j in links:
-                noise_type = random_state.choice(noise_types)
-                sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()
-                noises.append(getattr(noise_model(sigma), noise_type))
+                noise_type = random_state.choice(noise_types)  # gaussian
+                sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
+                noises.append(getattr(NoiseModel(sigma), noise_type))
 
-            if 'discretebinom' in model:
+            if 'discretebinom' in model:  # False
                 if 'binom2' in model:
                     n_binom = 2
                 elif 'binom4' in model:
@@ -176,7 +174,7 @@ def calculate(para_setup):
 
                 data_all_check, nonstationary = discretized_scp(links=links, T=T + 10000,
                                                                 n_binom=n_binom, random_state=random_state)
-            else:
+            else:  # yes
                 data_all_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(
                     links=links, T=T + 10000, noises=noises, random_state=random_state)
 
@@ -188,14 +186,45 @@ def calculate(para_setup):
             else:
                 print("Trial %d: Not a stationary model" % ir)
                 model_seed += 10000
+    # elif model == 'autobidirected':
+    #     if verbosity > 999:
+    #         model_seed = verbosity - 1000
+    #     else:
+    #         model_seed = sam
+    #
+    #     random_state = np.random.RandomState(model_seed)
+    #
+    #     links = {
+    #         0: [((0, -1), auto, lin_f), ((1, -1), coeff, lin_f)],
+    #         1: [],
+    #         2: [((2, -1), auto, lin_f), ((1, -1), coeff, lin_f)],
+    #         3: [((3, -1), auto, lin_f), ((2, -1), min_coeff, lin_f)],
+    #     }
+    #     observed_vars = [0, 2, 3]
+    #
+    #     noises = [random_state.randn for j in range(len(links))]
+    #
+    #     data_all, nonstationary = mod.generate_nonlinear_contemp_timeseries(
+    #         links=links, T=T, noises=noises, random_state=random_state)
+    #     data = data_all[:, observed_vars]
     else:
         raise ValueError("model %s not known" % model)
 
     if nonstationary:
         raise ValueError("No stationary model found: %s" % model)
 
-    true_graph = utilities._get_pag_from_dag(links, observed_vars=observed_vars,
-                                             tau_max=tau_max, verbosity=verbosity)[1]
+    links = remove_last_item_from_tuple_in_lists_in_dict_values(links)
+    tp.plot_graph(
+        val_matrix=None,
+        link_matrix=links,
+        var_names=None,
+        link_colorbar_label='cross-MCI',
+        node_colorbar_label='auto-MCI',
+        figsize=(10, 6),
+    )
+
+    true_graph = utilities.get_pag_from_dag(links, observed_vars=observed_vars,
+                                            tau_max=tau_max, verbosity=verbosity)[1]
 
     if verbosity > 0:
         print("True Links")
@@ -255,7 +284,7 @@ def calculate(para_setup):
             dataframe=dataframe,
             cond_ind_test=cond_ind_test)
 
-        lpcmcires = lpcmci.run_lpcmci(
+        lpcmci.run_lpcmci(
             tau_max=tau_max,
             pc_alpha=pc_alpha,
             max_p_non_ancestral=3,
@@ -266,37 +295,6 @@ def calculate(para_setup):
         graph = lpcmci.graph
         val_min = lpcmci.val_min_matrix
         max_cardinality = lpcmci.cardinality_matrix
-
-    # elif method == 'svarfci':
-    #     svarfci = SVARFCI(
-    #         dataframe=dataframe,
-    #         cond_ind_test=cond_ind_test)
-    #     svarfcires = svarfci.run_svarfci(
-    #         tau_max=tau_max,
-    #         pc_alpha=pc_alpha,
-    #         max_cond_px=0,
-    #         max_p_dsep=3,
-    #         fix_all_edges_before_final_orientation=True,
-    #         verbosity=verbosity)
-    #
-    #     graph = svarfci.graph
-    #     val_min = svarfci.val_min_matrix
-    #     max_cardinality = svarfci.cardinality_matrix
-    #
-    # elif method == 'svarrfci':
-    #     svarrfci = SVARRFCI(
-    #         dataframe=dataframe,
-    #         cond_ind_test=cond_ind_test)
-    #
-    #     svarrfcires = svarrfci.run_svarrfci(
-    #         tau_max=tau_max,
-    #         pc_alpha=pc_alpha,
-    #         fix_all_edges_before_final_orientation=True,
-    #         verbosity=verbosity)
-    #
-    #     graph = svarrfci.graph
-    #     val_min = svarrfci.val_min_matrix
-    #     max_cardinality = svarrfci.cardinality_matrix
     else:
         raise ValueError("%s not implemented." % method)
 

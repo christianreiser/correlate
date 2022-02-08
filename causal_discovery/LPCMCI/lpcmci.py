@@ -15,7 +15,8 @@ class LPCMCI():
         A conditional independence test object that specifies which conditional independence test CI is to be used
 
     Parameters passed to self.run_lpcmci():
-    Note: Not all parameters are used for the simulation studies. Some are temporary and might be removed in future versions
+    Note: Not all parameters are used for the simulation studies.
+    Some are temporary and might be removed in future versions
     - tau_max:
         The maximum considered time lag tau_max
     - pc_alpha:
@@ -27,7 +28,9 @@ class LPCMCI():
     - max_p_global:
         Restricts all conditional independence tests to conditioning sets with cardinality smaller or equal to max_p_global
     - max_p_non_ancestral:
-        Restricts all conditional independence tests in the second removal phase (here this is self._run_dsep_removal_phase()) to conditioning sets with cardinality smaller or equal to max_p_global
+        Restricts all conditional independence tests in the second removal phase
+        (here this is self._run_dsep_removal_phase())
+        to conditioning sets with cardinality smaller or equal to max_p_global
     - max_q_global:
         For each ordered pair (X^i_{t-\tau}, X^j_t) of adjacent variables and for each cardinality of the conditioning sets test at most max_q_global many conditioning sets (when summing over all tested cardinalities more than max_q_global tests may be made)
     - max_pds_set:
@@ -78,7 +81,7 @@ class LPCMCI():
 
     A note on middle marks:
         For convenience (to have strings of the same lengths) we here internally denote the empty middle mark by '-'.  For post-processing purposes all middle marks are set to the empty middle mark (here '-') in line 224 (there can be non-empty middle marks only when one of max_p_global, max_p_non_ancestral, max_q_global or max_pds_set is not np.inf), but if verbosity >= 1 a graph with the middle marks will be printed out before.
-    
+
     A note on wildcards:
         The middle mark wildcard \ast and the edge mark wildcard are here represented as *, the edge mark wildcard \star as +
     """
@@ -234,7 +237,7 @@ class LPCMCI():
             print("Max search set: {}".format(self.max_na_search_set_found))
             print("Max na-pds set: {}\n".format(self.max_na_pds_set_found))
 
-        # Post processing
+        # Post-processing
         self._fix_all_edges()
         self.graph = self._dict2graph()
         self.val_min_matrix = self._dict_to_matrix(self.val_min, self.tau_max, self.N, default=0)
@@ -2217,7 +2220,7 @@ class LPCMCI():
         # Build the output list
         out = []
 
-        # Find unshielded triples B_1 o--*--o A o--*--> C or B_1 <--*--o A o--*--> C or B_1 <--*-- A o--*--> C 
+        # Find unshielded triples B_1 o--*--o A o--*--> C or B_1 <--*--o A o--*--> C or B_1 <--*-- A o--*--> C
         all_appropriate_triples = set(self._find_triples(pattern_ij='o*o', pattern_jk='o*>', pattern_ik=''))
         all_appropriate_triples = all_appropriate_triples.union(
             set(self._find_triples(pattern_ij='<*o', pattern_jk='o*>', pattern_ik='')))
@@ -2919,7 +2922,7 @@ class LPCMCI():
                     # Add non-future adjacencies
                     self.graph_full_dict[j][(var, lag)] = link
 
-                    # Add the future adjacencies 
+                    # Add the future adjacencies
                     if lag < 0:
                         self.graph_full_dict[var][(j, -lag)] = self._reverse_link(link)
 
