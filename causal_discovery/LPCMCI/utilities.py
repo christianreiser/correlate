@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from itertools import product
-import tigramite.data_processing as pp
 
 import numpy as np
+import tigramite.data_processing as pp
 
 from svarfci import SVARFCI
 
@@ -808,4 +808,11 @@ def get_pag_from_dag(links_coeffs, observed_vars=None, tau_max=None, verbosity=0
     # Also return array version of pag graph
     pag_graph = svarfci._dict2graph()
 
-    return svarfci.graph_dict, pag_graph
+    svarfci_graph_dict = svarfci.graph_dict
+
+    return svarfci_graph_dict, pag_graph
+
+
+def compute_f1_score(precision, recall):
+    f1 = 2 * (precision * recall) / (precision + recall)
+    return f1

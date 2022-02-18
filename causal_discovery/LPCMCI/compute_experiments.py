@@ -5,7 +5,7 @@ import time
 import numpy as np
 # Imports from tigramite package available on https://github.com/jakobrunge/tigramite
 import tigramite.data_processing as pp
-from matplotlib import pyplot
+from matplotlib import pyplot, pyplot as plt
 from tigramite import plotting as tp
 from tigramite.independence_tests import ParCorr, GPDC, CMIknn
 
@@ -22,7 +22,18 @@ folder_name = "results/"
 
 # Arguments passed via command line
 # arg = sys.argv
-arg = [0, 2, 2, 'random_lineargaussian-3-3-0.2-0.8-0.9-0.3-0.3-3-100-par_corr-lpcmci_nprelim4-0.05-5']
+# 'model-N-L-min_coeff-max_coeff-autocorr-frac_contemp_links-frac_unobserved-max_true_lag-time_series_length-CI_test-method-alpha_level-tau_max'
+
+# original
+arg = [0, 1, 2, 'random_lineargaussian-3-3-0.2-0.8-0.9-0.3-0.3-3-100-par_corr-lpcmci_nprelim4-0.05-5']
+
+# easy and correct
+# arg = [0, 1, 0, 'random_lineargaussian-2-2-0.5-0.9-0.9-0.3-0.3-1-1000-par_corr-lpcmci_nprelim4-0.05-1']
+
+# close to real
+arg = [0, 1, 3, 'random_lineargaussian-9-9-0.1-0.45-0.6-0.6-0.3-1-510-par_corr-lpcmci_nprelim4-0.26-1'] # alpha=0.26
+
+remove_link_threshold = 0.11
 samples = int(arg[1])  # int number of time series realizations to generate
 verbosity = int(arg[2])  # verbosity
 config_list = list(arg)[3:]  # string that identifies a particular experiment consisting of a model and method.
@@ -36,18 +47,27 @@ else:
     plot_data = False
 
 
-def remove_last_item_from_tuple_in_lists_in_dict_values(my_dict):
+def modify_dict_get_graph_and_link_vals(my_dict):
     """
-    input format s.th. like
+    outputs:
+    1. new dict with link
+    2. link graph
+    3. val graph
+
+    input:
+    dict with format s.th. like
     my_dict = {0: [((0, -1), 0.85, 'removeme'),
-               ((1, 0), -0.5, 'removeme'),
-               ((2, -1), 0.7, 'removeme')],
-           1: [((1, -1), 0.8, 'removeme'),
-               ((2, 0), 0.7, 'removeme')],
-           2: [((2, -1), 0.9, 'removeme')],
-           3: [((3, -1), 0.8, 'removeme'),
-               ((0, -2), 0.4, 'removeme')]}
+                   ((1, 0), -0.5, 'removeme'),
+                   ((2, -1), 0.7, 'removeme')],
+               1: [((1, -1), 0.8, 'removeme'),
+                   ((2, 0), 0.7, 'removeme')],
+               2: [((2, -1), 0.9, 'removeme')],
+               3: [((3, -2), 0.8, 'removeme'),
+                   ((0, -3), 0.4, 'removeme')]}
     """
+    len_dict = len(my_dict)
+    max_time_lag = 0
+
     for key in my_dict:
         my_list = my_dict[key]
         len_my_list = len(my_list)
@@ -56,8 +76,34 @@ def remove_last_item_from_tuple_in_lists_in_dict_values(my_dict):
             my_tuple = my_list[list_index]
             modified_tuple = my_tuple[:-1]
             modified_list.append(modified_tuple)
+
+            # get max time lag
+            if max_time_lag > modified_tuple[0][1]:
+                max_time_lag = modified_tuple[0][1]
+
         my_dict.update({key: modified_list})
-    return my_dict
+
+    print('links:', my_dict)
+
+    max_time_lag = - max_time_lag
+
+    graph = np.ndarray(shape=(len_dict, len_dict, max_time_lag + 1), dtype='U3')
+    val = np.zeros(shape=(len_dict, len_dict, max_time_lag + 1), dtype=float)
+    for key in my_dict:
+        my_list = my_dict[key]
+        len_my_list = len(my_list)
+        for list_index in range(len_my_list):
+            my_tuple = my_list[list_index]
+            effected_index = key
+            cause_index = my_tuple[0][0]
+            lag = -my_tuple[0][1]
+            link_strength = my_tuple[1]
+            graph[cause_index][effected_index][lag] = '-->'
+            if lag == 0:
+                graph[effected_index][cause_index][lag] = '<--'
+            val[effected_index][cause_index][lag] = link_strength
+            val[cause_index][effected_index][lag] = link_strength
+    return my_dict, graph, val
 
 
 def calculate(para_setup):
@@ -74,7 +120,7 @@ def calculate(para_setup):
     auto = float(paras[5])  # auto-dependency (auto-correlation) 0.9
     contemp_fraction = float(paras[6])  # 0.3
     frac_unobserved = float(paras[7])  # 0.3
-    max_true_lag = int(paras[8])  # 3
+    max_true_lag = int(paras[8])  # 1
     T = int(paras[9])  # 100
 
     ci_test = str(paras[10])  # parr_corr
@@ -213,15 +259,7 @@ def calculate(para_setup):
     if nonstationary:
         raise ValueError("No stationary model found: %s" % model)
 
-    links = remove_last_item_from_tuple_in_lists_in_dict_values(links)
-    tp.plot_graph(
-        val_matrix=None,
-        link_matrix=links,
-        var_names=None,
-        link_colorbar_label='cross-MCI',
-        node_colorbar_label='auto-MCI',
-        figsize=(10, 6),
-    )
+    links_dict_clean, original_graph, original_vals = modify_dict_get_graph_and_link_vals(links)
 
     true_graph = utilities.get_pag_from_dag(links, observed_vars=observed_vars,
                                             tau_max=tau_max, verbosity=verbosity)[1]
@@ -301,6 +339,70 @@ def calculate(para_setup):
     computation_time_end = time.time()
     computation_time = computation_time_end - computation_time_start
 
+    if verbosity > 1:
+        # plot original DAG
+        tp.plot_graph(
+            val_matrix=original_vals,  # original_vals None
+            link_matrix=original_graph,
+            var_names=range(N_all),
+            link_colorbar_label='cross-MCI',
+            node_colorbar_label='auto-MCI',
+            figsize=(10, 6),
+        )
+        plt.show()
+        # Plot time series graph
+        tp.plot_time_series_graph(
+            figsize=(12, 8),
+            val_matrix=original_vals,  # original_vals None
+            link_matrix=original_graph,
+            var_names=range(N_all),
+            link_colorbar_label='MCI',
+        )
+        plt.show()
+
+        # plot true PAG
+        tp.plot_graph(
+            val_matrix=None,
+            link_matrix=true_graph,
+            var_names=observed_vars,
+            link_colorbar_label='cross-MCI',
+            node_colorbar_label='auto-MCI',
+            figsize=(10, 6),
+        )
+        plt.show()
+        # Plot time series graph
+        tp.plot_time_series_graph(
+            figsize=(12, 8),
+            val_matrix=None,
+            link_matrix=true_graph,
+            var_names=observed_vars,
+            link_colorbar_label='MCI',
+        )
+        plt.show()
+
+        # val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
+        # graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
+
+        # plot found PAG
+        tp.plot_graph(
+            val_matrix=val_min,
+            link_matrix=graph,
+            var_names=observed_vars,
+            link_colorbar_label='cross-MCI',
+            node_colorbar_label='auto-MCI',
+            figsize=(10, 6),
+        )
+        plt.show()
+        # Plot time series graph
+        tp.plot_time_series_graph(
+            figsize=(12, 8),
+            val_matrix=val_min,
+            link_matrix=graph,
+            var_names=observed_vars,
+            link_colorbar_label='MCI',
+        )
+        plt.show()
+
     return {
         'true_graph': true_graph,
         'val_min': val_min,
@@ -361,6 +463,12 @@ if __name__ == '__main__':
             else:
                 print(
                     f"{metric:30s} {metrics[metric][0]: 1.2f} +/-[{metrics[metric][1][0]: 1.2f}, {metrics[metric][1][1]: 1.2f}]")
+        # chr:
+        f1_score_anylink = utilities.compute_f1_score(metrics['adj_anylink_precision'][0],
+                                                      metrics['adj_anylink_recall'][0])
+        f1_score_edgemark = utilities.compute_f1_score(metrics['edgemarks_anylink_precision'][0],
+                                                       metrics['edgemarks_anylink_recall'][0])
+        print('f1_score_anylink:', f1_score_anylink, '\nf1_score_edgemark:', f1_score_edgemark)
 
         print("Metrics dump ", file_name.replace("'", "").replace('"', '') + '_metrics.dat')
         file = open(file_name.replace("'", "").replace('"', '') + '_metrics.dat', 'wb')

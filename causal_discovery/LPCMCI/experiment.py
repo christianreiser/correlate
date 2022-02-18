@@ -156,3 +156,4 @@ def causal_discovery():
 
         # Compute and save metrics in separate (smaller) file
         metrics = metrics_mod.get_evaluation(results=all_configs[conf])
+causal_discovery()

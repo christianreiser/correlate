@@ -1,4 +1,4 @@
-from causal_discovery.experiment import causal_discovery
+from causal_discovery.LPCMCI.experiment import causal_discovery
 from config import *
 from correlation import corr_coefficients_and_p_values
 from data_cleaning_and_imputation import *
