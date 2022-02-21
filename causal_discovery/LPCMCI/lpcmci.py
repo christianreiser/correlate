@@ -326,7 +326,9 @@ class LPCMCI():
         self.def_non_ancs = {j: set() for j in range(self.N)}
         self.ambiguous_ancestorships = {j: set() for j in range(self.N)}
 
-        # Initialize nested dictionaries for saving the minimum test statistic among all conditional independence tests of a given pair of variables, the maximum p-values, as well as the maximal cardinality of the known separating sets.
+        # Initialize nested dictionaries for saving the minimum test statistic among all conditional independence tests
+        # of a given pair of variables, the maximum p-values, as well as the maximal cardinality of the known separating
+        # sets.
         # Syntax: As for self.sepsets
         self.val_min = {
             j: {(i, -tau): float("inf") for i in range(self.N) for tau in range(self.tau_max + 1) if (tau > 0 or i < j)}

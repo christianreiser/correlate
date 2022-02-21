@@ -54,7 +54,7 @@ def main():
     fully_connected_nn_prediction(df_widest)
 
     # causal discovery
-    causal_discovery()
+    causal_discovery(df)
 
 
 main()

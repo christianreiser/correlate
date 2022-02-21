@@ -5,7 +5,7 @@ config parameters
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 
 # target
-target_label = 'ProductiveScreentime'  # label of interest
+target_label = 'Mood'  # label of interest
 
 # plots
 show_plots = False  # corr matrix
@@ -44,7 +44,9 @@ tau_max = 1
 alpha_level = 0.05
 corr_threshold = 0.07
 verbosity = 0
-pc_alpha = 0.01
+pc_alpha = 0.25
+remove_link_threshold = 0.15
+
 
 # check config
 if not sum(ensemble_weights) == 1.0:

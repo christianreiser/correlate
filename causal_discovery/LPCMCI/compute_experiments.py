@@ -11,8 +11,8 @@ from tigramite.independence_tests import ParCorr, GPDC, CMIknn
 
 # Imports from code inside directory
 import generate_data_mod as mod
-import metrics_mod
 import utilities as utilities
+from causal_discovery.LPCMCI import metrics_mod
 from discG2 import DiscG2
 from lpcmci import LPCMCI
 from simulate_discrete_scm import discretized_scp
@@ -25,15 +25,14 @@ folder_name = "results/"
 # 'model-N-L-min_coeff-max_coeff-autocorr-frac_contemp_links-frac_unobserved-max_true_lag-time_series_length-CI_test-method-alpha_level-tau_max'
 
 # original
-arg = [0, 1, 2, 'random_lineargaussian-3-3-0.2-0.8-0.9-0.3-0.3-3-100-par_corr-lpcmci_nprelim4-0.05-5']
+# arg = [0, 1, 2, 'random_lineargaussian-3-3-0.2-0.8-0.9-0.3-0.3-3-100-par_corr-lpcmci_nprelim4-0.05-5']
 
 # easy and correct
-# arg = [0, 1, 0, 'random_lineargaussian-2-2-0.5-0.9-0.9-0.3-0.3-1-1000-par_corr-lpcmci_nprelim4-0.05-1']
+arg = [0, 1, 3, 'random_lineargaussian-2-2-0.5-0.9-0.9-0.3-0.3-1-1000-par_corr-lpcmci_nprelim4-0.05-1']
 
 # close to real
-arg = [0, 1, 3, 'random_lineargaussian-9-9-0.1-0.45-0.6-0.6-0.3-1-510-par_corr-lpcmci_nprelim4-0.26-1'] # alpha=0.26
+# arg = [0, 1, 3, 'random_lineargaussian-9-9-0.1-0.45-0.6-0.6-0.3-1-510-par_corr-lpcmci_nprelim4-0.26-1']  # alpha=0.26
 
-remove_link_threshold = 0.11
 samples = int(arg[1])  # int number of time series realizations to generate
 verbosity = int(arg[2])  # verbosity
 config_list = list(arg)[3:]  # string that identifies a particular experiment consisting of a model and method.
@@ -56,14 +55,14 @@ def modify_dict_get_graph_and_link_vals(my_dict):
 
     input:
     dict with format s.th. like
-    my_dict = {0: [((0, -1), 0.85, 'removeme'),
-                   ((1, 0), -0.5, 'removeme'),
-                   ((2, -1), 0.7, 'removeme')],
-               1: [((1, -1), 0.8, 'removeme'),
-                   ((2, 0), 0.7, 'removeme')],
-               2: [((2, -1), 0.9, 'removeme')],
-               3: [((3, -2), 0.8, 'removeme'),
-                   ((0, -3), 0.4, 'removeme')]}
+    my_dict = {0: [((0, -1), 0.85, 'remove'),
+                   ((1, 0), -0.5, 'remove'),
+                   ((2, -1), 0.7, 'remove')],
+               1: [((1, -1), 0.8, 'remove'),
+                   ((2, 0), 0.7, 'remove')],
+               2: [((2, -1), 0.9, 'remove')],
+               3: [((3, -2), 0.8, 'remove'),
+                   ((0, -3), 0.4, 'remove')]}
     """
     len_dict = len(my_dict)
     max_time_lag = 0
@@ -103,40 +102,58 @@ def modify_dict_get_graph_and_link_vals(my_dict):
                 graph[effected_index][cause_index][lag] = '<--'
             val[effected_index][cause_index][lag] = link_strength
             val[cause_index][effected_index][lag] = link_strength
-    return my_dict, graph, val
+    return graph, val
 
 
-def calculate(para_setup):
-    para_setup_string, sam = para_setup
+def generate_data(random_state, links, noise_types, noise_sigma, model, T):
+    class NoiseModel:
+        def __init__(self, sigma=1):
+            self.sigma = sigma
 
-    paras = para_setup_string.split('-')
-    paras = [w.replace("'", "") for w in paras]
+        def gaussian(self, T):
+            # Get zero-mean unit variance gaussian distribution
+            return self.sigma * random_state.randn(T)
 
-    model = str(paras[0])  # e.g. random_lineargaussian
-    N = int(paras[1])  # 3
-    n_links = int(paras[2])  # 3
-    min_coeff = float(paras[3])  # 0.2
-    coeff = float(paras[4])  # 0.8
-    auto = float(paras[5])  # auto-dependency (auto-correlation) 0.9
-    contemp_fraction = float(paras[6])  # 0.3
-    frac_unobserved = float(paras[7])  # 0.3
-    max_true_lag = int(paras[8])  # 1
-    T = int(paras[9])  # 100
+        # def weibull(self, T):
+        #     # Get zero-mean sigma variance weibull distribution
+        #     a = 2
+        #     mean = scipy.special.gamma(1. / a + 1)
+        #     variance = scipy.special.gamma(2. / a + 1) - scipy.special.gamma(1. / a + 1) ** 2
+        #     return self.sigma * (random_state.weibull(a=a, size=T) - mean) / np.sqrt(variance)
+        #
+        # def uniform(self, T):
+        #     # Get zero-mean sigma variance uniform distribution
+        #     mean = 0.5
+        #     variance = 1. / 12.
+        #     return self.sigma * (random_state.uniform(size=T) - mean) / np.sqrt(variance)
 
-    ci_test = str(paras[10])  # parr_corr
-    method = str(paras[11])  # lpcmci_nprelim4
-    pc_alpha = float(paras[12])  # 0.05
-    tau_max = int(paras[13])  # 5
+    noises = []
+    for j in links:
+        noise_type = random_state.choice(noise_types)  # gaussian
+        sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
+        noises.append(getattr(NoiseModel(sigma), noise_type))
 
-    #############################################
-    ##  Data
-    #############################################
+    if 'discretebinom' in model:  # False
+        if 'binom2' in model:
+            n_binom = 2
+        elif 'binom4' in model:
+            n_binom = 4
 
+        data_all_check, nonstationary = discretized_scp(links=links, T=T + 10000,
+                                                        n_binom=n_binom, random_state=random_state)
+    else:  # yes
+        data_all_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(
+            links=links, T=T + 10000, noises=noises, random_state=random_state)
+    return nonstationary, data_all_check
+
+
+def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n_links, max_true_lag, T,
+                       contemp_fraction, tau_max):
     def lin_f(x):
         return x
 
     def f2(x):
-        return (x + 5. * x ** 2 * np.exp(-x ** 2 / 20.))
+        return x + 5. * x ** 2 * np.exp(-x ** 2 / 20.)
 
     if 'random' in model:
         if 'lineargaussian' in model:
@@ -145,12 +162,12 @@ def calculate(para_setup):
             noise_types = ['gaussian']  # , 'weibull', 'uniform']
             noise_sigma = (0.5, 2)
 
-        # elif 'nonlinearmixed' in model:
-        #
-        #     coupling_funcs = [lin_f, f2]
-        #
-        #     noise_types = ['gaussian', 'gaussian', 'weibull']
-        #     noise_sigma = (0.5, 2)
+        elif 'nonlinearmixed' in model:
+
+            coupling_funcs = [lin_f, f2]
+
+            noise_types = ['gaussian', 'gaussian', 'weibull']
+            noise_sigma = (0.5, 2)
 
         if coeff < min_coeff:  # correct coeff if to small
             min_coeff = coeff
@@ -182,47 +199,11 @@ def calculate(para_setup):
                 auto_coeffs=auto_deps,
                 tau_max=max_true_lag,
                 contemp_fraction=contemp_fraction,
-                # num_trials=1000,  
+                # num_trials=1000,
                 random_state=random_state)
 
-            class NoiseModel:
-                def __init__(self, sigma=1):
-                    self.sigma = sigma
-
-                def gaussian(self, T):
-                    # Get zero-mean unit variance gaussian distribution
-                    return self.sigma * random_state.randn(T)
-
-                # def weibull(self, T):
-                #     # Get zero-mean sigma variance weibull distribution
-                #     a = 2
-                #     mean = scipy.special.gamma(1. / a + 1)
-                #     variance = scipy.special.gamma(2. / a + 1) - scipy.special.gamma(1. / a + 1) ** 2
-                #     return self.sigma * (random_state.weibull(a=a, size=T) - mean) / np.sqrt(variance)
-                #
-                # def uniform(self, T):
-                #     # Get zero-mean sigma variance uniform distribution
-                #     mean = 0.5
-                #     variance = 1. / 12.
-                #     return self.sigma * (random_state.uniform(size=T) - mean) / np.sqrt(variance)
-
-            noises = []
-            for j in links:
-                noise_type = random_state.choice(noise_types)  # gaussian
-                sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
-                noises.append(getattr(NoiseModel(sigma), noise_type))
-
-            if 'discretebinom' in model:  # False
-                if 'binom2' in model:
-                    n_binom = 2
-                elif 'binom4' in model:
-                    n_binom = 4
-
-                data_all_check, nonstationary = discretized_scp(links=links, T=T + 10000,
-                                                                n_binom=n_binom, random_state=random_state)
-            else:  # yes
-                data_all_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-                    links=links, T=T + 10000, noises=noises, random_state=random_state)
+            # generate data from links
+            nonstationary, data_all_check = generate_data(random_state, links, noise_types, noise_sigma, model, T)
 
             # If the model is stationary, break the loop
             if not nonstationary:
@@ -232,37 +213,69 @@ def calculate(para_setup):
             else:
                 print("Trial %d: Not a stationary model" % ir)
                 model_seed += 10000
-    # elif model == 'autobidirected':
-    #     if verbosity > 999:
-    #         model_seed = verbosity - 1000
-    #     else:
-    #         model_seed = sam
-    #
-    #     random_state = np.random.RandomState(model_seed)
-    #
-    #     links = {
-    #         0: [((0, -1), auto, lin_f), ((1, -1), coeff, lin_f)],
-    #         1: [],
-    #         2: [((2, -1), auto, lin_f), ((1, -1), coeff, lin_f)],
-    #         3: [((3, -1), auto, lin_f), ((2, -1), min_coeff, lin_f)],
-    #     }
-    #     observed_vars = [0, 2, 3]
-    #
-    #     noises = [random_state.randn for j in range(len(links))]
-    #
-    #     data_all, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-    #         links=links, T=T, noises=noises, random_state=random_state)
-    #     data = data_all[:, observed_vars]
     else:
         raise ValueError("model %s not known" % model)
 
     if nonstationary:
         raise ValueError("No stationary model found: %s" % model)
 
-    links_dict_clean, original_graph, original_vals = modify_dict_get_graph_and_link_vals(links)
+    # plot data
+    if plot_data:
+        print("PLOTTING")
+        for j in range(N):
+            # ax = fig.add_subplot(N,1,j+1)
+            pyplot.plot(data[:, j])
+        pyplot.show()
 
-    true_graph = utilities.get_pag_from_dag(links, observed_vars=observed_vars,
-                                            tau_max=tau_max, verbosity=verbosity)[1]
+    # plot original DAG
+    if verbosity > 1:
+        original_graph, original_vals = modify_dict_get_graph_and_link_vals(links)
+        tp.plot_graph(
+            val_matrix=original_vals,  # original_vals None
+            link_matrix=original_graph,
+            var_names=range(N_all),
+            link_colorbar_label='cross-MCI',
+            node_colorbar_label='auto-MCI',
+            figsize=(10, 6),
+        )
+        plt.show()
+        # Plot time series graph
+        tp.plot_time_series_graph(
+            figsize=(12, 8),
+            val_matrix=original_vals,  # original_vals None
+            link_matrix=original_graph,
+            var_names=range(N_all),
+            link_colorbar_label='MCI',
+        )
+        plt.show()
+
+    dataframe = pp.DataFrame(data)
+    return dataframe, links, observed_vars
+
+
+def compute_true_pag(links, observed_vars, tau_max):
+    if verbosity > 1:
+        # plot true PAG
+        true_graph = utilities.get_pag_from_dag(links, observed_vars=observed_vars,
+                                                tau_max=tau_max, verbosity=verbosity)[1]
+        tp.plot_graph(
+            val_matrix=None,
+            link_matrix=true_graph,
+            var_names=observed_vars,
+            link_colorbar_label='cross-MCI',
+            node_colorbar_label='auto-MCI',
+            figsize=(10, 6),
+        )
+        plt.show()
+        # Plot time series graph
+        tp.plot_time_series_graph(
+            figsize=(12, 8),
+            val_matrix=None,
+            link_matrix=true_graph,
+            var_names=observed_vars,
+            link_colorbar_label='MCI',
+        )
+        plt.show()
 
     if verbosity > 0:
         print("True Links")
@@ -276,21 +289,67 @@ def calculate(para_setup):
         else:
             print(true_graph.squeeze())
 
-    if plot_data:
-        print("PLOTTING")
-        for j in range(N):
-            # ax = fig.add_subplot(N,1,j+1)
-            pyplot.plot(data[:, j])
+    # plot true PAG
+    tp.plot_graph(
+        val_matrix=None,
+        link_matrix=true_graph,
+        var_names=observed_vars,
+        link_colorbar_label='cross-MCI',
+        node_colorbar_label='auto-MCI',
+        figsize=(10, 6),
+    )
+    plt.show()
+    # Plot time series graph
+    tp.plot_time_series_graph(
+        figsize=(12, 8),
+        val_matrix=None,
+        link_matrix=true_graph,
+        var_names=observed_vars,
+        link_colorbar_label='MCI',
+    )
+    plt.show()
 
-        pyplot.show()
+    return true_graph
 
-    computation_time_start = time.time()
 
-    dataframe = pp.DataFrame(data)
+def calculate(para_setup):
+    para_setup_string, sam = para_setup
 
+    paras = para_setup_string.split('-')
+    paras = [w.replace("'", "") for w in paras]
+
+    model = str(paras[0])  # e.g. random_lineargaussian
+    N = int(paras[1])  # 3
+    n_links = int(paras[2])  # 3
+    min_coeff = float(paras[3])  # 0.2
+    coeff = float(paras[4])  # 0.8
+    auto = float(paras[5])  # auto-dependency (auto-correlation) 0.9
+    contemp_fraction = float(paras[6])  # 0.3
+    frac_unobserved = float(paras[7])  # 0.3
+    max_true_lag = int(paras[8])  # 1
+    T = int(paras[9])  # 100
+
+    ci_test = str(paras[10])  # parr_corr
+    method = str(paras[11])  # lpcmci_nprelim4
+    pc_alpha = float(paras[12])  # 0.05
+    tau_max = int(paras[13])  # 5
+
+    #############################################
+    ##  Data
+    #############################################
+
+    dataframe, links, observed_vars = generate_dataframe(model, coeff, min_coeff,
+                                                         auto, sam, N,
+                                                         frac_unobserved, n_links,
+                                                         max_true_lag, T,
+                                                         contemp_fraction,
+                                                         tau_max)
     #############################################
     ##  Methods
     #############################################
+    true_graph = compute_true_pag(links, observed_vars, tau_max)
+
+    computation_time_start = time.time()
 
     # Specify conditional independence test object
     if ci_test == 'par_corr':
@@ -339,69 +398,28 @@ def calculate(para_setup):
     computation_time_end = time.time()
     computation_time = computation_time_end - computation_time_start
 
-    if verbosity > 1:
-        # plot original DAG
-        tp.plot_graph(
-            val_matrix=original_vals,  # original_vals None
-            link_matrix=original_graph,
-            var_names=range(N_all),
-            link_colorbar_label='cross-MCI',
-            node_colorbar_label='auto-MCI',
-            figsize=(10, 6),
-        )
-        plt.show()
-        # Plot time series graph
-        tp.plot_time_series_graph(
-            figsize=(12, 8),
-            val_matrix=original_vals,  # original_vals None
-            link_matrix=original_graph,
-            var_names=range(N_all),
-            link_colorbar_label='MCI',
-        )
-        plt.show()
+    # val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
+    # graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
 
-        # plot true PAG
-        tp.plot_graph(
-            val_matrix=None,
-            link_matrix=true_graph,
-            var_names=observed_vars,
-            link_colorbar_label='cross-MCI',
-            node_colorbar_label='auto-MCI',
-            figsize=(10, 6),
-        )
-        plt.show()
-        # Plot time series graph
-        tp.plot_time_series_graph(
-            figsize=(12, 8),
-            val_matrix=None,
-            link_matrix=true_graph,
-            var_names=observed_vars,
-            link_colorbar_label='MCI',
-        )
-        plt.show()
-
-        # val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
-        # graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
-
-        # plot found PAG
-        tp.plot_graph(
-            val_matrix=val_min,
-            link_matrix=graph,
-            var_names=observed_vars,
-            link_colorbar_label='cross-MCI',
-            node_colorbar_label='auto-MCI',
-            figsize=(10, 6),
-        )
-        plt.show()
-        # Plot time series graph
-        tp.plot_time_series_graph(
-            figsize=(12, 8),
-            val_matrix=val_min,
-            link_matrix=graph,
-            var_names=observed_vars,
-            link_colorbar_label='MCI',
-        )
-        plt.show()
+    # plot found PAG
+    tp.plot_graph(
+        val_matrix=val_min,
+        link_matrix=graph,
+        var_names=observed_vars,
+        link_colorbar_label='cross-MCI',
+        node_colorbar_label='auto-MCI',
+        figsize=(10, 6),
+    )
+    plt.show()
+    # Plot time series graph
+    tp.plot_time_series_graph(
+        figsize=(12, 8),
+        val_matrix=val_min,
+        link_matrix=graph,
+        var_names=observed_vars,
+        link_colorbar_label='MCI',
+    )
+    plt.show()
 
     return {
         'true_graph': true_graph,
@@ -431,6 +449,9 @@ if __name__ == '__main__':
     for config_sam in job_list:
         config, sample = config_sam
         print("Experiment %s - Realization %d" % (config, sample))
+        ##################
+        ### calculate ###
+        ##################
         all_configs[config]['results'][sample] = calculate(config_sam)
 
     print("\nsaving all configs...")
