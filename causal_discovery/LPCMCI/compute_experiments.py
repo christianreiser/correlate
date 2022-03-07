@@ -22,7 +22,7 @@ folder_name = "results/"
 
 
 # close to real
-arg = [0, 50, 0, 'random_lineargaussian-8-8-0.2-0.5-0.5-0.6-0.3-1-500-par_corr-lpcmci_nprelim4-0.26-1']  # alpha=0.26
+arg = [0, 4000, 0, 'random_lineargaussian-8-8-0.2-0.5-0.5-0.6-0.3-1-500-par_corr-lpcmci_nprelim4-0.26-1']  # alpha=0.26
 
 samples = int(arg[1])  # int number of time series realizations to generate
 verbosity = int(arg[2])  # verbosity
