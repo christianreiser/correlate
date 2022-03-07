@@ -514,7 +514,8 @@ class LPCMCI():
                                       (X, Y, ' '.join([str(z) for z in S_default_YX]), ' '.join([str(z) for z in S_pc]),
                                        val, pval))
 
-                            # Accordingly update dictionaries that keep track of the test statistic, the corresponding p-value and the cardinality of conditioning sets
+                            # Accordingly update dictionaries that keep track of the test statistic, the corresponding
+                            # p-value and the cardinality of conditioning sets
                             self._update_val_min(X, Y, val)
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))

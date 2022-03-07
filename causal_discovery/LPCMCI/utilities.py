@@ -688,7 +688,7 @@ def _get_minmax_lag(links):
     return min_lag, max_lag
 
 
-def get_pag_from_dag(links_coeffs, observed_vars=None, tau_max=None, verbosity=0):
+def get_oracle_pag_from_dag(links_coeffs, observed_vars=None, tau_max=None, verbosity=0):
     """Computes PAG over observed variables from DAG on full variable set.
 
        Uses OracleCI tests based on ancestors in DAG to obtain skeleton and sepsets.

@@ -18,9 +18,6 @@ def get_masks(true_graphs):
     any_mask = np.ones((N, N, tau_max + 1)).astype('bool')
     any_mask[:, :, 0] = contemp_cross_mask_tril[:, :, 0]
 
-    # n_realizations = len(results['graphs'])
-    # true_graphs = results['true_graphs']
-
     cross_mask = np.repeat(cross_mask.reshape(1, N, N, tau_max + 1), n_realizations, axis=0)
     contemp_cross_mask_tril = np.repeat(contemp_cross_mask_tril.reshape(1, N, N, tau_max + 1), n_realizations, axis=0)
     lagged_mask = np.repeat(lagged_mask.reshape(1, N, N, tau_max + 1), n_realizations, axis=0)
@@ -86,24 +83,24 @@ def get_numbers(metrics, orig_true_graphs, orig_pred_graphs, val_min, cardinalit
     true_graphs = orig_true_graphs
 
     metrics_dict['valmin_lagged'] = (
-    ((true_graphs != "") * np.abs(val_min) * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * np.abs(val_min) * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
     metrics_dict['valmin_auto'] = (((true_graphs != "") * np.abs(val_min) * auto_mask).sum(axis=(1, 2, 3)),
                                    ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['valmin_contemp'] = (
-    ((true_graphs != "") * np.abs(val_min) * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * np.abs(val_min) * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
     metrics_dict['valmin_anylink'] = (((true_graphs != "") * np.abs(val_min) * any_mask).sum(axis=(1, 2, 3)),
                                       ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
 
     metrics_dict['cardinality_lagged'] = (
-    ((true_graphs != "") * cardinality * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * cardinality * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
     metrics_dict['cardinality_auto'] = (((true_graphs != "") * cardinality * auto_mask).sum(axis=(1, 2, 3)),
                                         ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['cardinality_contemp'] = (
-    ((true_graphs != "") * cardinality * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * cardinality * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
     metrics_dict['cardinality_anylink'] = (((true_graphs != "") * cardinality * any_mask).sum(axis=(1, 2, 3)),
                                            ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
 
@@ -121,11 +118,11 @@ def get_numbers(metrics, orig_true_graphs, orig_pred_graphs, val_min, cardinalit
     metrics_dict['directed_auto'] = (((true_graphs == "-->") * auto_mask).sum(axis=(1, 2, 3)),
                                      ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['directed_contemp'] = (
-    (np.logical_or(true_graphs == "-->", true_graphs == "<--") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        (np.logical_or(true_graphs == "-->", true_graphs == "<--") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
     metrics_dict['directed_anylink'] = (
-    (np.logical_or(true_graphs == "-->", true_graphs == "<--") * any_mask).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
+        (np.logical_or(true_graphs == "-->", true_graphs == "<--") * any_mask).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
 
     metrics_dict['bidirected_lagged'] = (((true_graphs == "<->") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
                                          ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
@@ -138,49 +135,50 @@ def get_numbers(metrics, orig_true_graphs, orig_pred_graphs, val_min, cardinalit
 
     # Adjacency true/false positives and precision/recall, separated by lagged/auto/contemp
     metrics_dict['adj_lagged_fpr'] = (
-    ((true_graphs == "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
-    ((true_graphs == "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+        ((true_graphs == "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
+        ((true_graphs == "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_lagged_tpr'] = (
-    ((true_graphs != "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_auto_fpr'] = (((true_graphs == "") * (pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)),
                                     ((true_graphs == "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_auto_tpr'] = (((true_graphs != "") * (pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)),
                                     ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_contemp_fpr'] = (
-    ((true_graphs == "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((true_graphs == "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        ((true_graphs == "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((true_graphs == "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
     metrics_dict['adj_contemp_tpr'] = (
-    ((true_graphs != "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
 
     metrics_dict['adj_anylink_fpr'] = (((true_graphs == "") * (pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)),
                                        ((true_graphs == "") * any_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_anylink_tpr'] = (((true_graphs != "") * (pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)),
                                        ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
 
-    metrics_dict['adj_lagged_precision'] = (
-    ((true_graphs != "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
-    ((pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
-    metrics_dict['adj_lagged_recall'] = (
-    ((true_graphs != "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+    # adj_lagged_precision = oracle * predicted / pred = tp/(tp+fp) = precision
+    metrics_dict['adj_lagged_precision'] = (((true_graphs != "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3))
+                                            ,
+                                            ((pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+    metrics_dict['adj_lagged_recall'] = ( # tp/(tp+fn) =  recall
+       ((true_graphs != "") * (pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_auto_precision'] = (((true_graphs != "") * (pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)),
                                           ((pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_auto_recall'] = (((true_graphs != "") * (pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)),
                                        ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_contemp_precision'] = (
-    ((true_graphs != "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
     metrics_dict['adj_contemp_recall'] = (
-    ((true_graphs != "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        ((true_graphs != "") * (pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
 
     metrics_dict['adj_anylink_precision'] = (((true_graphs != "") * (pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)),
                                              ((pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
     metrics_dict['adj_anylink_recall'] = (((true_graphs != "") * (pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)),
                                           ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
-    #chr f1 adj
+    # chr f1 adj
     # metrics_dict['adj_anylink_f1_of_recall_precision'] = 2 * metrics_dict['adj_anylink_precision'] * metrics_dict[
     #     'adj_anylink_recall'] / (metrics_dict['adj_anylink_precision'] + metrics_dict['adj_anylink_recall'])
 
@@ -190,48 +188,67 @@ def get_numbers(metrics, orig_true_graphs, orig_pred_graphs, val_min, cardinalit
         axis=(1, 2, 3)),
                                                   2. * ((pred_graphs != "") * cross_mask * lagged_mask).sum(
                                                       axis=(1, 2, 3)))
-
-    metrics_dict['edgemarks_lagged_recall'] = (
-    (match_func(true_graphs, pred_graphs) * (cross_mask * lagged_mask)).sum(axis=(1, 2, 3)),
-    2. * ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+    first =  (match_func(true_graphs, pred_graphs) * (cross_mask * lagged_mask)).sum(axis=(1, 2, 3))
+    second = 2. * ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3))
+    metrics_dict['edgemarks_lagged_recall'] = (first,
+        second)
     metrics_dict['edgemarks_auto_precision'] = ((match_func(true_graphs, pred_graphs) * auto_mask).sum(axis=(1, 2, 3)),
                                                 2. * ((pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['edgemarks_auto_recall'] = ((match_func(true_graphs, pred_graphs) * auto_mask).sum(axis=(1, 2, 3)),
                                              2. * ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
     metrics_dict['edgemarks_contemp_precision'] = (
-    (match_func(true_graphs, pred_graphs) * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    2. * ((pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        (match_func(true_graphs, pred_graphs) * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        2. * ((pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
     metrics_dict['edgemarks_contemp_recall'] = (
-    (match_func(true_graphs, pred_graphs) * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
-    2. * ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        (match_func(true_graphs, pred_graphs) * contemp_cross_mask_tril).sum(axis=(1, 2, 3)),
+        2. * ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
 
     metrics_dict['edgemarks_anylink_precision'] = (
-    (match_func(true_graphs, pred_graphs) * any_mask).sum(axis=(1, 2, 3)),
-    2. * ((pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
+        (match_func(true_graphs, pred_graphs) * any_mask).sum(axis=(1, 2, 3)),
+        2. * ((pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
     metrics_dict['edgemarks_anylink_recall'] = ((match_func(true_graphs, pred_graphs) * any_mask).sum(axis=(1, 2, 3)),
                                                 2. * ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
-    #chr f1 edgemark
+    # chr f1 edgemark
     # metrics_dict['edgemarks_anylink_f1_of_recall_precision'] = 2 * metrics_dict['edgemarks_anylink_precision'] * metrics_dict[
     #     'edgemarks_anylink_recall'] / (metrics_dict['edgemarks_anylink_precision'] + metrics_dict['edgemarks_anylink_recall'])
 
     # Unoriented marks in true_graph and conflicts in pred_graph
+
     metrics_dict['unoriented_lagged'] = (
-    (unoriented_func(true_graphs) * (cross_mask * lagged_mask)).sum(axis=(1, 2, 3)),
-    2. * ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+        (unoriented_func(pred_graphs) * (cross_mask * lagged_mask)).sum(axis=(1, 2, 3)),
+        2. * ((pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+    # metrics_dict['unoriented_lagged'] = (
+    #     (unoriented_func(true_graphs) * (cross_mask * lagged_mask)).sum(axis=(1, 2, 3)),
+    #     2. * ((true_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
+
     metrics_dict['conflicts_lagged'] = ((conflict_func(pred_graphs) * (cross_mask * lagged_mask)).sum(axis=(1, 2, 3)),
                                         2. * ((pred_graphs != "") * cross_mask * lagged_mask).sum(axis=(1, 2, 3)))
-    metrics_dict['unoriented_auto'] = ((unoriented_func(true_graphs) * (auto_mask)).sum(axis=(1, 2, 3)),
-                                       2. * ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
+
+    metrics_dict['unoriented_auto'] = ((unoriented_func(pred_graphs) * (auto_mask)).sum(axis=(1, 2, 3)),
+                                       2. * ((pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
+    # metrics_dict['unoriented_auto'] = ((unoriented_func(true_graphs) * (auto_mask)).sum(axis=(1, 2, 3)),
+    #                                    2. * ((true_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
+
     metrics_dict['conflicts_auto'] = ((conflict_func(pred_graphs) * (auto_mask)).sum(axis=(1, 2, 3)),
                                       2. * ((pred_graphs != "") * auto_mask).sum(axis=(1, 2, 3)))
+
     metrics_dict['unoriented_contemp'] = (
-    (unoriented_func(true_graphs) * (contemp_cross_mask_tril)).sum(axis=(1, 2, 3)),
-    2. * ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+        (unoriented_func(pred_graphs) * (contemp_cross_mask_tril)).sum(axis=(1, 2, 3)),
+        2. * ((pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+    # metrics_dict['unoriented_contemp'] = (
+    #     (unoriented_func(true_graphs) * (contemp_cross_mask_tril)).sum(axis=(1, 2, 3)),
+    #     2. * ((true_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
+
     metrics_dict['conflicts_contemp'] = ((conflict_func(pred_graphs) * (contemp_cross_mask_tril)).sum(axis=(1, 2, 3)),
                                          2. * ((pred_graphs != "") * contemp_cross_mask_tril).sum(axis=(1, 2, 3)))
 
-    metrics_dict['unoriented_anylink'] = ((unoriented_func(true_graphs) * (any_mask)).sum(axis=(1, 2, 3)),
-                                          2. * ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
+    metrics_dict['unoriented_anylink'] = ((unoriented_func(pred_graphs) * (any_mask)).sum(axis=(1, 2, 3)),
+                                          2. * ((pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
+    # metrics_dict['unoriented_anylink'] = ((unoriented_func(true_graphs) * (any_mask)).sum(axis=(1, 2, 3)),
+    #                                       2. * ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
+
+    print('unoriented_anylink_oracle', (((unoriented_func(true_graphs) * (any_mask)).sum(axis=(1, 2, 3)))/
+                                        (2. * ((true_graphs != "") * any_mask).sum(axis=(1, 2, 3)))))
     metrics_dict['conflicts_anylink'] = ((conflict_func(pred_graphs) * (any_mask)).sum(axis=(1, 2, 3)),
                                          2. * ((pred_graphs != "") * any_mask).sum(axis=(1, 2, 3)))
 
@@ -248,7 +265,7 @@ def get_numbers(metrics, orig_true_graphs, orig_pred_graphs, val_min, cardinalit
         metrics_dict[metric] = (numerator.sum() / denominator.sum(), metric_boot.std())
 
     metrics_dict['computation_time'] = (
-    np.mean(np.array(computation_time)), np.percentile(np.array(computation_time), [5, 95]))
+        np.mean(np.array(computation_time)), np.percentile(np.array(computation_time), [5, 95]))
 
     return metrics_dict
 
@@ -275,7 +292,7 @@ def get_evaluation(results, from_file=False):
         # all_configs[conf]['computation_time'].append(all_configs[conf]['results'][i]['computation_time'])
 
         # Same tau_max for all trials
-        orig_true_graphs = results['true_graphs']
+        orig_true_graphs = results['oracle_graphs']
 
         # Minimum effect size for each link
         val_min = results['val_min']
