@@ -1,12 +1,13 @@
 import math
 import os
 import pickle
+import random as rd
 import time
 
 import numpy as np
 # Imports from tigramite package available on https://github.com/jakobrunge/tigramite
 import tigramite.data_processing as pp
-from matplotlib import pyplot, pyplot as plt
+from matplotlib import pyplot as plt
 from tigramite import plotting as tp
 from tigramite.independence_tests import ParCorr
 
@@ -14,12 +15,10 @@ from tigramite.independence_tests import ParCorr
 import generate_data_mod as mod
 import utilities as utilities
 from causal_discovery.LPCMCI import metrics_mod
-from config import remove_link_threshold
 from lpcmci import LPCMCI
 
 # Directory to save results
 folder_name = "results/"
-
 
 # close to real
 arg = [0, 4000, 0, 'random_lineargaussian-8-8-0.2-0.5-0.5-0.6-0.3-1-500-par_corr-lpcmci_nprelim4-0.26-1']  # alpha=0.26
@@ -73,7 +72,7 @@ def modify_dict_get_graph_and_link_vals(my_dict):
 
         my_dict.update({key: modified_list})
 
-    print('links:', my_dict)
+    # print('links:', my_dict)
 
     max_time_lag = - max_time_lag
 
@@ -211,7 +210,6 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
             original_graph, original_vals = modify_dict_get_graph_and_link_vals(links)
             dataframe = pp.DataFrame(data)
 
-
             # save data to file
             # filename = os.path.abspath("./../../../test.dat")
             # fileobj = open(filename, mode='wb')
@@ -292,6 +290,7 @@ def compute_oracle_pag(links, observed_vars, tau_max):
             print(oracle_graph.squeeze())
     return oracle_graph
 
+
 def calculate(para_setup):
     para_setup_string, sam = para_setup
 
@@ -318,8 +317,9 @@ def calculate(para_setup):
     ##  Data
     #############################################
 
-    dataframe, links, observed_vars, original_graph = generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved,
-                                                         n_links, max_true_lag, T, contemp_fraction)
+    dataframe, links, observed_vars, original_graph = generate_dataframe(model, coeff, min_coeff, auto, sam, N,
+                                                                         frac_unobserved,
+                                                                         n_links, max_true_lag, T, contemp_fraction)
 
     # dataframe, links, observed_vars = generate_fixed_data()
 
@@ -339,10 +339,38 @@ def calculate(para_setup):
         tau_max=tau_max,
         pc_alpha=pc_alpha,
         max_p_non_ancestral=3,  # max cardinality of conditioning set, in the second removal phase
-        n_preliminary_iterations=4,
+        n_preliminary_iterations=10,
         verbosity=verbosity)
 
     graph = lpcmci.graph
+    l = ['-->', '', '<--', '', 'o->', '', '<-o', '', '<->', '']
+    random_edgemark_graph = [[[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]],
+              [[rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)],
+               [rd.choice(l), rd.choice(l)], [rd.choice(l), rd.choice(l)]]]
+    # graph = np.asarray(random_edgemark_graph)
+    # print('\ngraph!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n', graph, '\n\n')
+
     val_min = lpcmci.val_min_matrix
     max_cardinality = lpcmci.cardinality_matrix
 
@@ -363,9 +391,8 @@ def calculate(para_setup):
     computation_time_end = time.time()
     computation_time = computation_time_end - computation_time_start
 
-
     # plot predicted PAG
-    if verbosity >0:
+    if verbosity > 0:
         tp.plot_graph(
             val_matrix=val_min,
             link_matrix=graph,
@@ -448,10 +475,12 @@ if __name__ == '__main__':
 
     for conf in list(all_configs.keys()):
         all_configs[conf]['graphs'] = np.zeros((samples,) + all_configs[conf]['results'][0]['graph'].shape, dtype='<U3')
-        all_configs[conf]['oracle_graphs'] = np.zeros((samples,) + all_configs[conf]['results'][0]['oracle_graph'].shape,
-                                                    dtype='<U3')
-        all_configs[conf]['original_graphs'] = np.zeros((samples,) + all_configs[conf]['results'][0]['original_graph'].shape,
-                                                    dtype='<U3')
+        all_configs[conf]['oracle_graphs'] = np.zeros(
+            (samples,) + all_configs[conf]['results'][0]['oracle_graph'].shape,
+            dtype='<U3')
+        all_configs[conf]['original_graphs'] = np.zeros(
+            (samples,) + all_configs[conf]['results'][0]['original_graph'].shape,
+            dtype='<U3')
         all_configs[conf]['val_min'] = np.zeros((samples,) + all_configs[conf]['results'][0]['val_min'].shape)
         all_configs[conf]['max_cardinality'] = np.zeros(
             (samples,) + all_configs[conf]['results'][0]['max_cardinality'].shape)
