@@ -9,3 +9,5 @@ venv/
 runs/*
 __pycache__/
 0_data_raw/
+*.dat
+*.pth
