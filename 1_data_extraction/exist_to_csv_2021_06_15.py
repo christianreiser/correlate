@@ -6,7 +6,7 @@ correlate
 
 load data form json, into df, correlation matrix, visualize
 """
-path_to_json_files = './ChrisG_dd3d35c4fd41e0386e17b86906d710f6ad86e95c36de734bb4bf7c915d195e8e/'
+path_to_json_files = '/home/chrei/code/quantifiedSelfData/2022/ChrisG_a7bdb31dddb7586bea95f752ca7883740c77ae2dde615633ca99b40c74ef9192'
 verbose = False
 
 excludedFiles = ['averages.json', 'correlations.json', 'weather_summary.json', 'twitter_username.json',
@@ -43,7 +43,7 @@ for root, dirs, files in os.walk(path_to_json_files):
         # exclude files small files to reduce noise
         # exclude correlations.json
         file_size = os.stat(os.path.join(path_to_json_files, file))[6]
-        if file.endswith("_2019.json") and file.startswith('data_') and file not in excludedFiles:
+        if file.endswith("_2022.json") and file.startswith('data_') and file not in excludedFiles:
             if verbose:
                 print('file-size=', file_size)
                 print('json_2_1_feature_df(root, file):', json_2_1_feature_df(root, file))
@@ -60,8 +60,8 @@ for root, dirs, files in os.walk(path_to_json_files):
                     print('/n')
             i += 1
 
-df.to_csv('exist_output_2019.csv')
+df.to_csv('exist_output_2022.csv')
 if verbose:
     print(df)
-print('exist_output_2019.csv written')
+print('exist_output_2022.csv written')
 

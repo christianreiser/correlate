@@ -1,13 +1,22 @@
 import datetime
 import pylunar
-mi = pylunar.MoonInfo((42, 21, 30), (-71, 3, 35))
-mi.update((2021, 6, 23, 22, 0, 0))
-base = datetime.datetime.today()
-base = datetime.datetime(2019,2,12,22,00,00)
-date_list = [datetime.timedelta(days=x) + base for x in range(870)]
+"""
+This script is used to extract the moon illumination data for all dates between "base" and "today".
+data is printed and can be copy pasted in to csv.
+uncomment printing date-list temporarily and check at https://www.timeanddate.com/moon/phases/germany/stuttgart if correct
 
-#    mi.update(str(date_list[0].strftime('%Y,%m,%d,%H,%M,%S')))
+"""
+mi = pylunar.MoonInfo((42, 21, 30), (-71, 3, 35))
+today = datetime.datetime.today()
+base = datetime.datetime(2019,2,11,22,00,00)
+timedelta = today  - base
+date_list = [datetime.timedelta(days=x) + base for x in range(int(timedelta.days+2))]
+
 for i in range(len(date_list)):
     mi.update(date_list[i])
-    print(date_list[i])
+
+    # print(date_list[i])
     print(round(mi.fractional_phase(),2))
+
+""" save mi.fractional_phase() to csv """
+
