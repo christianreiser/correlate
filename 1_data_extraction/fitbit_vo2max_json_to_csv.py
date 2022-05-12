@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-path_to_json_files = '/home/chrei/PycharmProjects/correlate/MyFitbitData/ChrisRe/Physical Activity'
+path_to_json_files = '/home/chrei/code/quantifiedSelfData/2022/MyFitbitData/ChrisRe/Physical Activity'
 output_filename = 'fitbit_vo2max.csv'
 verbose = True
 
@@ -52,7 +52,7 @@ all_files_df['filteredRunVO2Max'] = filteredRunVO2MaxList
 
 # aggregate when multiple per day
 all_files_df['dateTime'] = pd.to_datetime(all_files_df['dateTime'])
-all_files_df = all_files_df.groupby(all_files_df['dateTime'].dt.date).median(skipna=True)
+all_files_df = all_files_df.groupby(all_files_df['dateTime'].dt.date).median()
 
 # round
 all_files_df.filteredRunVO2Max = round(all_files_df.filteredRunVO2Max, 1)

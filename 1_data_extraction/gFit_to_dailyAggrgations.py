@@ -12,8 +12,8 @@ select which aggregation is needed: max, min, mean, sum
 append to data frame
 write dataframe
 """
-path_to_csv_files = '/home/chrei/PycharmProjects/correlate/0_data_raw/google/takeout-20210625T075514Z-001/Takeout/Fit/Daily activity metrics/'
-outputname = './google_output_2021_06_25_percentile.csv'
+path_to_csv_files = '/home/chrei/code/quantifiedSelfData/2022/takeout-20220502T163423Z-001/Takeout/Fit/Daily activity metrics/'
+outputname = './google_output_2022_05_12_percentile.csv'
 verbose = False
 print('running ...')
 
@@ -161,6 +161,9 @@ def csv_2_df(csv_root, csv_file, total_agg):
             daily_aggregation[attribute_name] = [
                 aggregated[attribute_name]['sum']]
         elif aggregated.columns[i] == 'Elliptical duration (ms)':
+            daily_aggregation[attribute_name] = [
+                aggregated[attribute_name]['sum']]
+        elif aggregated.columns[i] == 'Roller skiing duration (ms)':
             daily_aggregation[attribute_name] = [
                 aggregated[attribute_name]['sum']]
         elif aggregated.columns[i] == 'Stair climbing duration (ms)':

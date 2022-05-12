@@ -6,7 +6,7 @@ data is printed and can be copy pasted in to csv.
 uncomment printing date-list temporarily and check at https://www.timeanddate.com/moon/phases/germany/stuttgart if correct
 
 """
-mi = pylunar.MoonInfo((42, 21, 30), (-71, 3, 35))
+mi = pylunar.MoonInfo((42, 21, 30), (-71, 3, 35)) # stuttgart location
 today = datetime.datetime.today()
 base = datetime.datetime(2019,2,11,22,00,00)
 timedelta = today  - base
@@ -18,5 +18,7 @@ for i in range(len(date_list)):
     # print(date_list[i])
     print(round(mi.fractional_phase(),2))
 
-""" save mi.fractional_phase() to csv """
+
+
+
 

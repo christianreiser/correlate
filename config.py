@@ -8,14 +8,14 @@ private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 target_label = 'Mood'  # label of interest
 
 # plots
-show_plots = False  # corr matrix
-histograms_on = False
+show_plots = True  # corr matrix
+histograms_on = True
 
 # autocorrelation
-autocorrelation_on = False
+autocorrelation_on = True
 
 # correlations
-load_precomputed_coefficients_and_p_val = True
+load_precomputed_coefficients_and_p_val = False
 
 # features
 add_yesterdays_target_feature_on = False
@@ -33,10 +33,10 @@ phone_vis_height_width = [407, 370]
 survey_value_manipulation = False  # to create fake data for visualization survey
 
 # NN
-fully_connected_nn_prediction_on = False
+fully_connected_nn_prediction_on = True
 
 # PCA
-pca_on = False
+pca_on = True
 
 # causal discovery
 causal_discovery_on = True

@@ -10,7 +10,7 @@ from prediction.linear_regression import multiple_linear_regression_ensemble
 
 def main():
     # load data
-    df = pd.read_csv(str(private_folder_path) + 'daily_summaries_all.csv', index_col=0)
+    df = pd.read_csv(str(private_folder_path) + 'daily_summaries_compute.csv', index_col=0)
 
     if survey_value_manipulation:
         df.loc['2021-06-14', 'DistractingScreentime'] = 658

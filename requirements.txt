@@ -5,7 +5,7 @@ networkx~=2.6.3
 tigramite~=4.2.2.1
 matplotlib~=3.5.1
 dcor~=0.5.3
-torch~=1.10.0
+torch==1.11.0
 gpytorch~=1.6.0
 six~=1.16.0
 pytest~=6.2.5
@@ -18,3 +18,4 @@ seaborn~=0.11.1
 DateTime~=4.3
 tqdm==4.62.3
 python-dateutil~=2.8.1
+tensorboard

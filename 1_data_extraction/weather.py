@@ -12,8 +12,8 @@ select which aggregation is needed: max, min, mean, sum
 append to data frame
 write dataframe
 """
-path_to_csv_files = '/home/chrei/PycharmProjects/correlate/0_data_raw/weather/'
-outputname = '/home/chrei/PycharmProjects/correlate/0_data_raw/weather/weather_daily_summaries.csv'
+path_to_csv_files = '/home/chrei/code/quantifiedSelfData/2022/'
+outputname = './weather_daily_summaries.csv'
 verbose = False
 excludedFiles = ['weather (another copy).csv', 'weather (copy).csv']
 print('starting ...')
