@@ -1,11 +1,14 @@
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from tigramite import data_processing as pp
 from tigramite import plotting as tp
 from tigramite.independence_tests import ParCorr
+from tigramite.pcmci import PCMCI
+
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
 from causal_discovery.preprocessing import remove_nan_seq_from_top_and_bot
-from config import verbosity, causal_discovery_on, tau_max, pc_alpha, remove_link_threshold
+from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_folder_path, remove_link_threshold
 
 
 # def calculate():
@@ -88,9 +91,12 @@ from config import verbosity, causal_discovery_on, tau_max, pc_alpha, remove_lin
 
 def causal_discovery(df):
     if causal_discovery_on:
+        # load csv to dataframe from path str(private_folder_path) + 'results.csv'
+        non_zero_inices = pd.read_csv(str(private_folder_path) + 'results.csv')
+
+
         # select columns
-        df = df[['HumidInMax()', 'Mood', 'HeartPoints', 'CO2Median()', 'NoiseMax()', 'VitaminDSup', 'PressOutMin()',
-                 'BodyWeight']]  #
+        df = df[['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']]  #
         df.reset_index(level=0, inplace=True)
 
         df = remove_nan_seq_from_top_and_bot(df)
@@ -109,40 +115,71 @@ def causal_discovery(df):
             significance='analytic',
             recycle_residuals=True)
 
-        lpcmci = LPCMCI(
+        # lpcmci = LPCMCI(
+        #     dataframe=dataframe,
+        #     cond_ind_test=cond_ind_test)
+        #
+        # lpcmci.run_lpcmci(
+        #     tau_max=tau_max,
+        #     pc_alpha=pc_alpha,
+        #     max_p_non_ancestral=3,
+        #     n_preliminary_iterations=4,
+        #     prelim_only=False,
+        #     verbosity=verbosity)
+        #
+        # graph = lpcmci.graph
+        # val_min = lpcmci.val_min_matrix
+        #
+        # val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
+        # graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
+        #
+        # # plot found PAG
+        # tp.plot_graph(
+        #     val_matrix=val_min,
+        #     link_matrix=graph,
+        #     var_names=var_names,
+        #     link_colorbar_label='cross-MCI',
+        #     node_colorbar_label='auto-MCI',
+        #     figsize=(10, 6),
+        # )
+        # plt.show()
+
+        ## Plot time series graph
+        # tp.plot_time_series_graph(
+        #     figsize=(12, 8),
+        #     val_matrix=val_min,
+        #     link_matrix=graph,
+        #     var_names=var_names,
+        #     link_colorbar_label='MCI',
+        # )
+        # plt.show()
+
+        """pcmci"""
+        pcmci = PCMCI(
             dataframe=dataframe,
-            cond_ind_test=cond_ind_test)
+            cond_ind_test=ParCorr(significance='analytic'),
+            verbosity=1)
 
-        lpcmci.run_lpcmci(
-            tau_max=tau_max,
-            pc_alpha=pc_alpha,
-            max_p_non_ancestral=3,
-            n_preliminary_iterations=4,
-            prelim_only=False,
-            verbosity=verbosity)
+        results = pcmci.run_pcmciplus(tau_min=0, tau_max=tau_max, pc_alpha=pc_alpha)
+        q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], fdr_method='fdr_bh',
+                                               exclude_contemporaneous=False)
+        link_matrix = results['graph']
 
-        graph = lpcmci.graph
-        val_min = lpcmci.val_min_matrix
+        graph = link_matrix
+        val_min = results['val_matrix']
+        max_cardinality = None
 
         val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
         graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
 
-        # plot found PAG
+
+        # plot predicted PAG
         tp.plot_graph(
             val_matrix=val_min,
             link_matrix=graph,
-            var_names=var_names,
+            var_names=['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps'],
             link_colorbar_label='cross-MCI',
             node_colorbar_label='auto-MCI',
             figsize=(10, 6),
-        )
-        plt.show()
-        # Plot time series graph
-        tp.plot_time_series_graph(
-            figsize=(12, 8),
-            val_matrix=val_min,
-            link_matrix=graph,
-            var_names=var_names,
-            link_colorbar_label='MCI',
         )
         plt.show()

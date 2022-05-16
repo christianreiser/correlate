@@ -8,14 +8,13 @@ from matplotlib import pyplot as plt
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
 
-
 from config import show_plots, load_precomputed_coefficients_and_p_val, private_folder_path
 
 
 def corr_coefficients_and_p_values(df, target_label):
     # load precomputed values
     if load_precomputed_coefficients_and_p_val:
-        results = pd.read_csv(str(private_folder_path)+'results.csv', index_col=0)
+        results = pd.read_csv(str(private_folder_path) + 'results.csv', index_col=0)
 
     # compute correlations and p values
     else:
@@ -48,7 +47,7 @@ def corr_coefficients_and_p_values(df, target_label):
         results['pvals_corrected'] = pvals_corrected
         results['reject_0_hypothesis'] = reject_0_hypothesis
 
-        results.to_csv(str(private_folder_path)+'results.csv')
+        results.to_csv(str(private_folder_path) + 'results.csv')
 
     # visualize
     visualize_corr_and_p_values(results)
@@ -63,7 +62,7 @@ def corr_coefficients_and_p_values(df, target_label):
     return results
 
 
-def worker1(i,df,p_val_matrix):
+def worker1(i, df, p_val_matrix):
     for j in range(df.shape[1]):
         y = df.columns[i]
         x = df.columns[j]
@@ -76,20 +75,15 @@ def p_values(corr_matrix, df, target_label):
     p_val_matrix = corr_matrix.copy()
     print('computing p values. TODO: Is there a faster way?')
 
-
-
-
     pool_size = 12  # your "parallelness"
     pool = Pool(pool_size)
-    i=-1
+    i = -1
     for column in tqdm(df.columns):  # rows are the number of rows in the matrix.
-        i+=1
-        pool.apply_async(worker1(i,df,p_val_matrix), (column,))
+        i += 1
+        pool.apply_async(worker1(i, df, p_val_matrix), (column,))
 
     pool.close()
     pool.join()
-
-
 
     target_p_values = p_val_matrix[target_label]  # get target label from matrix
     target_p_values = target_p_values.drop([target_label])  # drop self correlation
@@ -110,9 +104,14 @@ def visualize_corr_matrix(corr_matrix, df):
 
 
 def visualize_corr_and_p_values(corr_coeff_and_p_val):
+    """
+    there is some error but only when running in debug mode?
+    """
     if show_plots:
-        plt.plot(corr_coeff_and_p_val.index, corr_coeff_and_p_val['corrCoeff'], 'g^', corr_coeff_and_p_val.index,
-                 corr_coeff_and_p_val['pVal'], 'bs')
+        i = corr_coeff_and_p_val.index
+        c = corr_coeff_and_p_val['corrCoeff']
+        p = corr_coeff_and_p_val['pVal']
+        plt.plot(i, c, 'g^', i, p, 'bs')
         plt.xticks(rotation=90)
 
         plt.show()

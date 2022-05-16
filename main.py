@@ -6,6 +6,7 @@ from helper import histograms, dataset_creation, pca_function, \
     autocorrelation, normalization
 from prediction.fully_connected import fully_connected_nn_prediction
 from prediction.linear_regression import multiple_linear_regression_ensemble
+import pandas as pd
 
 
 def main():

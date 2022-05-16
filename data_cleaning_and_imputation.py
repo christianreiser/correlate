@@ -42,6 +42,7 @@ def data_cleaning_and_imputation(df, target_label, add_all_yesterdays_features, 
 
     # add_all_yesterdays_features
     if add_all_yesterdays_features:
+        df = df.copy()  # defragment frame
         for column in df.columns:
             name_yesterday = str(column) + 'Yesterday'
             df[name_yesterday] = df[column].shift(periods=1)

@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-path_to_json_files = '/home/chrei/code/quantifiedSelfData/2022/MyFitbitData/ChrisRe/Physical Activity'
-output_filename = 'fitbit_vo2max.csv'
+path_to_json_files = '/home/chrei/code/quantifiedSelfData/walter_fitbit/2022/MyFitbitData/Walter/Physical Activity'
+output_filename = 'walter_fitbit_vo2max.csv'
 verbose = True
 
 excludedFiles = ['']
