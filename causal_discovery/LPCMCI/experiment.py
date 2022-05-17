@@ -92,11 +92,20 @@ from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_fo
 
 def causal_discovery(df):
     if causal_discovery_on:
-        # load csv to dataframe from path str(private_folder_path) + 'results.csv'
-        non_zero_inices = pd.read_csv(str(private_folder_path) + 'results.csv')
+
+        """get non_zero_inices"""
+        non_zero_inices = pd.read_csv(str(private_folder_path) + 'results.csv', index_col=0)
+        # of non_zero_inices get column called 'ref_coeff_widestk=5'
+        non_zero_inices = non_zero_inices.loc[:, 'reg_coeff_widestk=5']
+        # drop all rows with 0 in non_zero_inices
+        non_zero_inices = non_zero_inices[non_zero_inices != 0]
+        # detete all rows with nans in non_zero_inices
+        non_zero_inices = non_zero_inices.dropna().index
+        # TODO: automatic non_zero_inices doesn't work yet below is hardcoded
+        non_zero_inices = ['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']
 
         # select columns
-        df = df[['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']]  #
+        df = df[non_zero_inices]
         df.reset_index(level=0, inplace=True)
 
         df = remove_nan_seq_from_top_and_bot(df)
@@ -143,7 +152,6 @@ def causal_discovery(df):
             graph = results['graph']
             val_min = results['val_matrix']
 
-
         val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
         graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
 
@@ -157,3 +165,10 @@ def causal_discovery(df):
             figsize=(10, 6),
         )
         plt.show()
+
+        # save val_min, graph and var_names to file via np.ndarray.tofile()
+        np.save(str(private_folder_path) + 'val_min', val_min)
+        np.save(str(private_folder_path) + 'graph', graph)
+        np.save(str(private_folder_path) + 'var_names', var_names)
+
+        print()

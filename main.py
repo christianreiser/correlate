@@ -1,4 +1,5 @@
 from causal_discovery.LPCMCI.experiment import causal_discovery
+from causal_discovery.LPCMCI.intervention import get_direct_influence_coeffs, intervention
 from config import *
 from correlation import corr_coefficients_and_p_values
 from data_cleaning_and_imputation import *
@@ -56,6 +57,9 @@ def main():
 
     # causal discovery
     causal_discovery(df)
+
+    # intervention()
+
 
 
 main()
