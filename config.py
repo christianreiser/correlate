@@ -1,6 +1,8 @@
 """
 config parameters
 """
+verbosity = 1
+
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 

@@ -520,6 +520,7 @@ class LPCMCI():
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))
 
+                            #chr: pvalalpha
                             # Check whether test result was significant
                             if pval > self.pc_alpha:
 
@@ -564,6 +565,7 @@ class LPCMCI():
                             self._update_cardinality(X, Y, len(Z))
 
                             # Check whether test result was significant
+                            # chr: pvalalpha
                             if pval > self.pc_alpha:
 
                                 # Mark the edge from X to Y for removal and save sepset
@@ -879,6 +881,7 @@ class LPCMCI():
                         self._update_pval_max(X, Y, pval)
                         self._update_cardinality(X, Y, len(Z))
 
+                        # chr: pvalalpha
                         # Check whether test result was significant
                         if pval > self.pc_alpha:
 
@@ -1603,6 +1606,7 @@ class LPCMCI():
                     print("MakeMin:    %s _|_ %s  |  Z_A = %s: val = %.2f / pval = % .4f" %
                           (X, Y, ' '.join([str(z) for z in list(Z_A)]), val, pval))
 
+                # chr: pvalalpha
                 # Check whether the test result was significant
                 if pval > self.pc_alpha:
                     new_sepsets.append(frozenset(Z_A))
@@ -1695,6 +1699,7 @@ class LPCMCI():
                           (X, Y, ' '.join([str(z) for z in Z_add]),
                            ' '.join([str(z) for z in {node for node in Z_raw if node != X and node != Y}]), val, pval))
 
+                # chr: pvalalpha
                 # Check whether test result was significant
                 if pval > self.pc_alpha:
                     all_sepsets.add(frozenset(Z))
@@ -1724,6 +1729,7 @@ class LPCMCI():
                            ' '.join([str(z) for z in {node for node in Z_raw if node != X and node != Y}]), val, pval))
 
                 # Check whether test result was significant
+                # chr: pvalalpha
                 if pval > self.pc_alpha:
                     all_sepsets.add(frozenset(Z))
 
@@ -1819,6 +1825,7 @@ class LPCMCI():
                                pval))
 
                     # Check whether test result was significant
+                    # chr: pvalalpha
                     if pval > self.pc_alpha:
                         all_sepsets.add(frozenset(Z))
 
@@ -1848,6 +1855,7 @@ class LPCMCI():
                                pval))
 
                     # Check whether test result was significant
+                    # chr: pvalalpha
                     if pval > self.pc_alpha:
                         all_sepsets.add(frozenset(Z))
 

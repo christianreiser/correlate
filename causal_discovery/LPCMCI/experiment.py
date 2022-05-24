@@ -89,6 +89,14 @@ from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_fo
 #         'graph': graph,
 #     }
 
+# function that saves val_min, graph, and var_names to a file
+def save_results(val_min, graph, var_names, name_extension):
+    np.save(str(private_folder_path) + 'val_min_'+str(name_extension), val_min)
+    np.save(str(private_folder_path) + 'graph_'+str(name_extension), graph)
+    np.save(str(private_folder_path) + 'var_names_'+str(name_extension), var_names)
+
+
+
 
 def causal_discovery(df):
     if causal_discovery_on:
@@ -166,9 +174,7 @@ def causal_discovery(df):
         )
         plt.show()
 
-        # save val_min, graph and var_names to file via np.ndarray.tofile()
-        np.save(str(private_folder_path) + 'val_min', val_min)
-        np.save(str(private_folder_path) + 'graph', graph)
-        np.save(str(private_folder_path) + 'var_names', var_names)
+        # save results
+        save_results(val_min, graph, var_names, 'chr')
 
         print()

@@ -5,7 +5,6 @@ import random as rd
 import time
 
 import numpy as np
-# Imports from tigramite package available on https://github.com/jakobrunge/tigramite
 import tigramite.data_processing as pp
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
@@ -20,12 +19,9 @@ from lpcmci import LPCMCI
 # Directory to save results
 folder_name = "results/"
 
-# close to real
-arg = [0, 4000, 0, 'random_lineargaussian-8-8-0.2-0.5-0.5-0.6-0.3-1-500-par_corr-lpcmci_nprelim4-0.26-1']  # alpha=0.26
-
-samples = int(arg[1])  # int number of time series realizations to generate
-verbosity = int(arg[2])  # verbosity
-config_list = list(arg)[3:]  # string that identifies a particular experiment consisting of a model and method.
+samples = 1  # int number of time series realizations to generate
+verbosity = 0  # verbosity
+config_list = ['random_lineargaussian-8-8-0.2-0.5-0.5-0.6-0.3-1-500-par_corr-lpcmci_nprelim4-0.26-1']  # string that identifies a particular experiment consisting of a model and method.
 num_configs = len(config_list)
 
 time_start = time.time()
@@ -95,9 +91,12 @@ def modify_dict_get_graph_and_link_vals(my_dict):
     return graph, val
 
 
-# generate data from links
-# data might be non-stationary
+
 def generate_data(random_state, links, noise_types, noise_sigma, model, T):
+    """
+    input: links of SCM
+    output: time series data (might be non-stationary)
+    """
     class NoiseModel:
         def __init__(self, sigma=1):
             self.sigma = sigma
@@ -155,6 +154,25 @@ def generate_fixed_data():
 
 def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n_links, max_true_lag, T,
                        contemp_fraction):
+    """
+    Generate dataframe and links of SCM
+    1. generates links from input data about model (mod.generate_random_contemp_model(...))
+    2. generates df from links (generate_data)
+    3. drops non-stationary data
+    :param model:
+    :param coeff:
+    :param min_coeff:
+    :param auto:
+    :param sam:
+    :param N:
+    :param frac_unobserved:
+    :param n_links:
+    :param max_true_lag:
+    :param T:
+    :param contemp_fraction:
+    :return: dataframe, links, observed_vars, original_graph
+
+    """
     def lin_f(x):
         return x
 
@@ -166,8 +184,7 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
     noise_types = ['gaussian']  # , 'weibull', 'uniform']
     noise_sigma = (0.5, 2)
 
-    if coeff < min_coeff:  # correct coeff if to small
-        min_coeff = coeff
+
     couplings = list(np.arange(min_coeff, coeff + 0.1, 0.1))  # coupling strength
     couplings += [-c for c in couplings]  # add negative coupling strength
 
@@ -253,6 +270,10 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
 
 
 def compute_oracle_pag(links, observed_vars, tau_max):
+    """
+    Compute the oracle PAG, given links and observed_vars and tau_max
+    returns: oracle_pag
+    """
     oracle_graph = utilities.get_oracle_pag_from_dag(links, observed_vars=observed_vars, tau_max=tau_max,
                                                      verbosity=verbosity)[1]
     if verbosity > 0:
@@ -292,26 +313,38 @@ def compute_oracle_pag(links, observed_vars, tau_max):
 
 
 def calculate(para_setup):
+    """
+    Main function to run the experiment, given para_setup
+
+    returns: original_graph, oracle_graph, val_min, max_cardinality,
+
+    calls:
+    1. parses input parameters
+    2. calls generate_dataframe
+    3. calls compute_oracle_pag
+    4. calls LPCMCI to get graph and values
+
+    """
     para_setup_string, sam = para_setup
 
     paras = para_setup_string.split('-')
     paras = [w.replace("'", "") for w in paras]
 
-    model = str(paras[0])  # e.g. random_lineargaussian
-    N = int(paras[1])  # 3
-    n_links = int(paras[2])  # 3
-    min_coeff = float(paras[3])  # 0.2
-    coeff = float(paras[4])  # 0.8
-    auto = float(paras[5])  # auto-dependency (auto-correlation) 0.9
-    contemp_fraction = float(paras[6])  # 0.3
-    frac_unobserved = float(paras[7])  # 0.3
-    max_true_lag = int(paras[8])  # 1
-    T = int(paras[9])  # 100
+    model = 'random_lineargaussian'
+    N = 8
+    n_links = 8
+    min_coeff = 0.2
+    coeff = 0.5
+    auto = 0.5  # auto-dependency (auto-correlation) 0.5
+    contemp_fraction = 0.6
+    frac_unobserved = 0.3
+    max_true_lag = 1
+    T = 500
 
-    ci_test = str(paras[10])  # parr_corr
-    method = str(paras[11])  # lpcmci_nprelim4
-    pc_alpha = float(paras[12])  # 0.05
-    tau_max = int(paras[13])  # 5
+    ci_test = 'parr_corr'
+    method = 'lpcmci_nprelim4'
+    pc_alpha = 0.26
+    tau_max = 1
 
     #############################################
     ##  Data
@@ -449,6 +482,10 @@ def calculate(para_setup):
 
 
 if __name__ == '__main__':
+    """
+    calls calcualte()
+    
+    """
 
     all_configs = dict([(conf, {'results': {},
                                 "graphs": {},

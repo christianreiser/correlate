@@ -1,16 +1,17 @@
 import numpy as np
+from config import private_folder_path, target_label
+
+# function that loads val_min, graph, and var_names from a file and allow_pickle=True
+def load_results(name_extension):
+    val_min = np.load(str(private_folder_path) + 'val_min_'+str(name_extension)+'.npy', allow_pickle=True)
+    graph = np.load(str(private_folder_path) + 'graph_'+str(name_extension)+'.npy', allow_pickle=True)
+    var_names = np.load(str(private_folder_path) + 'var_names_'+str(name_extension)+'.npy', allow_pickle=True)
+    return val_min, graph, var_names
+
 
 def intervention():
-    private_folder_path = '/home/chrei/code/quantifiedSelfData/'
-    target_idx = 0
-    target_label = 'Mood'  # label of interest
-
-    # read val_min, graph and var_names to file via np.ndarray.tofile()
-    val_min = np.load(str(private_folder_path) + 'val_min.npy', allow_pickle=True)
-    graph = np.load(str(private_folder_path) + 'graph.npy', allow_pickle=True)
-    var_names = np.load(str(private_folder_path) + 'var_names.npy', allow_pickle=True)
-    # non_zero_inices = ['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']
-
+    # load results
+    val_min, graph, var_names = load_results('chr')
     direct_influence_coeffs = get_direct_influence_coeffs(val_min=val_min, graph=graph, var_names=var_names,
                                                           target_label=target_label)
 
@@ -19,6 +20,11 @@ def intervention():
     print()
 
 def get_direct_influence_coeffs(val_min, graph, var_names, target_label):
+    """
+    get_direct_influence_coeffs of a target variable
+    input: val_min, graph, var_names, target_label
+    output: direct_influence_coeffs
+    """
     # get position of target_label in ndarray var_names
     target_idx = np.where(var_names == target_label)[0][0]
 
