@@ -12,46 +12,53 @@ def load_results(name_extension):
 def intervention():
     # load results
     val_min, graph, var_names = load_results('chr')
-    direct_influence_coeffs = get_direct_influence_coeffs(val_min=val_min, graph=graph, var_names=var_names,
-                                                          target_label=target_label)
+    direct_influence_coeffs = get_direct_influence_coeffs(val_min=val_min, graph=graph, var_names=var_names, effect_label=target_label)
 
     # todo search for intervention. below is hardcoded
     intervention_idx = 3
     print()
 
-def get_direct_influence_coeffs(val_min, graph, var_names, target_label):
+def get_direct_influence_coeffs(val_min, graph, var_names, effect_label):
     """
-    get_direct_influence_coeffs of a target variable
-    input: val_min, graph, var_names, target_label
+    get_direct_influence_coeffs effect_label
+    input: val_min, graph, var_names, effect_label
     output: direct_influence_coeffs
     """
-    # get position of target_label in ndarray var_names
-    target_idx = np.where(var_names == target_label)[0][0]
+    # get position of effect_label in ndarray var_names
+    effect_idx = np.where(var_names == effect_label)[0][0]
 
     direct_influence_coeffs = np.zeros(val_min.shape)
-    direct_influence_coeffs = direct_influence_coeffs[:, target_idx, :]
-    graph_target = graph[:, target_idx, :]
+    direct_influence_coeffs = direct_influence_coeffs[:, effect_idx, :]
+    graph_target = graph[:, effect_idx, :]
     for time_lag in range(0, val_min.shape[2]):
         for cause in range(len(graph_target)):
             if graph_target[cause][time_lag] in [
+                "-->",
+                # "<--",
+                # "<->",
+            ]:
+                direct_influence_coeffs[cause][time_lag] = val_min[cause][effect_idx][time_lag]
+            elif graph_target[cause][time_lag] in [
                 "---",
                 "o--",
                 "--o",
                 "o-o",
                 "o->",
-                "-->",
-                "<->",
                 "x-o",
                 "o-x",
                 "x--",
                 "--x",
                 "x->",
                 "x-x",
-                "+->",
-            ]:
-                direct_influence_coeffs[cause][time_lag] = val_min[cause][target_idx][time_lag]
-            else:
+                "+->",]:
+                    raise ValueError("invalid link type:" + str(graph_target[cause][time_lag]))
+            elif graph_target[cause][time_lag] in ['',
+                                                   "<--",
+                                                   "<->", ]:
                 direct_influence_coeffs[cause][time_lag] = False
+            else:
+                raise ValueError("unknown link type:" + str(graph_target[cause][time_lag]))
+
     print()
     return direct_influence_coeffs
 

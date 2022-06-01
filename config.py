@@ -41,14 +41,14 @@ fully_connected_nn_prediction_on = False
 pca_on = False
 
 # causal discovery
-causal_discovery_on = False
+causal_discovery_on = True
 LPCMCI_or_PCMCI = False # True for LPCMCI, False for PCMCI
 tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
 verbosity = 0
-pc_alpha = 0.05
-remove_link_threshold = 0.0
+pc_alpha = 0.99
+remove_link_threshold = 0.08
 
 
 # check config
