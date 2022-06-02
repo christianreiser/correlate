@@ -3,6 +3,8 @@ from sympy import symbols
 # x0 + 2*x1 = 1 and 3*x0 + 5*x1 = 2:
 from causal_discovery.LPCMCI.intervention import load_results, get_direct_influence_coeffs
 from config import target_label
+from tigramite import plotting as tp
+from matplotlib import pyplot as plt
 
 
 def drop_redundant_information_due_to_symmetry(graph):
@@ -144,13 +146,11 @@ def generate_symbolic_vars_dict(var_names, tau_max):
         - external noise
     """
     symbolic_vars_dict = {}
+    symbolic_u_vars_dict = {}
     for i in var_names:
-        # symbolic_vars_dict['u_' + str(i)] = symbols('u_' + str(i))  # todo external noise symbols
-        # create symbolic vars for each tau
-        # for delay in range(tau_max):
-        #     symbolic_vars_dict[str(i) + '_tau=' + str(delay)] = symbols('u_' + str(i) + '_tau=' + str(delay))
+        symbolic_u_vars_dict['u_' + str(i)] = symbols('u_' + str(i)) # external noise
         symbolic_vars_dict[str(i)] = symbols(str(i))  # external noise symbols
-    return symbolic_vars_dict
+    return symbolic_vars_dict, symbolic_u_vars_dict
 
 
 def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
@@ -163,7 +163,34 @@ def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
     return causes
 
 
-def fill_causes_of_one_affected_var(affected_var_label, graph, val_min, var_names, symbolic_vars_dict):
+def get_noise_value(symbolic_vars_dict, affected_var_label):
+    # get expression free symbols of symbolic_vars_dict[affected_var_label]
+    coeff = symbolic_vars_dict[affected_var_label].expr_free_symbols # expr_free_symbols is depricated but free_symbols doesn't contain the coeffs
+    # sym to list
+    coeff = [str(x) for x in coeff]
+    # for all strings in sym, try to make string to float, otherwise drop it
+    idx_to_drop = []
+    for i in range(len(coeff)):
+        try:
+            coeff[i] = float(coeff[i])
+        except:
+            idx_to_drop.append(i)
+    # revert idx_to_drop
+    idx_to_drop.reverse()
+    for i in idx_to_drop:
+        del coeff[i]
+
+    # make every coeff absolute
+    for i in range(len(coeff)):
+        coeff[i] = abs(coeff[i])
+
+    # get noise coeff
+    noise_value = 1 - sum(coeff)
+
+    return noise_value
+
+
+def fill_causes_of_one_affected_var(affected_var_label, graph, val_min, var_names, symbolic_vars_dict, symbolic_u_vars_dict):
     """
     fill direct causes of a effect variable into symbolic_vars_dict
     input: symbolic_vars_dict to modify, effect var, causes in form of val_min and graph
@@ -189,14 +216,13 @@ def fill_causes_of_one_affected_var(affected_var_label, graph, val_min, var_name
             symbolic_vars_dict[affected_var_label] = symbolic_vars_dict[
                                                          affected_var_label] - workaround_adjustment * symbolic_cause_var_name
 
-    # todo add noise term
-    # get expression free symbols of symbolic_vars_dict[affected_var_label]
-    sym = symbolic_vars_dict[affected_var_label].expr_free_symbols
-    # sym to list
-    sym = [str(x) for x in sym]
-    # drop every second value of sym
-    sym = [sym[i] for i in range(0, len(sym), 2)]
-    sym_values = [str(x) for x in sym]
+    # add noise term
+    noise_value = get_noise_value(symbolic_vars_dict, affected_var_label)  # get noise term
+    symbolic_vars_dict[affected_var_label] = symbolic_vars_dict[affected_var_label] + noise_value * symbolic_u_vars_dict[
+        'u_' + str(affected_var_label)]
+
+
+
     return symbolic_vars_dict
 
 
@@ -215,19 +241,40 @@ def main():
         graph_unambiguous = make_links_point_forward(graph_unambiguous)
 
         # ini symbolic vars dict
-        symbolic_vars_dict = generate_symbolic_vars_dict(var_names, graph_unambiguous.shape[2])
+        symbolic_vars_dict, symbolic_u_vars_dict = generate_symbolic_vars_dict(var_names, graph_unambiguous.shape[2])
 
-        # find causes of all variables
-        for var_name in var_names:
-            # fill causes of target var
-            symbolic_vars_dict = fill_causes_of_one_affected_var(affected_var_label=var_name,
-                                                                                    graph=graph_unambiguous,
-                                                                                    val_min=val_min,
-                                                                                    var_names=var_names,
-                                                                                    symbolic_vars_dict=symbolic_vars_dict)
+        # iterate until convergence
+        converged = False
+        num_iterations = 0
+        while not converged:
+            num_iterations += 1
+            """copy symbolic_vars_dict to a new dict"""
+            symbolic_vars_dict_old = symbolic_vars_dict.copy()
 
 
-    print()
+            # find causes of all variables
+            for var_name in var_names:
+                # fill causes of target var
+                symbolic_vars_dict = fill_causes_of_one_affected_var(affected_var_label=var_name,
+                                                                     graph=graph_unambiguous,
+                                                                     val_min=val_min,
+                                                                     var_names=var_names,
+                                                                     symbolic_vars_dict=symbolic_vars_dict,
+                                                                     symbolic_u_vars_dict=symbolic_u_vars_dict)
+            # check if converged
+            if symbolic_vars_dict == symbolic_vars_dict_old and num_iterations < 30:
+                # if a == old_a and b == old_b and c == old_c and d == old_d:
+                converged = True
+                print('same')
+            else:
+                converged = False
+                print('different')
+
+
+
+        print(symbolic_vars_dict['Mood'])
+        print(symbolic_vars_dict['HeartPoints'])
+        print()
 
 
 main()
