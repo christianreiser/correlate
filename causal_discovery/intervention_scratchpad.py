@@ -142,15 +142,14 @@ def generate_symbolic_vars_dict(var_names, tau_max):
     create symbolic external noise vars
     one for each
         - label
-        - *delay
         - external noise
     """
     symbolic_vars_dict = {}
-    symbolic_u_vars_dict = {}
+    # symbolic_u_vars_dict = {}
     for i in var_names:
-        symbolic_u_vars_dict['u_' + str(i)] = symbols('u_' + str(i)) # external noise
-        symbolic_vars_dict[str(i)] = symbols(str(i))  # external noise symbols
-    return symbolic_vars_dict, symbolic_u_vars_dict
+        # symbolic_u_vars_dict['u_' + str(i)] = symbols('u_' + str(i)) # external noise
+        symbolic_vars_dict[str(i)] = symbols('u_' + str(i))#symbols(str(i))  # external noise symbols
+    return symbolic_vars_dict#, symbolic_u_vars_dict
 
 
 def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
@@ -161,6 +160,8 @@ def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
     for i in range(len(causes)):
         causes[i] = causes[i][:causes[i].find('_tau=')]
     return causes
+
+
 
 
 def get_noise_value(symbolic_vars_dict, affected_var_label):
@@ -201,10 +202,17 @@ def fill_causes_of_one_affected_var(affected_var_label, graph, val_min, var_name
         col_idx = -1  # col indicates which time delay affected_var_label
         for col_or_val in row_or_cause:
             col_idx += 1
+
+            # get var name
             cause_var_name = var_names[row_idx]
+
+            # get symbolic_cause_var_name
             symbolic_cause_var_name = symbolic_vars_dict[cause_var_name]
 
+            # multiply coeff to symbolic_cause_var_name
             symbol_val_to_add = symbolic_cause_var_name * col_or_val
+
+            # add symbol_val_to_add to dict
             symbolic_vars_dict[affected_var_label] = symbolic_vars_dict[
                                                          affected_var_label] + symbol_val_to_add
             # todo check if below is good
@@ -220,7 +228,6 @@ def fill_causes_of_one_affected_var(affected_var_label, graph, val_min, var_name
     noise_value = get_noise_value(symbolic_vars_dict, affected_var_label)  # get noise term
     symbolic_vars_dict[affected_var_label] = symbolic_vars_dict[affected_var_label] + noise_value * symbolic_u_vars_dict[
         'u_' + str(affected_var_label)]
-
 
 
     return symbolic_vars_dict
@@ -248,6 +255,7 @@ def main():
         num_iterations = 0
         while not converged:
             num_iterations += 1
+            print('num_iterations: ' + str(num_iterations))
             """copy symbolic_vars_dict to a new dict"""
             symbolic_vars_dict_old = symbolic_vars_dict.copy()
 
@@ -261,8 +269,19 @@ def main():
                                                                      var_names=var_names,
                                                                      symbolic_vars_dict=symbolic_vars_dict,
                                                                      symbolic_u_vars_dict=symbolic_u_vars_dict)
+
+            """
+            remove float values of symbolic_vars_dict
+            """
+            symbolic_vars_dict_new = symbolic_vars_dict.copy()
+            # remove float values of symbolic_vars_dict_new
+            for var_name in var_names:
+                symbolic_vars_dict_new[var_name] = symbolic_vars_dict_new[var_name].free_symbols
+                symbolic_vars_dict_old[var_name] = symbolic_vars_dict_old[var_name].free_symbols
+            """"""
+
             # check if converged
-            if symbolic_vars_dict == symbolic_vars_dict_old and num_iterations < 30:
+            if symbolic_vars_dict_new == symbolic_vars_dict_old and num_iterations < 30:
                 # if a == old_a and b == old_b and c == old_c and d == old_d:
                 converged = True
                 print('same')
