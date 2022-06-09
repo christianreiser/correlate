@@ -120,7 +120,7 @@ def get_links_permutations(new_links_list):
         links_permutations = [(x, y) for x in a for y in b]  # https://stackoverflow.com/a/39064769/7762867
         new_links_list[i + 1][0] = links_permutations
 
-    if links_permutations == []:
+    if not links_permutations:
         links_permutations = np.transpose(np.asarray(new_links_list[0]))
     return links_permutations
 
@@ -257,15 +257,6 @@ def fill_causes_of_one_affected_var(affected_var_label,
             # add symbol_val_to_add to dict
             symbolic_vars_dict[affected_var_label] = symbolic_vars_dict[
                                                          affected_var_label] + symbol_val_to_add
-            # # todo check if below is good
-            # # problem is that otherwise target var is too big
-            # if str(symbolic_cause_var_name.free_symbols)[1:-1] == affected_var_label:
-            #     workaround_adjustment = 1
-            # else:
-            #     workaround_adjustment = 0
-            # symbolic_vars_dict[affected_var_label] = symbolic_vars_dict[
-            #                                              affected_var_label] - \
-            #                                          workaround_adjustment * symbolic_cause_var_name
 
     # add noise term
     noise_value = get_noise_value(symbolic_vars_dict, affected_var_label)  # get noise term
@@ -355,7 +346,6 @@ def compute_target_equations():
 
         # find causes of all variables
         for var_name in var_names:
-
             # fill causes of target var
             symbolic_vars_dict = fill_causes_of_one_affected_var(affected_var_label=var_name,
                                                                  graph=graph_unambiguous,
@@ -395,4 +385,4 @@ def compute_target_equations():
         pickle.dump(target_ans_per_graph_dict, f)
 
     return target_ans_per_graph_dict
-
+# compute_target_equations()
