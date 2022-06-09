@@ -1,5 +1,6 @@
 from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
-from config import target_label, show_plots, verbosity
+from config import target_label, show_plots, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
+    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed
 import math
 import numpy as np
 import tigramite.data_processing as pp
@@ -8,6 +9,28 @@ from tigramite import plotting as tp
 
 # Imports from code inside directory
 import generate_data_mod as mod
+
+"""
+main challenges to get algo running:
+1. 2        Modify data generator to start from last sample 14. june
+2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
+3. 5        Orient edges with interventional data           22 june
+4. 3        Initialize lpcmci with above result             28. june
+5. 3        Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 4. july
+
+further TODOs
+1. 2        compute optimal intervention from SCM 6. july
+2. 2        calculate regret 11. july
+3. 5        set up simulation study 19. july
+4. 5        interpret results 27. july
+5. 40       write 5. oct
+
+-> 27 coding days + 40 writing days = 57 days = 11.5 weeks = 3 months (optimistic guess) 
+    => 3.75 with phinc => end of september
+
+-> 75 coding days + 60 writing days = 135 days = 22 weeks = 5.5 months (guess delay factor: 2.8x coding, 1.5x writing) 
+    => 7 with phinc => end of end of year
+"""
 
 
 def sample_nonzero_cross_dependencies(coeff, min_coeff):
@@ -19,25 +42,106 @@ def sample_nonzero_cross_dependencies(coeff, min_coeff):
     return couplings
 
 
-def generate_scm(random_state, frac_latents, n_measured_links, n_vars_measured, coeff, min_coeff, n_vars_all):
+def nonstationary_check(scm):
     """
-    generate scm given specs
+    check if scm is stationary
     """
-    n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
-    n_links_generator = math.ceil(n_measured_links / n_vars_measured * n_vars_all)  # 11
+    noise_sigma = (0.5, 2)
+    random_state = np.random.RandomState(random_seed)
 
-    def lin_f(x):
-        return x
+    class NoiseModel:
+        def __init__(self, sigma=1):
+            self.sigma = sigma
 
-    scm = mod.generate_random_contemp_model(
-        N=n_vars_all, L=n_links_generator,
-        coupling_coeffs=sample_nonzero_cross_dependencies(coeff, min_coeff), # ~U±(min_coeff and coeff)
-        coupling_funcs=[lin_f],
-        auto_coeffs=list(np.arange(0.3, 0.6, 0.05)),  # auto-correlations ∼ U(0.3, 0.6) with 0.05 steps
-        tau_max=1,
-        contemp_fraction=0.6,
-        random_state=random_state)
-    return scm
+        def gaussian(self, n_samples):
+            # Get zero-mean unit variance gaussian distribution
+            return self.sigma * random_state.randn(n_samples)
+
+    noises = []
+    for link in scm:
+        noise_type = 'gaussian'
+        sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
+        noises.append(getattr(NoiseModel(sigma), noise_type))
+
+    ts_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(
+        links=scm, T=1500, noises=noises, random_state=random_state)  # todo T= config_samples = 10000
+    return nonstationary
+
+
+def generate_stationary_scm():
+    """
+    generate scms until a stationary one is found
+    """
+    # todo get settings from config
+    nonstationary = True
+    scm = []  # stupid ini
+    counter = 0
+    while nonstationary:
+        n_links_all = math.ceil(n_measured_links / n_vars_measured * n_vars_all)  # 11
+
+        def lin_f(x):
+            return x
+
+        coupling_coeffs = sample_nonzero_cross_dependencies(coeff, min_coeff)
+        auto_coeffs = list(np.arange(0.3, 0.6, 0.05))  # somehow error when in config file
+
+        # generate scm
+        scm = mod.generate_random_contemp_model(
+            N=n_vars_all,  # 11
+            L=n_links_all,  # 11
+            coupling_coeffs=coupling_coeffs,  # ~U±(min_coeff and coeff) # 0.2,0.3,0.4,0.5,-0.2,-0.3,-0.4,-0.5
+            coupling_funcs=[lin_f],
+            auto_coeffs=auto_coeffs,  # [0.3, 0.35, 0.4, 0.45, 0.45, 0.55]
+            tau_max=1,
+            contemp_fraction=0.6,
+            random_state=random_state)  # MT19937(random_state)
+
+        nonstationary = nonstationary_check(scm)
+        print("nonstationary:", nonstationary, "counter:", counter)
+        counter += 1
+
+    # plot scm
+    original_graph = plot_scm(scm)  #
+    return scm, original_graph
+
+
+def plot_scm(scm):
+    # ts_df = pp.DataFrame(ts)
+    original_graph, original_vals = modify_dict_get_graph_and_link_vals(scm)
+
+    # save data to file
+    # filename = os.path.abspath("./../../../test.dat")
+    # fileobj = open(filename, mode='wb')
+    # off = np.array(data, dtype=np.float32)
+    # off.tofile(fileobj)
+    # fileobj.close()
+
+    # plot data
+    # if show_plots:
+    #     tp.plot_timeseries(ts_df, figsize=(15, 5))
+    #     plt.show()
+
+    # plot original DAG
+    if verbosity > 0:
+        tp.plot_graph(
+            val_matrix=original_vals,  # original_vals None
+            link_matrix=original_graph,
+            var_names=range(n_vars_all),
+            link_colorbar_label='cross-MCI',
+            node_colorbar_label='auto-MCI',
+            figsize=(10, 6),
+        )
+        plt.show()
+        # Plot time series graph
+        # tp.plot_time_series_graph(
+        #     figsize=(12, 8),
+        #     val_matrix=original_vals,  # original_vals None
+        #     link_matrix=original_graph,
+        #     var_names=range(n_vars_all),
+        #     link_colorbar_label='MCI',
+        # )
+        # plt.show()
+    return original_graph
 
 
 def data_generator(scm, intervention, ts, random_seed, n_samples, n_vars_all):
@@ -66,49 +170,10 @@ def data_generator(scm, intervention, ts, random_seed, n_samples, n_vars_all):
         sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
-    ts_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-        links=scm, T=n_samples + 10000, noises=noises, random_state=random_state)
-
-    if not nonstationary:
-        ts = ts_check[:n_samples]
-        ts_df = pp.DataFrame(ts)
-        original_graph, original_vals = modify_dict_get_graph_and_link_vals(scm)
-
-        # save data to file
-        # filename = os.path.abspath("./../../../test.dat")
-        # fileobj = open(filename, mode='wb')
-        # off = np.array(data, dtype=np.float32)
-        # off.tofile(fileobj)
-        # fileobj.close()
-
-        # plot data
-        if show_plots:
-            tp.plot_timeseries(ts_df, figsize=(15, 5))
-            plt.show()
-
-        # plot original DAG
-        if verbosity > 0:
-            tp.plot_graph(
-                val_matrix=original_vals,  # original_vals None
-                link_matrix=original_graph,
-                var_names=range(n_vars_all),
-                link_colorbar_label='cross-MCI',
-                node_colorbar_label='auto-MCI',
-                figsize=(10, 6),
-            )
-            plt.show()
-            # Plot time series graph
-            # tp.plot_time_series_graph(
-            #     figsize=(12, 8),
-            #     val_matrix=original_vals,  # original_vals None
-            #     link_matrix=original_graph,
-            #     var_names=range(n_vars_all),
-            #     link_colorbar_label='MCI',
-            # )
-            # plt.show()
-        return ts, ts_df, original_graph
-    else:
-        print('nonstationary')
+    ts, nonstationary = mod.generate_nonlinear_contemp_timeseries(
+        links=scm, T=2, noises=noises, random_state=random_state)  # todo mby T= config_samples + 10000
+    ts = ts[:1]  # needed as T=1 does not work
+    return ts
 
 
 def measure(ts, obs_vars):
@@ -182,23 +247,23 @@ def get_edgemarks_and_effect_sizes(scm):
 
 
 def main():
-    # ini
-    random_seed = 0
-    random_state = np.random.RandomState(random_seed)
+    # generate stationary scm
+    scm, original_graph = generate_stationary_scm()
 
-    n_vars_measured = 8
-    frac_latents = 0.3
-    n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))
-    scm = generate_scm(random_state=random_state, frac_latents=frac_latents, n_measured_links=8, n_vars_measured=8,
-                       coeff=0.5, min_coeff=0.2, n_vars_all=n_vars_all)
-    ts_generated_actual = []
+    # ini
+    ts_generated_actual = np.zeros((0, n_vars_all))
     ts_generated_optimal = []
     ts_measured_actual = []
-    is_intervention_list = obs_or_intervene(n_ini_obs=500, n_mixed=500, nth=4) # 500 obs + 500 with every 4th intvention
-    n_samples = len(is_intervention_list)  # todo: extend ts by one sample at a time for len(is_intervention_list)
+    is_intervention_list = obs_or_intervene(
+        n_ini_obs=n_ini_obs,
+        n_mixed=n_mixed,
+        nth=nth)  # 500 obs + 500 with every 4th intervention
+    n_samples = 1  # len(is_intervention_list)  # todo: extend ts by one sample at a time for len(is_intervention_list)
 
     measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
-                                                  size=math.ceil((1. - frac_latents) * n_vars_all),
+                                                  size=math.ceil(
+                                                      (1. - frac_latents) *
+                                                      n_vars_all),
                                                   replace=False)).tolist()
 
     pag_edgemarks = 'fully connected'  # ini PAG as complete graph
@@ -218,13 +283,23 @@ def main():
             intervention_actual = None
             intervention_optimal = None
 
-        # intervene and generate new data
-        ts_generated_actual = ts_generated_actual.append(
-            data_generator(scm=scm, intervention=intervention_actual, ts=ts_generated_actual, random_seed=random_seed,
-                           n_samples=n_samples,
-                           n_vars_all=n_vars_all))
-        ts_generated_optimal = ts_generated_optimal.append(
-            data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples, n_vars_all))
+        # intervene as proposed and generate new data
+        ts_new = data_generator(
+            scm=scm,
+            intervention=intervention_actual,
+            ts=ts_generated_actual,
+            random_seed=random_seed,
+            n_samples=n_samples,
+            n_vars_all=n_vars_all
+        )
+
+        # append new actual data
+        ts_generated_actual = np.r_[ts_generated_actual, ts_new]
+
+        # intervene optimally and generate new data
+        ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
+                                n_vars_all)
+        ts_generated_optimal = ts_generated_optimal.append(ts_new)
 
         # measure
         ts_measured_actual = ts_measured_actual.append(measure(ts_generated_actual, obs_vars=measured_labels))
@@ -244,5 +319,6 @@ def main():
 
     regret_sum = sum(regret_list)
     print('regret_sum:', regret_sum)
+
 
 main()

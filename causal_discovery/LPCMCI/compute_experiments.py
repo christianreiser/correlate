@@ -32,7 +32,7 @@ else:
     plot_data = False
 
 
-def modify_dict_get_graph_and_link_vals(my_dict):
+def modify_dict_get_graph_and_link_vals(original_dict):
     """
     outputs:
     1. new dict with link
@@ -50,6 +50,7 @@ def modify_dict_get_graph_and_link_vals(my_dict):
                3: [((3, -2), 0.8, 'remove'),
                    ((0, -3), 0.4, 'remove')]}
     """
+    my_dict = original_dict.copy() # otherwise it changes scm_dict in main
     len_dict = len(my_dict)
     max_time_lag = 0
 
@@ -198,7 +199,7 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
         model_seed = sam
 
     for ir in range(1000):
-        random_state = np.random.RandomState(model_seed)
+        random_state = np.random.RandomState(0)# todo (model_seed)
 
         N_all = math.floor((N / (1. - frac_unobserved)))  # 4
         n_links_all = math.ceil(n_links / N * N_all)  # 4
@@ -207,7 +208,8 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
                                                     replace=False)).tolist()
 
         links = mod.generate_random_contemp_model(
-            N=N_all, L=n_links_all,
+            N=N_all,
+            L=n_links_all,
             coupling_coeffs=couplings,
             coupling_funcs=coupling_funcs,
             auto_coeffs=auto_deps,

@@ -155,7 +155,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
         for link_props in links[j]:
             var, lag = link_props[0]
             coeff = link_props[1]
-            func = link_props[2]
+            # func = link_props[2] # chrei
             if lag == 0: contemp = True
             if var not in range(N):
                 raise ValueError("var must be in 0..{}.".format(N-1))
@@ -188,6 +188,8 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
                 var, lag = link_props[0]
                 # if abs(lag) > 0:
                 coeff = link_props[1]
+                if len(link_props) < 3:
+                    print('chrei error')
                 func = link_props[2]
 
                 X[t, j] += coeff * func(X[t + lag, var])
