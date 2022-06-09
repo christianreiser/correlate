@@ -5,10 +5,58 @@ from config import target_label, private_folder_path
 from tigramite import plotting as tp
 from matplotlib import pyplot as plt
 
+"""
+This file contains the functions to compute the target equations from the PAG.
+The steps are:
+1. load the PAG from a file
+2. optional: plot graph
+3. drop redundant information due to symmetry
+4. get ambiguous locations
+5. get number of graph combinations
+6. get new links list
+7. get links permutations
+8. make links point forward
+9. create all graph combinations
+10. get direct influences of variables
+11. add unknown noise to all equations
+12. solve equations to get causes of target
+13. module test
+"""
+
+# function that loads val_min, graph, and var_names from a file and allow_pickle=True
+def load_results(name_extension):
+    val_min = np.load(str(private_folder_path) + 'val_min_' + str(name_extension) + '.npy', allow_pickle=True)
+    graph = np.load(str(private_folder_path) + 'graph_' + str(name_extension) + '.npy', allow_pickle=True)
+    var_names = np.load(str(private_folder_path) + 'var_names_' + str(name_extension) + '.npy', allow_pickle=True)
+    return val_min, graph, var_names
+
+
+def plot_graph(val_min, graph, var_names):
+    tp.plot_graph(
+        val_matrix=val_min,
+        link_matrix=graph,
+        var_names=var_names,
+        # link_colorbar_label='cross-MCI',
+        # node_colorbar_label='auto-MCI',
+        figsize=(10, 6),
+    )
+    plt.show()
+
+    # Plot time series graph
+    tp.plot_time_series_graph(
+        figsize=(12, 8),
+        val_matrix=val_min,
+        link_matrix=graph,
+        var_names=var_names,
+        link_colorbar_label='MCI',
+    )
+    plt.show()
+
 
 def drop_redundant_information_due_to_symmetry(graph):
     """
-    drop redundant information due to symmetry
+    drop redundant link information of a graph due to diagonal symmetry in matrix representation.
+    e.g. A-->B = B<--A
     """
     # iterate through 3ed dimension (tau) of graph
     for tau in range(graph.shape[2]):
@@ -20,26 +68,13 @@ def drop_redundant_information_due_to_symmetry(graph):
     return graph
 
 
-def make_links_point_forward(graph):
-    graph_forward = np.copy(graph)
-    # iterate through 3ed dimension (tau) of graph
-    for tau in range(graph.shape[2]):
-        # if value == '<--', then switch i and j and change value to '-->'
-        for i in range(graph.shape[0]):
-            for j in range(graph.shape[1]):
-                if graph[i, j, tau] == '<--':
-                    graph_forward[i, j, tau] = ''
-                    if graph[j, i, tau] != '':
-                        raise ValueError('graph[j, i, tau] != ''')
-                    graph_forward[j, i, tau] = '-->'
-    return graph_forward
-
-
 def get_ambiguous_graph_locations(graph):
     """
-    get_ambiguous_graph_locations
+    1. Locate ambiguous edgemarks of a graph by string their i,j,k matrix indices.
+    2. store their ambiguous original link.
+    3. store their new possible unambiguous links.
     return:
-    - [i, j, k, original_link, new_links]
+    - [i, j, k, [original_links (ambiguous)], [[new_links (unambiguous)]]]
     - e.g. [0, 1, 0, ['o-o'], [["-->", " <->", "<--"]]]
     """
     # ambigious edgemark list
@@ -122,6 +157,21 @@ def get_links_permutations(new_links_list):
     return links_permutations
 
 
+def make_links_point_forward(graph):
+    graph_forward = np.copy(graph)
+    # iterate through 3ed dimension (tau) of graph
+    for tau in range(graph.shape[2]):
+        # if value == '<--', then switch i and j and change value to '-->'
+        for i in range(graph.shape[0]):
+            for j in range(graph.shape[1]):
+                if graph[i, j, tau] == '<--':
+                    graph_forward[i, j, tau] = ''
+                    if graph[j, i, tau] != '':
+                        raise ValueError('graph[j, i, tau] != ''')
+                    graph_forward[j, i, tau] = '-->'
+    return graph_forward
+
+
 def create_all_graph_combinations(graph, ambiguous_locations):
     """
     input: ambiguous_locations
@@ -185,44 +235,6 @@ def generate_symbolic_vars_dicts(var_names):
     return symbolic_vars_dict, symbolic_u_vars_dict, plain_var_names_dict
 
 
-def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
-    # get causes of affected var
-    causes = symbolic_vars_dict[affected_var_label].free_symbols
-    causes = [str(x) for x in causes]  # change causes to list with strings
-    # for each item in causes remove everything behind '_tau='; e.g. 'x0_tau=0' -> 'x0'
-    for i in range(len(causes)):
-        causes[i] = causes[i][:causes[i].find('_tau=')]
-    return causes
-
-
-def get_noise_value(symbolic_vars_dict, affected_var_label):
-    # get expression free symbols of symbolic_vars_dict[affected_var_label]
-    coeff = symbolic_vars_dict[
-        affected_var_label].expr_free_symbols  # expr_free_symbols is depricated but free_symbols doesn't contain the coeffs
-    # sym to list
-    coeff = [str(x) for x in coeff]
-    # for all strings in sym, try to make string to float, otherwise drop it
-    idx_to_drop = []
-    for i in range(len(coeff)):
-        try:
-            coeff[i] = float(coeff[i])
-        except:
-            idx_to_drop.append(i)
-    # revert idx_to_drop
-    idx_to_drop.reverse()
-    for i in idx_to_drop:
-        del coeff[i]
-
-    # make every coeff absolute
-    for i in range(len(coeff)):
-        coeff[i] = abs(coeff[i])
-
-    # get noise coeff
-    noise_value = 1 - sum(coeff)
-
-    return noise_value
-
-
 def get_direct_influence_coeffs(
         val_min,
         graph,
@@ -272,6 +284,44 @@ def get_direct_influence_coeffs(
     return direct_influence_coeffs
 
 
+def get_noise_value(symbolic_vars_dict, affected_var_label):
+    # get expression free symbols of symbolic_vars_dict[affected_var_label]
+    coeff = symbolic_vars_dict[
+        affected_var_label].expr_free_symbols  # expr_free_symbols is depricated but free_symbols doesn't contain the coeffs
+    # sym to list
+    coeff = [str(x) for x in coeff]
+    # for all strings in sym, try to make string to float, otherwise drop it
+    idx_to_drop = []
+    for i in range(len(coeff)):
+        try:
+            coeff[i] = float(coeff[i])
+        except:
+            idx_to_drop.append(i)
+    # revert idx_to_drop
+    idx_to_drop.reverse()
+    for i in idx_to_drop:
+        del coeff[i]
+
+    # make every coeff absolute
+    for i in range(len(coeff)):
+        coeff[i] = abs(coeff[i])
+
+    # get noise coeff
+    noise_value = 1 - sum(coeff)
+
+    return noise_value
+
+
+# def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
+#     # get causes of affected var
+#     causes = symbolic_vars_dict[affected_var_label].free_symbols
+#     causes = [str(x) for x in causes]  # change causes to list with strings
+#     # for each item in causes remove everything behind '_tau='; e.g. 'x0_tau=0' -> 'x0'
+#     for i in range(len(causes)):
+#         causes[i] = causes[i][:causes[i].find('_tau=')]
+#     return causes
+
+
 def fill_causes_of_one_affected_var(affected_var_label,
                                     graph,
                                     val_min,
@@ -313,28 +363,6 @@ def fill_causes_of_one_affected_var(affected_var_label,
     return symbolic_vars_dict
 
 
-def plot_graph(val_min, graph, var_names):
-    tp.plot_graph(
-        val_matrix=val_min,
-        link_matrix=graph,
-        var_names=var_names,
-        # link_colorbar_label='cross-MCI',
-        # node_colorbar_label='auto-MCI',
-        figsize=(10, 6),
-    )
-    plt.show()
-
-    # Plot time series graph
-    tp.plot_time_series_graph(
-        figsize=(12, 8),
-        val_matrix=val_min,
-        link_matrix=graph,
-        var_names=var_names,
-        link_colorbar_label='MCI',
-    )
-    plt.show()
-
-
 def chr_test(target_ans_per_graph_dict):
     # # save str(target_ans_per_graph_dict) to file
     # with open('target_ans_per_graph_dict_str_chr.txt', 'w') as f:
@@ -352,14 +380,6 @@ def chr_test(target_ans_per_graph_dict):
     else:
         print('WARNING: target_ans_per_graph_dict is NOT the same')
         ValueError('target_ans_per_graph_dict is not the same')
-
-
-# function that loads val_min, graph, and var_names from a file and allow_pickle=True
-def load_results(name_extension):
-    val_min = np.load(str(private_folder_path) + 'val_min_' + str(name_extension) + '.npy', allow_pickle=True)
-    graph = np.load(str(private_folder_path) + 'graph_' + str(name_extension) + '.npy', allow_pickle=True)
-    var_names = np.load(str(private_folder_path) + 'var_names_' + str(name_extension) + '.npy', allow_pickle=True)
-    return val_min, graph, var_names
 
 
 def compute_target_equations():
