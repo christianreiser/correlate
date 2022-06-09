@@ -295,7 +295,7 @@ def chr_test(target_ans_per_graph_dict):
     #     f.write(str(target_ans_per_graph_dict))
 
     # load str(target_ans_per_graph_dict) from file
-    with open('target_ans_per_graph_dict_str_chr.txt', 'r') as f:
+    with open('../causal_discovery/target_ans_per_graph_dict_str_chr.txt', 'r') as f:
         target_ans_per_graph_dict_gt = (f.read())
 
     target_ans_per_graph_dict_str = str(target_ans_per_graph_dict)
@@ -381,7 +381,7 @@ def compute_target_equations():
     chr_test(target_ans_per_graph_dict)
 
     # save target_ans_per_graph_dict to file via pickle
-    with open('target_eq_chr.pkl', 'wb') as f:
+    with open('../causal_discovery/target_eq_chr.pkl', 'wb') as f:
         pickle.dump(target_ans_per_graph_dict, f)
 
     return target_ans_per_graph_dict
