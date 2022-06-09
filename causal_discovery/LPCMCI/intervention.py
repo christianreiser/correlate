@@ -18,7 +18,11 @@ def intervention():
     intervention_idx = 3
     print()
 
-def get_direct_influence_coeffs(val_min, graph, var_names, effect_label):
+def get_direct_influence_coeffs(
+        val_min,
+        graph,
+        var_names,
+        effect_label):
     """
     get_direct_influence_coeffs effect_label
     input: val_min, graph, var_names, effect_label
