@@ -130,11 +130,15 @@ class Graph():
 
         return stack
 
-def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, starting_values=None):
+def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, ts_old=None):
+    # chrei if ts_old not specified (i.e. during stationarity check),
+    # behave like it's the first time and don't ini with last values
+    if ts_old is None:
+        ts_old = []
+
     # random_state
     if random_state is None:
         random_state = np.random
-
     # links must be {j:[((i, -tau), func), ...], ...}
     # coeff is coefficient
     # func is a function f(x) that becomes linear ~x in limit
@@ -157,7 +161,8 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
             var, lag = link_props[0]
             coeff = link_props[1]
             func = link_props[2]
-            if lag == 0: contemp = True
+            if lag == 0:
+                contemp = True
             if var not in range(N):
                 raise ValueError("var must be in 0..{}.".format(N-1))
             if 'float' not in str(type(coeff)):
@@ -177,49 +182,54 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
 
     causal_order = contemp_dag.topologicalSort()
 
-    # todo chrei to compensate for removing starting value below with X = X[1,:]
-    if starting_values is not None:
-        T = T+1
-
-    transient = int(.2*T)
+    len_ts_old = len(ts_old)
 
     # zeros ini
-    X = np.zeros((T+transient, N), dtype='float32')
+    X = np.zeros((T+max_lag+len_ts_old, N), dtype='float32')
 
+    # todo remove this
+    fake_noises = range(T+max_lag+len_ts_old)
     # add noises
     for j in range(N):
-        X[:, j] = noises[j](T+transient)
+        X[:, j] = fake_noises# todo noises[j](T+max_lag+len_ts_old)
 
-    # chrei: replace values of X for t=0 with starting_values
-    if starting_values is not None:
-        X[0,:] = starting_values
+    # chrei: replace values of X for starting from len_ts_old for max_lag elements with starting_values
+    if len_ts_old > 0:
+        X[len_ts_old:max_lag+len_ts_old] = ts_old[-max_lag:]
 
-    for t in range(max_lag, T+transient): # range(1,1800)
-        for j in causal_order: # vor var in vars ( in causal order)
-            for link_props in links[j]: # for link in variable j
+
+
+    for t in range(max_lag+len_ts_old, T+max_lag+len_ts_old): # for all time steps
+        for j in causal_order: # for all variables ( in causal order)
+            for link_props in links[j]: # for links affecting j
                 var, lag = link_props[0] # var name, lag
                 # if abs(lag) > 0:
                 coeff = link_props[1]
                 func = link_props[2]
+                base_value =X[t + lag, var]
+                val_to_add = coeff * func(base_value)
+                noise_val = X[t, j]
+                new_value = noise_val + val_to_add
+                X[t, j] = new_value # add value on noise for var j and time t
 
-                X[t, j] += coeff * func(X[t + lag, var]) # add value on noise for var j and time t
+    # chrei: remove some value because they were added for initialization before
+    if len_ts_old != 0:
+        X = X[max_lag+len_ts_old:]
+    else:
+        X = X[max_lag:]
+    return X
 
-    X = X[transient:]
-
-    # todo chrei: remove first value because it was added for initialization before
-    if starting_values is not None:
-        X = X[1:,:]
-
-    if (check_stationarity(links)[0] == False or 
-        np.any(np.isnan(X)) or 
+def check_stationarity_chr(X, links):
+    if (check_stationarity(links)[0] == False or
+        np.any(np.isnan(X)) or
         np.any(np.isinf(X)) or
         # np.max(np.abs(X)) > 1.e4 or
         np.any(np.abs(np.triu(np.corrcoef(X, rowvar=0), 1)) > 0.999)):
         nonstationary = True
     else:
         nonstationary = False
+    return nonstationary
 
-    return X, nonstationary
 
 
 def generate_random_contemp_model(N, L, 
@@ -335,41 +345,41 @@ def generate_random_contemp_model(N, L,
     # print("No stationary models found in {} trials".format(num_trials))
     return links
 
-def generate_logistic_maps(N, T, links, noise_lev):
-
-    # Check parameters
-    # contemp = False
-    max_lag = 0
-    for j in range(N):
-        for link_props in links[j]:
-            var, lag = link_props[0]
-            max_lag  = max(max_lag, abs(lag))
-
-    transient = int(.2*T)
-
-    # Chaotic logistic map parameter
-    r = 4.
-
-    X = np.random.rand(T+transient, N)
-
-    for t in range(max_lag, T+transient):
-        for j in range(N):
-            added_input = 0.
-            for link_props in links[j]:
-                var, lag = link_props[0]
-                if var != j and abs(lag) > 0:
-                    coeff        = link_props[1]
-                    coupling     = link_props[2]
-                    added_input += coeff*X[t - abs(lag), var]
-
-            X[t, j] = (X[t-1, j] * (r - r*X[t-1, j] - added_input + noise_lev*np.random.rand())) % 1
-                        #func(coeff, X[t+lag, var], coupling)
-
-    X = X[transient:]
-
-    if np.any(np.abs(X) == np.inf) or np.any(X == np.nan):
-        raise ValueError("Data divergent")
-    return X
+# def generate_logistic_maps(N, T, links, noise_lev):
+#
+#     # Check parameters
+#     # contemp = False
+#     max_lag = 0
+#     for j in range(N):
+#         for link_props in links[j]:
+#             var, lag = link_props[0]
+#             max_lag  = max(max_lag, abs(lag))
+#
+#     transient = int(.2*T)
+#
+#     # Chaotic logistic map parameter
+#     r = 4.
+#
+#     X = np.random.rand(T+transient, N)
+#
+#     for t in range(max_lag, T+transient):
+#         for j in range(N):
+#             added_input = 0.
+#             for link_props in links[j]:
+#                 var, lag = link_props[0]
+#                 if var != j and abs(lag) > 0:
+#                     coeff        = link_props[1]
+#                     coupling     = link_props[2]
+#                     added_input += coeff*X[t - abs(lag), var]
+#
+#             X[t, j] = (X[t-1, j] * (r - r*X[t-1, j] - added_input + noise_lev*np.random.rand())) % 1
+#                         #func(coeff, X[t+lag, var], coupling)
+#
+#     X = X[transient:]
+#
+#     if np.any(np.abs(X) == np.inf) or np.any(X == np.nan):
+#         raise ValueError("Data divergent")
+#     return X
 
 
 

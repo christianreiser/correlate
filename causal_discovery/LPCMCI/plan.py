@@ -12,14 +12,15 @@ import generate_data_mod as mod
 
 """
 main challenges to get algo running:
-1. 2        Modify data generator to start from last sample 14. june
+1. 1 -> 1   Modify data generator to start from last sample 10. june
+1. 1        intervene in datagenerator                      14. june
 2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
 3. 5        Orient edges with interventional data           22 june
 4. 3        Initialize lpcmci with above result             28. june
 5. 3        Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 4. july
 
 further TODOs
-1. 2        compute optimal intervention from SCM 6. july
+1. 2        compute optimal intervention from SCM (for ground truth)6. july
 2. 2        calculate regret 11. july
 3. 5        set up simulation study 19. july
 4. 5        interpret results 27. july
@@ -63,8 +64,10 @@ def nonstationary_check(scm):
         sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
-    ts_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-        links=scm, T=1500, noises=noises, random_state=random_state)  # todo T= config_samples = 10000
+    ts_check = mod.generate_nonlinear_contemp_timeseries(links=scm, T=2000, noises=noises,
+                                                         random_state=random_state)
+    nonstationary = mod.check_stationarity_chr(ts_check, scm)
+
     return nonstationary
 
 
@@ -96,7 +99,8 @@ def generate_stationary_scm():
             contemp_fraction=0.6,
             random_state=random_state)  # MT19937(random_state)
 
-        nonstationary = nonstationary_check(scm)
+        nonstationary = nonstationary_check(scm)  # todo reactivate
+        nonstationary = False  # todo remove
         print("nonstationary:", nonstationary, "counter:", counter)
         counter += 1
 
@@ -142,15 +146,6 @@ def plot_scm(scm):
         # )
         # plt.show()
 
-    tp.plot_graph(
-        val_matrix=original_vals,  # original_vals None
-        link_matrix=original_graph,
-        var_names=range(n_vars_all),
-        link_colorbar_label='cross-MCI',
-        node_colorbar_label='auto-MCI',
-        figsize=(10, 6),
-    )
-    plt.show()
     return original_graph
 
 
@@ -181,16 +176,12 @@ def data_generator(scm, intervention, ts_old, random_seed, n_samples, n_vars_all
         sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
-    # get last value of ts
-    if len(ts_old) == 0:
-        ts_last = None
-    else:
-        ts_last = None#ts_old[-1]
-        print()
-
-    ts, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-        links=scm, T=2, noises=noises, random_state=random_state, starting_values=ts_last )  # todo mby T= config_samples + 10000
-    ts = ts[:1]  # needed as T=1 does not work
+    ts = mod.generate_nonlinear_contemp_timeseries(links=scm,
+                                                   T=1,
+                                                   noises=noises,
+                                                   random_state=random_state,
+                                                   ts_old=ts_old)
+    ts = ts[:1]  # todo needed as T=1 does not work
     return ts
 
 
@@ -288,7 +279,7 @@ def main():
     pag_effect_sizes = None
     regret_list = []
 
-    for is_intervention in is_intervention_list:
+    for is_intervention in is_intervention_list[:400]:
         # get interventions of actual PAG and true SCM.
         # output: None if observational or find via optimal control.
         if is_intervention:
@@ -300,8 +291,6 @@ def main():
         else:
             intervention_actual = None
             intervention_optimal = None
-
-
 
         # intervene as proposed and generate new data
         ts_new = data_generator(
@@ -339,6 +328,13 @@ def main():
     #
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)
-
+    print('done')
+    correct390_0 = 1236.9815673828125
+    if ts_generated_actual[390,0] == correct390_0:
+        print('ts_generated_actual is correct ')
+    else:
+        print('ts_generated_actual is wrong')
+    print('correct390_0:', correct390_0)
+    print('done')
 
 main()
