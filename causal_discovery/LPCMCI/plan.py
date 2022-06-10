@@ -141,10 +141,20 @@ def plot_scm(scm):
         #     link_colorbar_label='MCI',
         # )
         # plt.show()
+
+    tp.plot_graph(
+        val_matrix=original_vals,  # original_vals None
+        link_matrix=original_graph,
+        var_names=range(n_vars_all),
+        link_colorbar_label='cross-MCI',
+        node_colorbar_label='auto-MCI',
+        figsize=(10, 6),
+    )
+    plt.show()
     return original_graph
 
 
-def data_generator(scm, intervention, ts, random_seed, n_samples, n_vars_all):
+def data_generator(scm, intervention, ts_old, random_seed, n_samples, n_vars_all):
     """
     initialize from last samples of ts
     generate new sample
@@ -152,6 +162,7 @@ def data_generator(scm, intervention, ts, random_seed, n_samples, n_vars_all):
     output: time series data (might be non-stationary)
     # TODO continue from last tau_max samples of ts
     # todo implement interventions
+    # todo move configs to config file
     """
     noise_sigma = (0.5, 2)
     random_state = np.random.RandomState(random_seed)
@@ -170,8 +181,15 @@ def data_generator(scm, intervention, ts, random_seed, n_samples, n_vars_all):
         sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
+    # get last value of ts
+    if len(ts_old) == 0:
+        ts_last = None
+    else:
+        ts_last = None#ts_old[-1]
+        print()
+
     ts, nonstationary = mod.generate_nonlinear_contemp_timeseries(
-        links=scm, T=2, noises=noises, random_state=random_state)  # todo mby T= config_samples + 10000
+        links=scm, T=2, noises=noises, random_state=random_state, starting_values=ts_last )  # todo mby T= config_samples + 10000
     ts = ts[:1]  # needed as T=1 does not work
     return ts
 
@@ -283,11 +301,13 @@ def main():
             intervention_actual = None
             intervention_optimal = None
 
+
+
         # intervene as proposed and generate new data
         ts_new = data_generator(
             scm=scm,
             intervention=intervention_actual,
-            ts=ts_generated_actual,
+            ts_old=ts_generated_actual,
             random_seed=random_seed,
             n_samples=n_samples,
             n_vars_all=n_vars_all
@@ -296,29 +316,29 @@ def main():
         # append new actual data
         ts_generated_actual = np.r_[ts_generated_actual, ts_new]
 
-        # intervene optimally and generate new data
-        ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
-                                n_vars_all)
-        ts_generated_optimal = ts_generated_optimal.append(ts_new)
-
-        # measure
-        ts_measured_actual = ts_measured_actual.append(measure(ts_generated_actual, obs_vars=measured_labels))
-
-        # regret
-        regret_list = np.append(regret_list,
-                                abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
-
-        # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
-        pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph', pag_effect_sizes=None,
-                                                        ts_measured_actual=ts_measured_actual,
-                                                        is_intervention_list=is_intervention_list)
-        pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
-                                                           is_intervention_list)
-        pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual,
-                                                        is_intervention_list)
-
-    regret_sum = sum(regret_list)
-    print('regret_sum:', regret_sum)
+    #     # intervene optimally and generate new data
+    #     ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
+    #                             n_vars_all)
+    #     ts_generated_optimal = ts_generated_optimal.append(ts_new)
+    #
+    #     # measure
+    #     ts_measured_actual = ts_measured_actual.append(measure(ts_generated_actual, obs_vars=measured_labels))
+    #
+    #     # regret
+    #     regret_list = np.append(regret_list,
+    #                             abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
+    #
+    #     # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
+    #     pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph', pag_effect_sizes=None,
+    #                                                     ts_measured_actual=ts_measured_actual,
+    #                                                     is_intervention_list=is_intervention_list)
+    #     pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
+    #                                                        is_intervention_list)
+    #     pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual,
+    #                                                     is_intervention_list)
+    #
+    # regret_sum = sum(regret_list)
+    # print('regret_sum:', regret_sum)
 
 
 main()

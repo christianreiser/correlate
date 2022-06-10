@@ -130,14 +130,15 @@ class Graph():
 
         return stack
 
-def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None):
-
+def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, starting_values=None):
+    # random_state
     if random_state is None:
         random_state = np.random
 
     # links must be {j:[((i, -tau), func), ...], ...}
     # coeff is coefficient
     # func is a function f(x) that becomes linear ~x in limit
+
     # noises is a random_state.___ function
     N = len(links.keys())
     if noises is None:
@@ -155,7 +156,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
         for link_props in links[j]:
             var, lag = link_props[0]
             coeff = link_props[1]
-            # func = link_props[2] # chrei
+            func = link_props[2]
             if lag == 0: contemp = True
             if var not in range(N):
                 raise ValueError("var must be in 0..{}.".format(N-1))
@@ -174,27 +175,40 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     if contemp_dag.isCyclic() == 1: 
         raise ValueError("Contemporaneous links must not contain cycle.")
 
-    causal_order = contemp_dag.topologicalSort() 
+    causal_order = contemp_dag.topologicalSort()
+
+    # todo chrei to compensate for removing starting value below with X = X[1,:]
+    if starting_values is not None:
+        T = T+1
 
     transient = int(.2*T)
 
+    # zeros ini
     X = np.zeros((T+transient, N), dtype='float32')
+
+    # add noises
     for j in range(N):
         X[:, j] = noises[j](T+transient)
 
-    for t in range(max_lag, T+transient):
-        for j in causal_order:
-            for link_props in links[j]:
-                var, lag = link_props[0]
+    # chrei: replace values of X for t=0 with starting_values
+    if starting_values is not None:
+        X[0,:] = starting_values
+
+    for t in range(max_lag, T+transient): # range(1,1800)
+        for j in causal_order: # vor var in vars ( in causal order)
+            for link_props in links[j]: # for link in variable j
+                var, lag = link_props[0] # var name, lag
                 # if abs(lag) > 0:
                 coeff = link_props[1]
-                if len(link_props) < 3:
-                    print('chrei error')
                 func = link_props[2]
 
-                X[t, j] += coeff * func(X[t + lag, var])
+                X[t, j] += coeff * func(X[t + lag, var]) # add value on noise for var j and time t
 
     X = X[transient:]
+
+    # todo chrei: remove first value because it was added for initialization before
+    if starting_values is not None:
+        X = X[1:,:]
 
     if (check_stationarity(links)[0] == False or 
         np.any(np.isnan(X)) or 
