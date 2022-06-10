@@ -1,6 +1,6 @@
 from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
 from config import target_label, show_plots, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
-    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed
+    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, correct390_0
 import math
 import numpy as np
 import tigramite.data_processing as pp
@@ -47,25 +47,30 @@ def nonstationary_check(scm):
     """
     check if scm is stationary
     """
-    noise_sigma = (0.5, 2)
-    random_state = np.random.RandomState(random_seed)
+    # random_state = np.random.RandomState(random_seed)
+    #
+    # class NoiseModel:
+    #     def __init__(self, sigma=1):
+    #         self.sigma = sigma
+    #
+    #     def gaussian(self, n_samples):
+    #         # Get zero-mean unit variance gaussian distribution
+    #         return self.sigma * random_state.randn(n_samples)
+    #
+    # noises = []
+    # for link in scm:
+    #     noise_type = 'gaussian'
+    #     sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
+    #     noises.append(getattr(NoiseModel(sigma), noise_type))
 
-    class NoiseModel:
-        def __init__(self, sigma=1):
-            self.sigma = sigma
+    ts_check = data_generator(scm, intervention=None, ts_old=[], random_seed=random_seed, n_samples=2000)
 
-        def gaussian(self, n_samples):
-            # Get zero-mean unit variance gaussian distribution
-            return self.sigma * random_state.randn(n_samples)
+    #test
+    if ts_check[390,0] == correct390_0:
+        print('ts_generated_actual is correct ')
+    else:
+        print('ts_generated_actual is wrong')
 
-    noises = []
-    for link in scm:
-        noise_type = 'gaussian'
-        sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
-        noises.append(getattr(NoiseModel(sigma), noise_type))
-
-    ts_check = mod.generate_nonlinear_contemp_timeseries(links=scm, T=2000, noises=noises,
-                                                         random_state=random_state)
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
 
     return nonstationary
@@ -149,17 +154,16 @@ def plot_scm(scm):
     return original_graph
 
 
-def data_generator(scm, intervention, ts_old, random_seed, n_samples, n_vars_all):
+def data_generator(scm, intervention, ts_old, random_seed, n_samples):
     """
     initialize from last samples of ts
     generate new sample
     intervention=None for observational time series
     output: time series data (might be non-stationary)
-    # TODO continue from last tau_max samples of ts
     # todo implement interventions
     # todo move configs to config file
     """
-    noise_sigma = (0.5, 2)
+
     random_state = np.random.RandomState(random_seed)
 
     class NoiseModel:
@@ -177,11 +181,10 @@ def data_generator(scm, intervention, ts_old, random_seed, n_samples, n_vars_all
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
     ts = mod.generate_nonlinear_contemp_timeseries(links=scm,
-                                                   T=1,
+                                                   T=n_samples,
                                                    noises=noises,
                                                    random_state=random_state,
                                                    ts_old=ts_old)
-    ts = ts[:1]  # todo needed as T=1 does not work
     return ts
 
 
@@ -256,6 +259,7 @@ def get_edgemarks_and_effect_sizes(scm):
 
 
 def main():
+
     # generate stationary scm
     scm, original_graph = generate_stationary_scm()
 
@@ -299,7 +303,6 @@ def main():
             ts_old=ts_generated_actual,
             random_seed=random_seed,
             n_samples=n_samples,
-            n_vars_all=n_vars_all
         )
 
         # append new actual data
@@ -329,7 +332,6 @@ def main():
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)
     print('done')
-    correct390_0 = 1236.9815673828125
     if ts_generated_actual[390,0] == correct390_0:
         print('ts_generated_actual is correct ')
     else:

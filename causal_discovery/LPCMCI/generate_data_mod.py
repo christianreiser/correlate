@@ -1,7 +1,7 @@
-import itertools
+from collections import defaultdict
+
 import numpy as np
-import sys
-from collections import defaultdict 
+
 
 def check_stationarity(links):
     """Returns stationarity according to a unit root test
@@ -13,7 +13,6 @@ def check_stationarity(links):
     - The noise vectors are identically distributed;
     - Stability condition on Phi(t-1) coupling matrix (stabmat) of VAR(1)-version  of VAR(p).
     """
-
 
     N = len(links)
     # Check parameters
@@ -27,25 +26,25 @@ def check_stationarity(links):
 
             max_lag = max(max_lag, abs(lag))
 
-    graph = np.zeros((N,N,max_lag))
+    graph = np.zeros((N, N, max_lag))
     couplings = []
 
     for j in range(N):
         for link_props in links[j]:
             var, lag = link_props[0]
-            coeff    = link_props[1]
+            coeff = link_props[1]
             coupling = link_props[2]
             if abs(lag) > 0:
-                graph[j,var,abs(lag)-1] = coeff
+                graph[j, var, abs(lag) - 1] = coeff
             couplings.append(coupling)
 
-    stabmat = np.zeros((N*max_lag,N*max_lag))
+    stabmat = np.zeros((N * max_lag, N * max_lag))
     index = 0
 
-    for i in range(0,N*max_lag,N):
-        stabmat[:N,i:i+N] = graph[:,:,index]
-        if index < max_lag-1:
-            stabmat[i+N:i+2*N,i:i+N] = np.identity(N)
+    for i in range(0, N * max_lag, N):
+        stabmat[:N, i:i + N] = graph[:, :, index]
+        if index < max_lag - 1:
+            stabmat[i + N:i + 2 * N, i:i + N] = np.identity(N)
         index += 1
 
     eig = np.linalg.eig(stabmat)[0]
@@ -61,74 +60,76 @@ def check_stationarity(links):
         return stationary, np.abs(eig).max()
 
 
-class Graph(): 
-    def __init__(self,vertices): 
-        self.graph = defaultdict(list) 
-        self.V = vertices 
-  
-    def addEdge(self,u,v): 
-        self.graph[u].append(v) 
-  
-    def isCyclicUtil(self, v, visited, recStack): 
-  
+class Graph():
+    def __init__(self, vertices):
+        self.graph = defaultdict(list)
+        self.V = vertices
+
+    def addEdge(self, u, v):
+        self.graph[u].append(v)
+
+    def isCyclicUtil(self, v, visited, recStack):
+
         # Mark current node as visited and  
         # adds to recursion stack 
         visited[v] = True
         recStack[v] = True
-  
+
         # Recur for all neighbours 
         # if any neighbour is visited and in  
         # recStack then graph is cyclic 
-        for neighbour in self.graph[v]: 
-            if visited[neighbour] == False: 
-                if self.isCyclicUtil(neighbour, visited, recStack) == True: 
+        for neighbour in self.graph[v]:
+            if visited[neighbour] == False:
+                if self.isCyclicUtil(neighbour, visited, recStack) == True:
                     return True
-            elif recStack[neighbour] == True: 
+            elif recStack[neighbour] == True:
                 return True
-  
+
         # The node needs to be poped from  
         # recursion stack before function ends 
         recStack[v] = False
         return False
-  
+
     # Returns true if graph is cyclic else false 
-    def isCyclic(self): 
-        visited = [False] * self.V 
-        recStack = [False] * self.V 
-        for node in range(self.V): 
-            if visited[node] == False: 
-                if self.isCyclicUtil(node,visited,recStack) == True: 
+    def isCyclic(self):
+        visited = [False] * self.V
+        recStack = [False] * self.V
+        for node in range(self.V):
+            if visited[node] == False:
+                if self.isCyclicUtil(node, visited, recStack) == True:
                     return True
         return False
-  
+
     # A recursive function used by topologicalSort 
-    def topologicalSortUtil(self,v,visited,stack): 
+    def topologicalSortUtil(self, v, visited, stack):
 
-      # Mark the current node as visited. 
-      visited[v] = True
+        # Mark the current node as visited.
+        visited[v] = True
 
-      # Recur for all the vertices adjacent to this vertex 
-      for i in self.graph[v]: 
-          if visited[i] == False: 
-              self.topologicalSortUtil(i,visited,stack) 
+        # Recur for all the vertices adjacent to this vertex
+        for i in self.graph[v]:
+            if visited[i] == False:
+                self.topologicalSortUtil(i, visited, stack)
 
-      # Push current vertex to stack which stores result 
-      stack.insert(0,v) 
+                # Push current vertex to stack which stores result
+        stack.insert(0, v)
 
-    # The function to do Topological Sort. It uses recursive  
-    # topologicalSortUtil() 
-    def topologicalSort(self): 
+        # The function to do Topological Sort. It uses recursive
+
+    # topologicalSortUtil()
+    def topologicalSort(self):
         # Mark all the vertices as not visited 
-        visited = [False]*self.V 
-        stack =[] 
+        visited = [False] * self.V
+        stack = []
 
         # Call the recursive helper function to store Topological 
         # Sort starting from all vertices one by one 
-        for i in range(self.V): 
-          if visited[i] == False: 
-              self.topologicalSortUtil(i,visited,stack) 
+        for i in range(self.V):
+            if visited[i] == False:
+                self.topologicalSortUtil(i, visited, stack)
 
         return stack
+
 
 def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, ts_old=None):
     # chrei if ts_old not specified (i.e. during stationarity check),
@@ -148,7 +149,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     if noises is None:
         noises = [random_state.randn for j in range(N)]
 
-    if N != max(links.keys())+1 or N != len(noises):
+    if N != max(links.keys()) + 1 or N != len(noises):
         raise ValueError("links and noises keys must match N.")
 
     # Check parameters
@@ -164,7 +165,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
             if lag == 0:
                 contemp = True
             if var not in range(N):
-                raise ValueError("var must be in 0..{}.".format(N-1))
+                raise ValueError("var must be in 0..{}.".format(N - 1))
             if 'float' not in str(type(coeff)):
                 raise ValueError("coeff must be float.")
             if lag > 0 or type(lag) != int:
@@ -177,7 +178,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
                 # a, b = causal_order.index(var), causal_order.index(j)
                 # causal_order[b], causal_order[a] = causal_order[a], causal_order[b]
 
-    if contemp_dag.isCyclic() == 1: 
+    if contemp_dag.isCyclic() == 1:
         raise ValueError("Contemporaneous links must not contain cycle.")
 
     causal_order = contemp_dag.topologicalSort()
@@ -185,63 +186,59 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     len_ts_old = len(ts_old)
 
     # zeros ini
-    X = np.zeros((T+max_lag+len_ts_old, N), dtype='float32')
+    X = np.zeros((T + max_lag + len_ts_old, N), dtype='float32')
 
-    # todo remove this
-    fake_noises = range(T+max_lag+len_ts_old)
     # add noises
     for j in range(N):
-        X[:, j] = fake_noises# todo noises[j](T+max_lag+len_ts_old)
+        X[:, j] = noises[j](T + max_lag + len_ts_old)
 
     # chrei: replace values of X for starting from len_ts_old for max_lag elements with starting_values
     if len_ts_old > 0:
-        X[len_ts_old:max_lag+len_ts_old] = ts_old[-max_lag:]
+        X[len_ts_old:max_lag + len_ts_old] = ts_old[-max_lag:]
 
-
-
-    for t in range(max_lag+len_ts_old, T+max_lag+len_ts_old): # for all time steps
-        for j in causal_order: # for all variables ( in causal order)
-            for link_props in links[j]: # for links affecting j
-                var, lag = link_props[0] # var name, lag
+    for t in range(max_lag + len_ts_old, T + max_lag + len_ts_old):  # for all time steps
+        for j in causal_order:  # for all variables ( in causal order)
+            for link_props in links[j]:  # for links affecting j
+                var, lag = link_props[0]  # var name, lag
                 # if abs(lag) > 0:
                 coeff = link_props[1]
                 func = link_props[2]
-                base_value =X[t + lag, var]
+                base_value = X[t + lag, var]
                 val_to_add = coeff * func(base_value)
                 noise_val = X[t, j]
                 new_value = noise_val + val_to_add
-                X[t, j] = new_value # add value on noise for var j and time t
+                X[t, j] = new_value  # add value on noise for var j and time t
 
     # chrei: remove some value because they were added for initialization before
     if len_ts_old != 0:
-        X = X[max_lag+len_ts_old:]
+        X = X[max_lag + len_ts_old:]
     else:
         X = X[max_lag:]
     return X
 
+
 def check_stationarity_chr(X, links):
     if (check_stationarity(links)[0] == False or
-        np.any(np.isnan(X)) or
-        np.any(np.isinf(X)) or
-        # np.max(np.abs(X)) > 1.e4 or
-        np.any(np.abs(np.triu(np.corrcoef(X, rowvar=0), 1)) > 0.999)):
+            np.any(np.isnan(X)) or
+            np.any(np.isinf(X)) or
+            # np.max(np.abs(X)) > 1.e4 or
+            np.any(np.abs(np.triu(np.corrcoef(X, rowvar=0), 1)) > 0.999)):
         nonstationary = True
     else:
         nonstationary = False
     return nonstationary
 
 
-
-def generate_random_contemp_model(N, L, 
-    coupling_coeffs, 
-    coupling_funcs, 
-    auto_coeffs, 
-    tau_max, 
-    contemp_fraction=0.,
-    # num_trials=1000,
-    random_state=None):
-
-    def lin(x): return x
+def generate_random_contemp_model(N, L,
+                                  coupling_coeffs,
+                                  coupling_funcs,
+                                  auto_coeffs,
+                                  tau_max,
+                                  contemp_fraction=0.,
+                                  # num_trials=1000,
+                                  random_state=None):
+    def lin(x):
+        return x
 
     if random_state is None:
         random_state = np.random
@@ -250,7 +247,7 @@ def generate_random_contemp_model(N, L,
     a_len = len(auto_coeffs)
     if type(coupling_coeffs) == float:
         coupling_coeffs = [coupling_coeffs]
-    c_len  = len(coupling_coeffs)
+    c_len = len(coupling_coeffs)
     func_len = len(coupling_funcs)
 
     if tau_max == 0:
@@ -258,18 +255,17 @@ def generate_random_contemp_model(N, L,
 
     if contemp_fraction > 0.:
         contemp = True
-        L_lagged = int((1.-contemp_fraction)*L)
+        L_lagged = int((1. - contemp_fraction) * L)
         L_contemp = L - L_lagged
-        if L==1: 
+        if L == 1:
             # Randomly assign a lagged or contemp link
-            L_lagged = random_state.randint(0,2)
+            L_lagged = random_state.randint(0, 2)
             L_contemp = int(L_lagged == False)
 
     else:
         contemp = False
         L_lagged = L
         L_contemp = 0
-
 
     # for ir in range(num_trials):
 
@@ -294,10 +290,10 @@ def generate_random_contemp_model(N, L,
         cause = random_state.choice(causal_order[:-1])
         effect = random_state.choice(causal_order)
         while (causal_order.index(cause) >= causal_order.index(effect)
-             or (cause, effect) in chosen_links):
+               or (cause, effect) in chosen_links):
             cause = random_state.choice(causal_order[:-1])
             effect = random_state.choice(causal_order)
-        
+
         contemp_links.append((cause, effect))
         chosen_links.append((cause, effect))
 
@@ -310,7 +306,7 @@ def generate_random_contemp_model(N, L,
         while (cause, effect) in chosen_links or cause == effect:
             cause = random_state.choice(causal_order)
             effect = random_state.choice(causal_order)
-        
+
         lagged_links.append((cause, effect))
         chosen_links.append((cause, effect))
 
@@ -322,7 +318,7 @@ def generate_random_contemp_model(N, L,
         if (i, j) in contemp_links:
             tau = 0
         else:
-            tau = int(random_state.randint(1, tau_max+1))
+            tau = int(random_state.randint(1, tau_max + 1))
         # print tau
         # CHoose coupling
         c = float(coupling_coeffs[random_state.randint(0, c_len)])
@@ -341,9 +337,9 @@ def generate_random_contemp_model(N, L,
     #     else:
     #         print("Trial %d: Not a stationary model" % ir)
 
-
     # print("No stationary models found in {} trials".format(num_trials))
     return links
+
 
 # def generate_logistic_maps(N, T, links, noise_lev):
 #
@@ -382,7 +378,6 @@ def generate_random_contemp_model(N, L,
 #     return X
 
 
-
 def weighted_avg_and_std(values, axis, weights):
     """Returns the weighted average and standard deviation.
 
@@ -404,11 +399,12 @@ def weighted_avg_and_std(values, axis, weights):
     """
 
     values[np.isnan(values)] = 0.
-    average  = np.ma.average(values, axis=axis, weights=weights)
+    average = np.ma.average(values, axis=axis, weights=weights)
     variance = np.sum(weights * (values - np.expand_dims(average, axis)
-                                    ) ** 2, axis=axis) / weights.sum(axis=axis)
+                                 ) ** 2, axis=axis) / weights.sum(axis=axis)
 
     return (average, np.sqrt(variance))
+
 
 def time_bin_with_mask(data, time_bin_length, sample_selector=None):
     """Returns time binned data where only about non-masked values is averaged.
@@ -450,9 +446,8 @@ def time_bin_with_mask(data, time_bin_length, sample_selector=None):
         bindata[index] = weighted_avg_and_std(data[i:i + time_bin_length],
                                               axis=0,
                                               weights=sample_selector[i:i +
-                                              time_bin_length])[0]
+                                                                        time_bin_length])[0]
 
     T, grid_size = bindata.shape
 
     return (bindata.squeeze(), T)
-

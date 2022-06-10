@@ -68,6 +68,7 @@ frac_latents = 0.3
 n_measured_links = 8
 coeff = 0.5
 min_coeff = 0.2
+noise_sigma = (0.5, 2)
 # auto_coeffs = list(np.arange(0.3, 0.6, 0.05)), # somehow error when in config file  # auto-correlations ∼ U(0.3, 0.6) with 0.05 steps  [0.3, 0.35, 0.4, 0.45, 0.45, 0.55]
 
 random_state = np.random.RandomState(random_seed) # MT19937
@@ -77,3 +78,7 @@ n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))#11
 n_ini_obs = 500,
 n_mixed = 500,
 nth = 4
+
+
+#test
+correct390_0 = 2.5380406379699707
