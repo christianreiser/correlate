@@ -11,3 +11,5 @@ __pycache__/
 0_data_raw/
 *.dat
 *.pth
+*.pkl
+*.egg-info/

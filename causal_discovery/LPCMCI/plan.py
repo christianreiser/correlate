@@ -1,6 +1,3 @@
-from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
-from config import target_label, show_plots, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
-    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, correct390_0
 import math
 import numpy as np
 import tigramite.data_processing as pp
@@ -9,6 +6,10 @@ from tigramite import plotting as tp
 
 # Imports from code inside directory
 import generate_data_mod as mod
+from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
+from config import target_label, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
+    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, correct390_0, tau_max, \
+    contemp_fraction
 
 """
 main challenges to get algo running:
@@ -47,32 +48,8 @@ def nonstationary_check(scm):
     """
     check if scm is stationary
     """
-    # random_state = np.random.RandomState(random_seed)
-    #
-    # class NoiseModel:
-    #     def __init__(self, sigma=1):
-    #         self.sigma = sigma
-    #
-    #     def gaussian(self, n_samples):
-    #         # Get zero-mean unit variance gaussian distribution
-    #         return self.sigma * random_state.randn(n_samples)
-    #
-    # noises = []
-    # for link in scm:
-    #     noise_type = 'gaussian'
-    #     sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
-    #     noises.append(getattr(NoiseModel(sigma), noise_type))
-
     ts_check = data_generator(scm, intervention=None, ts_old=[], random_seed=random_seed, n_samples=2000)
-
-    #test
-    if ts_check[390,0] == correct390_0:
-        print('ts_generated_actual is correct ')
-    else:
-        print('ts_generated_actual is wrong')
-
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
-
     return nonstationary
 
 
@@ -80,7 +57,6 @@ def generate_stationary_scm():
     """
     generate scms until a stationary one is found
     """
-    # todo get settings from config
     nonstationary = True
     scm = []  # stupid ini
     counter = 0
@@ -100,12 +76,11 @@ def generate_stationary_scm():
             coupling_coeffs=coupling_coeffs,  # ~U±(min_coeff and coeff) # 0.2,0.3,0.4,0.5,-0.2,-0.3,-0.4,-0.5
             coupling_funcs=[lin_f],
             auto_coeffs=auto_coeffs,  # [0.3, 0.35, 0.4, 0.45, 0.45, 0.55]
-            tau_max=1,
-            contemp_fraction=0.6,
+            tau_max=tau_max,
+            contemp_fraction=contemp_fraction,
             random_state=random_state)  # MT19937(random_state)
 
-        nonstationary = nonstationary_check(scm)  # todo reactivate
-        nonstationary = False  # todo remove
+        nonstationary = nonstationary_check(scm)
         print("nonstationary:", nonstationary, "counter:", counter)
         counter += 1
 
@@ -161,7 +136,6 @@ def data_generator(scm, intervention, ts_old, random_seed, n_samples):
     intervention=None for observational time series
     output: time series data (might be non-stationary)
     # todo implement interventions
-    # todo move configs to config file
     """
 
     random_state = np.random.RandomState(random_seed)
@@ -259,7 +233,6 @@ def get_edgemarks_and_effect_sizes(scm):
 
 
 def main():
-
     # generate stationary scm
     scm, original_graph = generate_stationary_scm()
 
@@ -332,11 +305,12 @@ def main():
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)
     print('done')
-    if ts_generated_actual[390,0] == correct390_0:
+    if ts_generated_actual[390, 0] == correct390_0:
         print('ts_generated_actual is correct ')
     else:
         print('ts_generated_actual is wrong')
     print('correct390_0:', correct390_0)
     print('done')
+
 
 main()
