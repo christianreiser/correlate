@@ -1,15 +1,19 @@
 import math
+
 import numpy as np
-import tigramite.data_processing as pp
+import pandas as pd
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
 
 # Imports from code inside directory
 import generate_data_mod as mod
 from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
+from causal_discovery.LPCMCI.experiment import causal_discovery
 from config import target_label, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
-    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, correct390_0, tau_max, \
+    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, tau_max, \
     contemp_fraction
+from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
+from intervention_proposal.target_eqs_from_pag import compute_target_equations, plot_graph
 
 """
 main challenges to get algo running:
@@ -90,23 +94,23 @@ def generate_stationary_scm():
 
 
 def plot_scm(scm):
-    # ts_df = pp.DataFrame(ts)
-    original_graph, original_vals = modify_dict_get_graph_and_link_vals(scm)
-
-    # save data to file
-    # filename = os.path.abspath("./../../../test.dat")
-    # fileobj = open(filename, mode='wb')
-    # off = np.array(data, dtype=np.float32)
-    # off.tofile(fileobj)
-    # fileobj.close()
-
-    # plot data
-    # if show_plots:
-    #     tp.plot_timeseries(ts_df, figsize=(15, 5))
-    #     plt.show()
-
-    # plot original DAG
     if verbosity > 0:
+        # ts_df = pp.DataFrame(ts)
+        original_graph, original_vals = modify_dict_get_graph_and_link_vals(scm)
+
+        # save data to file
+        # filename = os.path.abspath("./../../../test.dat")
+        # fileobj = open(filename, mode='wb')
+        # off = np.array(data, dtype=np.float32)
+        # off.tofile(fileobj)
+        # fileobj.close()
+
+        # plot data
+        # if show_plots:
+        #     tp.plot_timeseries(ts_df, figsize=(15, 5))
+        #     plt.show()
+
+        # plot original DAG
         tp.plot_graph(
             val_matrix=original_vals,  # original_vals None
             link_matrix=original_graph,
@@ -126,7 +130,7 @@ def plot_scm(scm):
         # )
         # plt.show()
 
-    return original_graph
+        return original_graph
 
 
 def data_generator(scm, intervention, ts_old, random_seed, n_samples):
@@ -167,8 +171,7 @@ def measure(ts, obs_vars):
     drop latents
     """
     ts_measured_actual = ts[:, obs_vars]  # remove latents
-    ts_measured_actual_df = pp.DataFrame(ts)  # as df
-    return ts_measured_actual, ts_measured_actual_df
+    return ts_measured_actual
 
 
 def obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual, is_intervention_list):
@@ -178,38 +181,68 @@ def obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual, is_interv
     3. reduce pag_edgemarks with observatonal data and update pag_effect_sizes
     return: pag_edgemarks, pag_effect_sizes
     """
-    # todo observational_ts = intersection of ts_measured_actual and is_intervention_list
-    ts_observational = ts_measured_actual[not is_intervention_list]
-    pag_edgemarks = []  # todo
-    pag_effect_sizes = []  # todo
+    # first run case
+    if pag_edgemarks == 'complete_graph' and pag_effect_sizes == np.inf:
+        df = pd.DataFrame(ts_measured_actual)
+        pag_effect_sizes, pag_edgemarks, var_names = causal_discovery(df)
+    else:
+        ValueError("not implemented yet")
+        # todo observational_ts = intersection of ts_measured_actual and is_intervention_list
+        ts_observational = ts_measured_actual[not is_intervention_list]
+
+    # ts_measured_actual to dataframe
+
     return pag_edgemarks, pag_effect_sizes
 
 
-def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes):
+def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_labels):
     """
     Optimal control to find the most optimistic intervention.
-    Optimistic means the PAG is assumed to be correct, and we search for the intervention that maximizes the outcome
     """
-    intervention_optimistic = 0  # todo
-    return intervention_optimistic
+
+    # make items of measured_labels to strings
+    measured_labels = [str(x) for x in measured_labels]
+
+    # get target equations from graph
+    target_eq, graph_combinations = compute_target_equations(
+        val_min=graph_effect_sizes,
+        graph=graph_edgemarks,
+        var_names=measured_labels)
+
+    # remove unintervenable variables
+    target_eqs_intervenable = drop_unintervenable_variables(target_eq)
+
+    # get optimal intervention
+    largest_abs_coeff, best_intervention, most_optimistic_graph_idx = find_most_optimistic_intervention(
+        target_eqs_intervenable)
+
+    # most optimistic graph
+    most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
+    # plot most optimistic graph
+    if verbosity > 1:
+        plot_graph(graph_effect_sizes, most_optimistic_graph, measured_labels)
+    return best_intervention
 
 
-def obs_or_intervene(n_ini_obs, n_mixed, nth):
+def obs_or_intervene(
+        # n_ini_obs,
+        n_mixed,
+        nth):
     """
     first n_ini_obs samples are observational
     then for n_mixed samples, very nth sample is an intervention 
     false: observation
     true: intervention
     """
-    is_obs = np.zeros(n_ini_obs).astype(bool)
+    # is_obs = np.zeros(n_ini_obs).astype(bool)
     is_mixed = np.zeros(n_mixed).astype(bool)
     for i in range(len(is_mixed)):
         if i % nth == 0:
             is_mixed[i] = True
         else:
             is_mixed[i] = False
-    is_intervention_list = np.append(is_obs, is_mixed)
-    return is_intervention_list
+    # is_intervention_list = np.append(is_obs, is_mixed)
+    return is_mixed
 
 
 def interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes, is_intervention_list):
@@ -232,6 +265,15 @@ def get_edgemarks_and_effect_sizes(scm):
     return edgemarks, effect_sizes
 
 
+def get_measured_labels():
+    measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
+                                                  size=math.ceil(
+                                                      (1. - frac_latents) *
+                                                      n_vars_all),
+                                                  replace=False)).tolist()
+    return measured_labels
+
+
 def main():
     # generate stationary scm
     scm, original_graph = generate_stationary_scm()
@@ -239,31 +281,51 @@ def main():
     # ini
     ts_generated_actual = np.zeros((0, n_vars_all))
     ts_generated_optimal = []
-    ts_measured_actual = []
+    ts_measured_actual = np.zeros((0, n_vars_measured))
     is_intervention_list = obs_or_intervene(
-        n_ini_obs=n_ini_obs,
+        # n_ini_obs=n_ini_obs,
         n_mixed=n_mixed,
         nth=nth)  # 500 obs + 500 with every 4th intervention
     n_samples = 1  # len(is_intervention_list)  # todo: extend ts by one sample at a time for len(is_intervention_list)
 
-    measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
-                                                  size=math.ceil(
-                                                      (1. - frac_latents) *
-                                                      n_vars_all),
-                                                  replace=False)).tolist()
+    measured_labels = get_measured_labels()
 
     pag_edgemarks = 'fully connected'  # ini PAG as complete graph
     pag_effect_sizes = None
     regret_list = []
 
-    for is_intervention in is_intervention_list[:400]:
+    """ observe first 500 samples"""
+    # intervene as proposed and generate new data
+    ts_new = data_generator(
+        scm=scm,
+        intervention=None,
+        ts_old=ts_generated_actual,
+        random_seed=random_seed,
+        n_samples=n_ini_obs[0],
+    )
+
+    # measure new data
+    new_measurements = measure(ts_new, obs_vars=measured_labels)
+
+    # append new measured data
+    ts_measured_actual = np.r_[ts_measured_actual, new_measurements]
+
+    pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph',
+                                                    pag_effect_sizes=np.inf,
+                                                    ts_measured_actual=ts_measured_actual,
+                                                    is_intervention_list=is_intervention_list)
+
+    """ loop: causal discovery, planning, intervention """
+    for is_intervention in is_intervention_list:
         # get interventions of actual PAG and true SCM.
         # output: None if observational or find via optimal control.
         if is_intervention:
             # actual intervention
-            intervention_actual = find_optimistic_intervention(pag_edgemarks, pag_effect_sizes)
-            # optimal intervention
-            true_edgemarks, true_effectsizes = get_edgemarks_and_effect_sizes(scm)
+            intervention_actual = find_optimistic_intervention(pag_edgemarks, pag_effect_sizes, measured_labels)
+
+            # optimal intervention todo
+            # true_edgemarks, true_effectsizes = get_edgemarks_and_effect_sizes(scm)
+
             intervention_optimal = find_optimistic_intervention(true_edgemarks, true_effectsizes),
         else:
             intervention_actual = None
@@ -279,37 +341,35 @@ def main():
         )
 
         # append new actual data
-        ts_generated_actual = np.r_[ts_generated_actual, ts_new]
+        # ts_generated_actual = np.r_[ts_generated_actual, ts_new]
 
-    #     # intervene optimally and generate new data
-    #     ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
-    #                             n_vars_all)
-    #     ts_generated_optimal = ts_generated_optimal.append(ts_new)
-    #
-    #     # measure
-    #     ts_measured_actual = ts_measured_actual.append(measure(ts_generated_actual, obs_vars=measured_labels))
-    #
-    #     # regret
-    #     regret_list = np.append(regret_list,
-    #                             abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
-    #
-    #     # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
-    #     pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph', pag_effect_sizes=None,
-    #                                                     ts_measured_actual=ts_measured_actual,
-    #                                                     is_intervention_list=is_intervention_list)
-    #     pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
-    #                                                        is_intervention_list)
-    #     pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual,
-    #                                                     is_intervention_list)
+        # measure new data
+        new_measurements = measure(ts_new, obs_vars=measured_labels)
+
+        # append new measured data
+        ts_measured_actual = np.r_[ts_measured_actual, new_measurements]
+
+        #     # intervene optimally and generate new data
+        #     ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
+        #                             n_vars_all)
+        #     ts_generated_optimal = ts_generated_optimal.append(ts_new)
+        #
+
+        #
+        #     # regret
+        #     regret_list = np.append(regret_list,
+        #                             abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
+        #
+        # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
+
+        pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
+                                                           is_intervention_list)
+        pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual,
+                                                        is_intervention_list)
     #
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)
-    print('done')
-    if ts_generated_actual[390, 0] == correct390_0:
-        print('ts_generated_actual is correct ')
-    else:
-        print('ts_generated_actual is wrong')
-    print('correct390_0:', correct390_0)
+
     print('done')
 
 

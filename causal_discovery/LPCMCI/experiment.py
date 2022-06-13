@@ -101,24 +101,24 @@ def save_results(val_min, graph, var_names, name_extension):
 def causal_discovery(df):
     if causal_discovery_on:
 
-        """get non_zero_inices"""
-        non_zero_inices = pd.read_csv(str(private_folder_path) + 'results.csv', index_col=0)
-        # of non_zero_inices get column called 'ref_coeff_widestk=5'
-        non_zero_inices = non_zero_inices.loc[:, 'reg_coeff_widestk=5']
-        # drop all rows with 0 in non_zero_inices
-        non_zero_inices = non_zero_inices[non_zero_inices != 0]
-        # detete all rows with nans in non_zero_inices
-        non_zero_inices = non_zero_inices.dropna().index
+        """get non_zero_indices"""
+        # non_zero_inices = pd.read_csv(str(private_folder_path) + 'results.csv', index_col=0)
+        # # of non_zero_inices get column called 'ref_coeff_widestk=5'
+        # non_zero_inices = non_zero_inices.loc[:, 'reg_coeff_widestk=5']
+        # # drop all rows with 0 in non_zero_inices
+        # non_zero_inices = non_zero_inices[non_zero_inices != 0]
+        # # detete all rows with nans in non_zero_inices
+        # non_zero_inices = non_zero_inices.dropna().index
         # TODO: automatic non_zero_inices doesn't work yet below is hardcoded
-        non_zero_inices = ['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']
+        # non_zero_inices = ['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']
 
         # select columns
-        df = df[non_zero_inices]
-        df.reset_index(level=0, inplace=True)
+        # df = df[non_zero_inices]
+        # df.reset_index(level=0, inplace=True)
 
-        df = remove_nan_seq_from_top_and_bot(df)
+        # df = remove_nan_seq_from_top_and_bot(df)
         # df = non_contemporary_time_series_generation(df)  # todo, how to automate on and off
-        df = df.drop(['Date'], axis=1)  # drop date col
+        # df = df.drop(['Date'], axis=1)  # drop date col
 
         # # standardize data
         df -= df.mean(axis=0)
@@ -176,5 +176,4 @@ def causal_discovery(df):
 
         # save results
         save_results(val_min, graph, var_names, 'chr')
-
-        print()
+        return val_min, graph, var_names

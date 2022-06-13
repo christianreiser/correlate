@@ -112,8 +112,9 @@ def generate_data(random_state, links, noise_types, noise_sigma, model, T):
         sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
-    data_all_check, nonstationary = mod.generate_nonlinear_contemp_timeseries(links=links, T=T + 10000, noises=noises,
+    data_all_check = mod.generate_nonlinear_contemp_timeseries(links=links, T=T + 10000, noises=noises,
                                                                               random_state=random_state)
+    nonstationary = mod.check_stationarity_chr(data_all_check, links)
     return nonstationary, data_all_check
 
 

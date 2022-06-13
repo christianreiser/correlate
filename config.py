@@ -11,7 +11,7 @@ verbosity = 1
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 
 # target
-target_label = 'Mood'  # label of interest
+target_label = '2'#'Mood'  # label of interest
 
 # plots
 show_plots = False  # corr matrix
@@ -50,9 +50,9 @@ LPCMCI_or_PCMCI = False  # True for LPCMCI, False for PCMCI
 tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
-verbosity = 0
+verbosity = 1
 pc_alpha = 0.99
-remove_link_threshold = 0.08
+remove_link_threshold = 0.2
 
 # check config
 if not sum(ensemble_weights) == 1.0:
@@ -64,7 +64,7 @@ if not add_yesterdays_target_feature_on != add_all_yesterdays_features_on:
 # scm_config
 n_vars_measured = 8
 random_seed = 0 # todo should not be constant for simulation studies
-frac_latents = 0.3
+frac_latents = 0# todo 0.3
 contemp_fraction=0.6
 n_measured_links = 8
 coeff = 0.5

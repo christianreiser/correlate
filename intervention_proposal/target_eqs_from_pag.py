@@ -1,9 +1,13 @@
-import pickle
+import itertools
+
 import numpy as np
 import sympy as sp
-from config import target_label, private_folder_path
-from tigramite import plotting as tp
 from matplotlib import pyplot as plt
+from tigramite import plotting as tp
+from tqdm import tqdm
+from multiprocessing import Pool
+
+from config import target_label, private_folder_path, verbosity
 
 """
 This file contains the functions to compute the target equations from the PAG.
@@ -22,6 +26,7 @@ The steps are:
 12. solve equations to get causes of target
 13. module test
 """
+
 
 # function that loads val_min, graph, and var_names from a file and allow_pickle=True
 def load_results(name_extension):
@@ -127,34 +132,33 @@ def get_number_of_graph_combinations(ambiguous_locations):
     return number_of_graph_combinations
 
 
-def get_new_links_list(ambiguous_locations):
+def get_unambiguous_links(ambiguous_locations):
     """
     for each ambiguous location get the list of new possible links
     return: list of lists of new links
     input: ambiguous_locations
     """
     # of every list in ambiguous_locations, get 4th element (new_links) in a new list
-    new_links_list = []  # [i, j, k, new_links]
+    unambiguous_links = []  # [i, j, k, new_links]
     for ambiguous_location in ambiguous_locations:
-        new_links_list.append([ambiguous_location[4]])
-    return new_links_list
+        unambiguous_links.append([ambiguous_location[4]])
+    return unambiguous_links
 
 
-def get_links_permutations(new_links_list):
+def get_links_permutations(corresponding_unambiguous_links_list):
     """
-    create new_links_list where each element is the list of a unique link combination
-    links_permutations contains all links Permutations
+    input: corresponding_unambiguous_links_list. each item is a list of unambiguous links corresponding to an ambiguous
+        link.
+    output: permutations_of_uniquified_links contains all links Permutations of possible links.
     """
-    links_permutations = []  # stupid ini
-    for i in range(len(new_links_list) - 1):
-        a = new_links_list[i][0]
-        b = new_links_list[i + 1][0]
-        links_permutations = [(x, y) for x in a for y in b]  # https://stackoverflow.com/a/39064769/7762867
-        new_links_list[i + 1][0] = links_permutations
+    corresponding_unambiguous_links_list = [item for sublist in corresponding_unambiguous_links_list for item in
+                                            sublist]
+    permutations_of_uniquified_links = list(
+        itertools.product(*corresponding_unambiguous_links_list))  # https://stackoverflow.com/a/2853239/7762867
 
-    if not links_permutations:
-        links_permutations = np.transpose(np.asarray(new_links_list[0]))
-    return links_permutations
+    # if not links_permutations:
+    #     links_permutations = np.transpose(np.asarray(corresponding_unambiguous_links_list[0]))
+    return permutations_of_uniquified_links
 
 
 def make_links_point_forward(graph):
@@ -186,11 +190,29 @@ def create_all_graph_combinations(graph, ambiguous_locations):
     for combi_idx in range(number_of_graph_combinations):
         graph_combinations.append(np.copy(graph))
 
-    new_links_list = get_new_links_list(ambiguous_locations)
-    links_permutations = get_links_permutations(new_links_list)
+    corresponding_unambiguous_links_list = get_unambiguous_links(ambiguous_locations)
+    links_permutations = get_links_permutations(corresponding_unambiguous_links_list)
 
+    """start parallelization"""
     # replace ambiguous links with unambiguous links
-    for graph_idx in range(len(graph_combinations)):
+    # parallelize loop
+    # https://stackoverflow.com/a/428918/7762867
+
+    # for name in data_inputs:
+    #     sci = fits.open(name + '.fits')
+    #     image is manipulated
+
+    # name -> graph_idx
+    # data_inputs -> graph_combinations
+    # sci = fits.open(name + '.fits') -> my function inside the loop
+
+    # def process_image(name):
+    #     sci = fits.open('{}.fits'.format(name))
+    #     < process >
+    """end parallelization"""
+
+    for graph_idx in tqdm(range(number_of_graph_combinations)):
+
         for ambiguous_location_idx in range(len(ambiguous_locations)):
             ambiguous_location = ambiguous_locations[ambiguous_location_idx]
 
@@ -246,7 +268,7 @@ def get_direct_influence_coeffs(
     output: direct_influence_coeffs
     """
     # get position of effect_label in ndarray var_names
-    effect_idx = np.where(var_names == effect_label)[0][0]
+    effect_idx = np.where(np.array(var_names) == effect_label)[0][0]
 
     direct_influence_coeffs = np.zeros(val_min.shape)
     direct_influence_coeffs = direct_influence_coeffs[:, effect_idx, :]
@@ -342,7 +364,7 @@ def fill_causes_of_one_affected_var(affected_var_label,
             col_idx += 1
 
             # get var name
-            cause_var_name = var_names[row_idx]
+            cause_var_name = str(var_names[row_idx])
 
             # get symbolic_cause_var_name
             symbolic_cause_var_name = plain_var_names[cause_var_name]
@@ -369,7 +391,7 @@ def chr_test(target_ans_per_graph_dict):
     #     f.write(str(target_ans_per_graph_dict))
 
     # load str(target_ans_per_graph_dict) from file
-    with open('../causal_discovery/target_ans_per_graph_dict_str_chr.txt', 'r') as f:
+    with open('target_ans_per_graph_dict_str_chr.txt', 'r') as f:
         target_ans_per_graph_dict_gt = (f.read())
 
     target_ans_per_graph_dict_str = str(target_ans_per_graph_dict)
@@ -382,14 +404,15 @@ def chr_test(target_ans_per_graph_dict):
         ValueError('target_ans_per_graph_dict is not the same')
 
 
-def compute_target_equations():
+def compute_target_equations(val_min, graph, var_names):
     """
     compute target equations of all graph combinations
     input: val_min, graph, var_names (loads from file)
     output: target_equations_per_graph_dict
     """
-    # load data
-    val_min, graph, var_names = load_results('chr')
+    if verbosity > 0:
+        print('compute target equations')
+
 
     # plot graph
     # plot_graph(val_min, graph, var_names)
@@ -407,10 +430,9 @@ def compute_target_equations():
     target_ans_per_graph_dict = {}
 
     # ini idx
-    graph_idx = -1
     # for all graph combinations
-    for graph_unambiguous in graph_combinations:
-        graph_idx += 1
+    for graph_idx in tqdm(range(len(graph_combinations))):
+        graph_unambiguous = graph_combinations[graph_idx]
 
         # ini symbolic vars dict
         symbolic_vars_dict, symbolic_u_vars_dict, plain_var_names = generate_symbolic_vars_dicts(var_names)
@@ -445,18 +467,26 @@ def compute_target_equations():
         ans = sp.solve(eq_list, var_list)  # [target_label]
 
         # store target result
-        # check if first is target result
-        if str(list(ans.items())[0][0]) == target_label:
-            target_ans_per_graph_dict[graph_idx] = list(ans.items())[0][1]
-        else:
+        # find target key
+        for i in range(len(list(ans.items()))):
+            if list(ans.items())[i][0] == target_label:
+                target_ans_per_graph_dict[graph_idx] = list(ans.items())[i][1]
+        # test if target key was found by calling where it sould be stored
+        try:
+            test = target_ans_per_graph_dict[graph_idx]
+        except KeyError:
             ValueError('first item is not target_label')
+            print('valueerror: first item is not target_label')
 
     # conduct test
-    chr_test(target_ans_per_graph_dict)
+    # chr_test(target_ans_per_graph_dict)
 
     # save target_ans_per_graph_dict to file via pickle
-    with open('../causal_discovery/target_eq_chr.pkl', 'wb') as f:
-        pickle.dump(target_ans_per_graph_dict, f)
+    # with open('../causal_discovery/target_eq_chr.pkl', 'wb') as f:
+    #     pickle.dump(target_ans_per_graph_dict, f)
 
-    return target_ans_per_graph_dict
-# compute_target_equations()
+    return target_ans_per_graph_dict, graph_combinations
+
+# val_min, graph, var_names = load_results('chr')
+# var_names = [str(x) for x in var_names]
+# compute_target_equations(val_min, graph, var_names)

@@ -2,60 +2,88 @@ import pickle
 
 import numpy as np
 
+from config import target_label, verbosity
 
-def drop_unintervenable_variables():
+
+def drop_unintervenable_variables(target_eq):
     """
     drop variables from equations which can't be intervened upon
     """
-    # load target_ans_per_graph_dict from file via pickle
-    with open('target_eq_chr.pkl', 'rb') as f:
-        target_eq = pickle.load(f)
 
-        # names of unintervenable vars
-        unintervenable_vars = ['u_Mood']
 
-        # loop through equations
-        for eq_idx in range(len(target_eq)):
-            eq = target_eq[eq_idx]
+    # names of unintervenable vars
+    unintervenable_vars = ['u_'+str(target_label)]
 
-            # get var names
-            var_names_in_eq = eq.free_symbols
+    # loop through equations
+    for eq_idx in range(len(target_eq)):
+        eq = target_eq[eq_idx]
 
-            # make var_names_in_eq a list of strings
-            var_names_in_eq = [str(var_name) for var_name in var_names_in_eq]
+        # get var names
+        var_names_in_eq = eq.free_symbols
 
-            # loop through var names in eq
-            for var_name_in_eq in var_names_in_eq:
+        # make var_names_in_eq a list of strings
+        var_names_in_eq = [str(var_name) for var_name in var_names_in_eq]
 
-                # check if var_name_in_eq is unintervenable
-                if var_name_in_eq in unintervenable_vars:
-                    # if unintervenable, drop var name from eq
-                    target_eq[eq_idx] = eq.subs(var_name_in_eq, 0)
+        # loop through var names in eq
+        for var_name_in_eq in var_names_in_eq:
+
+            # check if var_name_in_eq is unintervenable
+            if var_name_in_eq in unintervenable_vars:
+                # if unintervenable, drop var name from eq
+                target_eq[eq_idx] = eq.subs(var_name_in_eq, 0)
     return target_eq
 
 
-def find_most_optimistic_intervention(target_eq):
+def find_most_optimistic_intervention(target_eqs):
     """
     find variable name with the largest absolute coefficient in target_eq
-    input: target_eq
+    input: target_eqs
     output: most_optimistic_intervention
     """
-    # get var names
-    var_names = [str(var_name) for var_name in target_eq[0].free_symbols]
+    largest_abs_coeff = 0
+    best_intervention = None
+    most_optimistic_graph_idx = None
 
-    # get coefficients
-    coeffs = [target_eq[0].coeff(var_name) for var_name in var_names]
+    for equation_idx in range(len(target_eqs)):
 
-    # find most optimistic intervention
-    most_optimistic_intervention = var_names[np.argmax(np.abs(coeffs))]
+        # get var names
+        var_names = [str(var_name) for var_name in target_eqs[equation_idx].free_symbols]
 
-    # find value of most optimistic intervention
-    # most_optimistic_intervention_value = np.max(np.abs(coeffs))
+        # get coefficients
+        coeffs = [target_eqs[0].coeff(var_name) for var_name in var_names]
 
-    return most_optimistic_intervention
+        # get most extreme coeff
+        abs_coeffs = [np.abs(coeff) for coeff in coeffs]
+        if len(abs_coeffs) > 0:
+            largest_abs_coeff_in_one_graph = np.max(abs_coeffs)
+
+            # if better coeff is found
+            if np.abs(largest_abs_coeff) < np.abs(largest_abs_coeff_in_one_graph):
+
+                # update value of most optimistic intervention
+                largest_abs_coeff = largest_abs_coeff_in_one_graph
+
+                # update most optimistic intervention
+                best_intervention = var_names[np.argmax(np.abs(coeffs))]
+
+                most_optimistic_graph_idx = equation_idx
+
+    if verbosity >0:
+        print('largest_abs_coeff: ' + str(largest_abs_coeff)+'\n')
+        print('best_intervention: ' + str(best_intervention)+'\n')
+        print('most_optimistic_graph_idx: ' + str(most_optimistic_graph_idx)+'\n')
 
 
-target_eq = drop_unintervenable_variables()
 
-proposed_intervention = find_most_optimistic_intervention(target_eq)
-print()
+
+
+    return largest_abs_coeff, best_intervention, most_optimistic_graph_idx
+
+# # load target_ans_per_graph_dict from file via pickle
+# with open('target_eq_chr.pkl', 'rb') as f:
+#     target_eq = pickle.load(f)
+#
+# target_eq = drop_unintervenable_variables(target_eq)
+#
+# largest_abs_coeff, best_intervention, most_optimistic_graph_idx = find_most_optimistic_intervention(target_eq)
+# print()
