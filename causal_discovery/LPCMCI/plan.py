@@ -12,7 +12,7 @@ from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_an
 from causal_discovery.LPCMCI.experiment import causal_discovery
 from config import target_label, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
     min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, tau_max, \
-    contemp_fraction
+    contemp_fraction, labels_strs
 from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
 from intervention_proposal.target_eqs_from_pag import plot_graph, load_results
 
@@ -165,6 +165,10 @@ def data_generator(scm,
         sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
         noises.append(getattr(NoiseModel(sigma), noise_type))
 
+    # get intervention_var as int. E.g. 'u_0' -> int(0)
+    if intervention_variable is not None:
+        intervention_variable = int(intervention_variable[2:])
+
     ts = mod.generate_nonlinear_contemp_timeseries(links=scm,
                                                    T=n_samples,
                                                    noises=noises,
@@ -173,7 +177,7 @@ def data_generator(scm,
                                                    intervention_variable=intervention_variable,
                                                    intervention_value=intervention_value)
 
-    labels_strs = [str(i) for i in range(n_vars_all)]
+
 
     # ts to pandas dataframe and set labels_strs as headers
     ts_df = pd.DataFrame(ts, columns=labels_strs)
@@ -213,8 +217,10 @@ def obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual, is_interv
 
 
 def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
+    ts_measured_actual = pd.DataFrame(ts_measured_actual)
     intervention_value = 0  # ini
-    intervention_var_measured_values = ts_measured_actual[var_name[2:]]
+    intervention_idx = var_name[2:]  # 'u_0' -> '0'
+    intervention_var_measured_values = ts_measured_actual[intervention_idx]
     # get 90th percentile of intervention_var_measured_values
     if intervention_coeff > 0:
         intervention_value = np.percentile(intervention_var_measured_values, 90)
@@ -323,7 +329,7 @@ def main():
         # n_ini_obs=n_ini_obs,
         n_mixed=n_mixed,
         nth=nth)  # 500 obs + 500 with every 4th intervention
-    n_samples = 1  # len(is_intervention_list)  # todo: extend ts by one sample at a time for len(is_intervention_list)
+    n_samples = 1  # len(is_intervention_list)
 
     measured_labels = get_measured_labels()
 
@@ -374,16 +380,15 @@ def main():
             random_seed=random_seed,
             n_samples=n_samples,
         )
-        print()
-        #
-        # # append new actual data
-        # # ts_generated_actual = np.r_[ts_generated_actual, ts_new]
-        #
-        # # measure new data
-        # new_measurements = measure(ts_new, obs_vars=measured_labels)
-        #
-        # # append new measured data
-        # ts_measured_actual = np.r_[ts_measured_actual, new_measurements]
+
+        # append new actual data
+        ts_generated_actual = np.r_[ts_generated_actual, ts_new]
+
+        # measure new data
+        new_measurements = measure(ts_new, obs_vars=measured_labels)
+
+        # append new measured data
+        ts_measured_actual = pd.DataFrame(np.r_[ts_measured_actual, new_measurements], columns=measured_labels)
         #
         # #     # intervene optimally and generate new data
         # #     ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,

@@ -50,12 +50,11 @@ LPCMCI_or_PCMCI = False  # True for LPCMCI, False for PCMCI
 tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
-verbosity = 1
 pc_alpha = 0.99
 remove_link_threshold = 0.2
 
 # scm_config
-n_vars_measured = 5
+n_vars_measured = 8
 random_seed = 0  # todo should not be constant for simulation studies
 frac_latents = 0.0  # todo 0.3
 contemp_fraction = 0.6
@@ -68,6 +67,7 @@ tau_max = 1
 
 random_state = np.random.RandomState(random_seed)  # MT19937
 n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
+labels_strs = [str(i) for i in range(n_vars_all)]
 
 # sampling config dict n_ini_obs=500, n_mixed=500, nth=4
 n_ini_obs = 500,

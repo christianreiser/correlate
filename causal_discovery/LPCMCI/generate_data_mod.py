@@ -199,17 +199,22 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
         X[len_ts_old:max_lag + len_ts_old] = ts_old[-max_lag:]
 
     for t in range(max_lag + len_ts_old, T + max_lag + len_ts_old):  # for all time steps
-        for j in causal_order:  # for all variables ( in causal order)
-            for link_props in links[j]:  # for links affecting j
-                var, lag = link_props[0]  # var name, lag
-                # if abs(lag) > 0:
-                coeff = link_props[1]
-                func = link_props[2]
-                base_value = X[t + lag, var]
-                val_to_add = coeff * func(base_value)
-                noise_val = X[t, j]
-                new_value = noise_val + val_to_add
-                X[t, j] = new_value  # add value on noise for var j and time t
+        for j in causal_order:  # for all affected variables j ( in causal order)
+            # if j is intervened, set value to intervention_value
+            if j == intervention_variable:
+                X[t, j] = intervention_value
+            # else, j is not intervened, and compute value
+            else:
+                for link_props in links[j]:  # for links affecting j
+                    var, lag = link_props[0]  # var name, lag
+                    # if abs(lag) > 0:
+                    coeff = link_props[1]
+                    func = link_props[2]
+                    base_value = X[t + lag, var]
+                    val_to_add = coeff * func(base_value)
+                    noise_val = X[t, j]
+                    new_value = noise_val + val_to_add
+                    X[t, j] = new_value  # add value on noise for var j and time t
 
     # chrei: remove some value because they were added for initialization before
     if len_ts_old != 0:
