@@ -131,7 +131,9 @@ class Graph():
         return stack
 
 
-def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, ts_old=None):
+def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, ts_old=None,
+                                          intervention_variable=None,
+                                          intervention_value=None):
     # chrei if ts_old not specified (i.e. during stationarity check),
     # behave like it's the first time and don't ini with last values
     if ts_old is None:

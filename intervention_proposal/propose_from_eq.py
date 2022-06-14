@@ -41,7 +41,8 @@ def find_most_optimistic_intervention(target_eqs):
     output: most_optimistic_intervention
     """
     largest_abs_coeff = 0
-    best_intervention = None
+    largest_coeff = 0
+    best_intervention_var_name = None
     most_optimistic_graph_idx = None
 
     for equation_idx in range(len(target_eqs)):
@@ -56,28 +57,30 @@ def find_most_optimistic_intervention(target_eqs):
         abs_coeffs = [np.abs(coeff) for coeff in coeffs]
         if len(abs_coeffs) > 0:
             largest_abs_coeff_in_one_graph = np.max(abs_coeffs)
+            largest_coeff_in_one_graph = np.max(coeffs)
 
             # if better coeff is found
             if np.abs(largest_abs_coeff) < np.abs(largest_abs_coeff_in_one_graph):
 
                 # update value of most optimistic intervention
                 largest_abs_coeff = largest_abs_coeff_in_one_graph
+                largest_coeff = largest_coeff_in_one_graph
 
                 # update most optimistic intervention
-                best_intervention = var_names[np.argmax(np.abs(coeffs))]
+                best_intervention_var_name = var_names[np.argmax(np.abs(coeffs))]
 
                 most_optimistic_graph_idx = equation_idx
 
     if verbosity >0:
         print('largest_abs_coeff: ' + str(largest_abs_coeff)+'\n')
-        print('best_intervention: ' + str(best_intervention)+'\n')
+        print('best_intervention: ' + str(best_intervention_var_name)+'\n')
         print('most_optimistic_graph_idx: ' + str(most_optimistic_graph_idx)+'\n')
 
 
 
 
 
-    return largest_abs_coeff, best_intervention, most_optimistic_graph_idx
+    return largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff
 
 # # load target_ans_per_graph_dict from file via pickle
 # with open('target_eq_chr.pkl', 'rb') as f:

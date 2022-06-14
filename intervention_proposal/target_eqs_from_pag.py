@@ -1,11 +1,11 @@
 import itertools
+import pickle
 
 import numpy as np
 import sympy as sp
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
 from tqdm import tqdm
-from multiprocessing import Pool
 
 from config import target_label, private_folder_path, verbosity
 
@@ -33,10 +33,12 @@ def load_results(name_extension):
     val_min = np.load(str(private_folder_path) + 'val_min_' + str(name_extension) + '.npy', allow_pickle=True)
     graph = np.load(str(private_folder_path) + 'graph_' + str(name_extension) + '.npy', allow_pickle=True)
     var_names = np.load(str(private_folder_path) + 'var_names_' + str(name_extension) + '.npy', allow_pickle=True)
+    print('Attention: val_min, graph, var_names loaded from file')
     return val_min, graph, var_names
 
 
 def plot_graph(val_min, graph, var_names):
+    graph = make_redundant_information_with_symmetry(graph)
     tp.plot_graph(
         val_matrix=val_min,
         link_matrix=graph,
@@ -70,6 +72,20 @@ def drop_redundant_information_due_to_symmetry(graph):
             for j in range(graph.shape[1]):
                 if i < j:
                     graph[i, j, tau] = ''
+    return graph
+
+def make_redundant_information_with_symmetry(graph):
+    """
+    make redundant link information of a graph with diagonal symmetry in matrix representation.
+    e.g. A-->B = B<--A
+    """
+    # iterate through 3ed dimension (tau) of graph
+    for tau in range(graph.shape[2]):
+        # if arrow is forward pointing insert symmetric backward arrow
+        for i in range(graph.shape[0]):
+            for j in range(graph.shape[1]):
+                if graph[i, j, tau] == '-->':
+                    graph[j, i, tau] = '<--'
     return graph
 
 
@@ -193,51 +209,54 @@ def create_all_graph_combinations(graph, ambiguous_locations):
     corresponding_unambiguous_links_list = get_unambiguous_links(ambiguous_locations)
     links_permutations = get_links_permutations(corresponding_unambiguous_links_list)
 
-    """start parallelization"""
-    # replace ambiguous links with unambiguous links
-    # parallelize loop
-    # https://stackoverflow.com/a/428918/7762867
 
-    # for name in data_inputs:
-    #     sci = fits.open(name + '.fits')
-    #     image is manipulated
+    for graph_idx in (range(number_of_graph_combinations)):
+        write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
 
-    # name -> graph_idx
-    # data_inputs -> graph_combinations
-    # sci = fits.open(name + '.fits') -> my function inside the loop
-
-    # def process_image(name):
-    #     sci = fits.open('{}.fits'.format(name))
-    #     < process >
-    """end parallelization"""
-
-    for graph_idx in tqdm(range(number_of_graph_combinations)):
-
-        for ambiguous_location_idx in range(len(ambiguous_locations)):
-            ambiguous_location = ambiguous_locations[ambiguous_location_idx]
-
-            # get original link
-            original_link = ambiguous_location[3]
-
-            # get new links
-            # new_links = ambiguous_location[4]
-
-            # get i, j, k location
-            i = ambiguous_location[0]
-            j = ambiguous_location[1]
-            k = ambiguous_location[2]
-            new_link = links_permutations[graph_idx][ambiguous_location_idx]
-
-            # get old link string
-            old_link = graph_combinations[graph_idx][i, j, k]
-
-            # replace graph_combinations[graph_idx][i, j, k] with new_link string
-            graph_combinations[graph_idx][i, j, k] = old_link.replace(original_link, new_link)
-
-        # make links point forward
-        graph_combinations[graph_idx] = make_links_point_forward(graph_combinations[graph_idx])
+    graph_combinations = load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations)
 
     return graph_combinations
+
+
+def load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations):
+    for graph_idx in range(number_of_graph_combinations):
+        with open(
+                '/home/chrei/PycharmProjects/correlate/intervention_proposal/graph_combinations/{}.pkl'.format(
+                    graph_idx), 'rb') as f:
+            graph_combinations[graph_idx] = pickle.load(f)
+    return graph_combinations
+
+
+def write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx):
+    for ambiguous_location_idx in range(len(ambiguous_locations)):
+        ambiguous_location = ambiguous_locations[ambiguous_location_idx]
+
+        # get original link
+        original_link = ambiguous_location[3]
+
+        # get new links
+        # new_links = ambiguous_location[4]
+
+        # get i, j, k location
+        i = ambiguous_location[0]
+        j = ambiguous_location[1]
+        k = ambiguous_location[2]
+        new_link = links_permutations[graph_idx][ambiguous_location_idx]
+
+        # get old link string
+        old_link = graph_combinations[graph_idx][i, j, k]
+
+        # replace graph_combinations[graph_idx][i, j, k] with new_link string
+        graph_combinations[graph_idx][i, j, k] = old_link.replace(original_link, new_link)
+
+    # make links point forward
+    graph_combinations[graph_idx] = make_links_point_forward(graph_combinations[graph_idx])
+
+    # save graph_combinations[graph_idx] and graph_idx to file with pickle
+    with open(
+            '/home/chrei/PycharmProjects/correlate/intervention_proposal/graph_combinations/{}.pkl'.format(
+                graph_idx), 'wb') as f:
+        pickle.dump(graph_combinations[graph_idx], f)
 
 
 def generate_symbolic_vars_dicts(var_names):
@@ -307,41 +326,27 @@ def get_direct_influence_coeffs(
 
 
 def get_noise_value(symbolic_vars_dict, affected_var_label):
-    # get expression free symbols of symbolic_vars_dict[affected_var_label]
-    coeff = symbolic_vars_dict[
-        affected_var_label].expr_free_symbols  # expr_free_symbols is depricated but free_symbols doesn't contain the coeffs
-    # sym to list
-    coeff = [str(x) for x in coeff]
-    # for all strings in sym, try to make string to float, otherwise drop it
-    idx_to_drop = []
-    for i in range(len(coeff)):
-        try:
-            coeff[i] = float(coeff[i])
-        except:
-            idx_to_drop.append(i)
-    # revert idx_to_drop
-    idx_to_drop.reverse()
-    for i in idx_to_drop:
-        del coeff[i]
+
+    # get coeffs
+    coeffs = []
+    for i in symbolic_vars_dict[
+        affected_var_label].expr_free_symbols:
+        # if datatype of i is float, then add it to coeffs
+        if type(i).is_Float:
+            coeffs.append(i)
 
     # make every coeff absolute
-    for i in range(len(coeff)):
-        coeff[i] = abs(coeff[i])
+    for i in range(len(coeffs)):
+        coeffs[i] = abs(coeffs[i])
 
     # get noise coeff
-    noise_value = 1 - sum(coeff)
+    noise_value = 1 - sum(coeffs)
+
+    if abs(noise_value) > 1:
+        print('Error: noise_value < 0 or noise_value > 1')
+        raise ValueError("noise_value < 0 or noise_value > 1")
 
     return noise_value
-
-
-# def get_causes_of_one_affected_var(symbolic_vars_dict, affected_var_label):
-#     # get causes of affected var
-#     causes = symbolic_vars_dict[affected_var_label].free_symbols
-#     causes = [str(x) for x in causes]  # change causes to list with strings
-#     # for each item in causes remove everything behind '_tau='; e.g. 'x0_tau=0' -> 'x0'
-#     for i in range(len(causes)):
-#         causes[i] = causes[i][:causes[i].find('_tau=')]
-#     return causes
 
 
 def fill_causes_of_one_affected_var(affected_var_label,
@@ -413,7 +418,6 @@ def compute_target_equations(val_min, graph, var_names):
     if verbosity > 0:
         print('compute target equations')
 
-
     # plot graph
     # plot_graph(val_min, graph, var_names)
 
@@ -429,7 +433,6 @@ def compute_target_equations(val_min, graph, var_names):
     # ini result dict
     target_ans_per_graph_dict = {}
 
-    # ini idx
     # for all graph combinations
     for graph_idx in tqdm(range(len(graph_combinations))):
         graph_unambiguous = graph_combinations[graph_idx]
@@ -469,7 +472,7 @@ def compute_target_equations(val_min, graph, var_names):
         # store target result
         # find target key
         for i in range(len(list(ans.items()))):
-            if list(ans.items())[i][0] == target_label:
+            if str(list(ans.items())[i][0]) == target_label:
                 target_ans_per_graph_dict[graph_idx] = list(ans.items())[i][1]
         # test if target key was found by calling where it sould be stored
         try:
@@ -481,9 +484,11 @@ def compute_target_equations(val_min, graph, var_names):
     # conduct test
     # chr_test(target_ans_per_graph_dict)
 
-    # save target_ans_per_graph_dict to file via pickle
-    # with open('../causal_discovery/target_eq_chr.pkl', 'wb') as f:
-    #     pickle.dump(target_ans_per_graph_dict, f)
+    # save target_ans_per_graph_dict and graph_combinations to file via pickle
+    with open('/home/chrei/PycharmProjects/correlate/intervention_proposal/target_eq_simulated.pkl', 'wb') as f:
+        pickle.dump(target_ans_per_graph_dict, f)
+    with open('/home/chrei/PycharmProjects/correlate/intervention_proposal/graph_combinations_simulated.pkl', 'wb') as f:
+        pickle.dump(graph_combinations, f)
 
     return target_ans_per_graph_dict, graph_combinations
 

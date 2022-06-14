@@ -96,8 +96,6 @@ def save_results(val_min, graph, var_names, name_extension):
     np.save(str(private_folder_path) + 'var_names_'+str(name_extension), var_names)
 
 
-
-
 def causal_discovery(df):
     if causal_discovery_on:
 
@@ -175,5 +173,5 @@ def causal_discovery(df):
         plt.show()
 
         # save results
-        save_results(val_min, graph, var_names, 'chr')
+        save_results(val_min, graph, var_names, 'simulated')
         return val_min, graph, var_names

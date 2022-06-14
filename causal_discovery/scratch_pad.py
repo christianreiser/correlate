@@ -1,11 +1,21 @@
-import numpy as np
+# # save symbolic_vars_dict with pickle to file
+# with open(
+#         '/home/chrei/PycharmProjects/correlate/intervention_proposal/symbolic_vars_dicts/tmp.pkl', 'wb') as f:
+#     pickle.dump(symbolic_vars_dict, f)
 
-var_names= [0, 1, 2, 3, 4, 5, 6, 7]
-effect_label = 0
+# load symbolic_vars_dict from file via pickle
+import pickle
 
-# get index of var_names where item is zero
-# non_zero_indices = np.where(df[var_names] != 0)[0]
-names = np.array(np.array(var_names))
-ans = np.where(names == effect_label)
-print()
+with open(
+        '/home/chrei/PycharmProjects/correlate/tmp.pkl', 'rb') as f:
+    symbolic_vars_dict = pickle.load(f)
+
+coeff_and_symbols = symbolic_vars_dict[
+    '0'].expr_free_symbols
+coeffs = []
+for i in coeff_and_symbols:
+    # if datatype of i is float, then add it to coeffs
+    if type(i).is_Float:
+        coeffs.append(i)
+
 print()
