@@ -11,83 +11,10 @@ from causal_discovery.preprocessing import remove_nan_seq_from_top_and_bot
 from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_folder_path, remove_link_threshold, \
     LPCMCI_or_PCMCI
 
+"""
+plain causal discovery
+"""
 
-# def calculate():
-#     links = {0: [((0, -1), 0.4), ((1, -1), 1)],
-#              1: [((1, -1), 0.4), ((3, -1), +1)],
-#              2: [((2, -1), 0.4), ((3, -1), 1)],
-#              3: [((3, -1), -0.4), ((4, -1), +1)],
-#              4: [((4, -1), 0.4)],
-#              }
-#     T = 1000  # time series length
-#
-#     # np.random.seed(41)  # Fix random seed
-#     data, true_parents_neighbors = pp.var_process(links, T=T, use='inv_inno_cov')  # inv_inno_cov no_noise
-#     # data = np.delete(data, 3, 1) # hide X3
-#
-#     # Initialize dataframe object, specify time axis and variable names
-#     var_names = [r'$X^0$', r'$X^1$', r'$X^2$', r'$X^3$', r'$X^4$']
-#     # var_names = [r'$X^0$', r'$X^1$', r'$X^2$', r'$X^4$']
-#     dataframe = pp.DataFrame(data,
-#                              datatime=np.arange(len(data)),
-#                              var_names=var_names)
-#
-#     tp.plot_timeseries(dataframe)
-#     plt.show()
-#
-#
-#     cond_ind_test = ParCorr(
-#         significance='analytic',
-#         recycle_residuals=True)
-#
-#     lpcmci = LPCMCI(
-#         dataframe=dataframe,
-#         cond_ind_test=cond_ind_test)
-#
-#     n_preliminary_iterations = 2
-#     prelim_only = False
-#
-#     lpcmcires = lpcmci.run_lpcmci(
-#         tau_max=tau_max,  # maximum considered time lag tau_max
-#         pc_alpha=0.5,  # significance level \alpha of conditional independence tests
-#         # max_p_non_ancestral=3,  # Restricts all conditional independence tests in the second removal phase
-#         n_preliminary_iterations=n_preliminary_iterations,  # In the paper this corresponds to the 'k' in LPCMCI(k)
-#         prelim_only=prelim_only,  # If True, stop after the preliminary phase. For detailed performance analysis
-#         verbosity=verbosity)
-#
-#     graph = lpcmci.graph
-#     val_min = lpcmci.val_min_matrix
-#
-#     # chr: remove weak links
-#     val_min[val_min < 0.1] = 0  # set values below threshold to zero
-#     graph[val_min < 0.1] = ""  # set values below threshold to zero
-#
-#     # plot
-#     tp.plot_graph(
-#         val_matrix=val_min,
-#         link_matrix=graph,
-#         var_names=var_names,
-#         link_colorbar_label='cross-MCI',
-#         node_colorbar_label='auto-MCI',
-#         figsize=(10, 6),
-#     )
-#
-#     plt.show()
-#     #
-#     # # Plot time series graph
-#     # tp.plot_time_series_graph(
-#     #     figsize=(12, 8),
-#     #     val_matrix=results['val_matrix'],
-#     #     link_matrix=link_matrix,
-#     #     var_names=var_names,
-#     #     link_colorbar_label='MCI',
-#     # )
-#     # plt.show()
-#
-#     return {
-#         # Method results
-#         'graph': graph,
-#     }
 
 # function that saves val_min, graph, and var_names to a file
 def save_results(val_min, graph, var_names, name_extension):
@@ -96,7 +23,9 @@ def save_results(val_min, graph, var_names, name_extension):
     np.save(str(private_folder_path) + 'var_names_'+str(name_extension), var_names)
 
 
-def causal_discovery(df):
+# def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_intervened):
+def observational_causal_discovery(df):
+
     if causal_discovery_on:
 
         """get non_zero_indices"""
@@ -175,3 +104,23 @@ def causal_discovery(df):
         # save results
         save_results(val_min, graph, var_names, 'simulated')
         return val_min, graph, var_names
+
+# # load ts dataframe from file
+# import os
+# filename = os.path.abspath("./LPCMCI/tmp_test.dat")
+# fileobj = open(filename, mode='rb')
+# ts = np.fromfile(fileobj, dtype=np.float32)
+# fileobj.close()
+#
+# ## load was_intervened dataframe from file
+# import os
+# filename = os.path.abspath("./tmp_was_intervened.dat")
+# was_intervened = pd.read_csv(filename, index_col=0)
+# print()
+#
+#
+# pag_effect_sizes, pag_edgemarks, var_names = observational_causal_discovery(
+#     pag_edgemarks='fully connected',
+#     pag_effect_sizes=None,
+#     df=ts,
+#     was_intervened  =was_intervened)

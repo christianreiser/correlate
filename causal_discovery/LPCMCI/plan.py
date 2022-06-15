@@ -9,17 +9,17 @@ from tigramite import plotting as tp
 # Imports from code inside directory
 import generate_data_mod as mod
 from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
-from causal_discovery.LPCMCI.experiment import causal_discovery
+from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from config import target_label, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
     min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, tau_max, \
     contemp_fraction, labels_strs
 from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
-from intervention_proposal.target_eqs_from_pag import plot_graph, load_results
+from intervention_proposal.target_eqs_from_pag import plot_graph, load_results, compute_target_equations
 
 """
 main challenges to get algo running:
 1. 1 -> 1   Modify data generator to start from last sample 10. june
-1. 1        intervene in datagenerator                      14. june
+1. 1 -> 2   intervene in datagenerator                      14->15. june
 2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
 3. 5        Orient edges with interventional data           22 june
 4. 3        Initialize lpcmci with above result             28. june
@@ -191,6 +191,16 @@ def measure(ts, obs_vars):
     """
     # drop all columns in ts if their header is not in obs_vars
     ts = ts.drop(list(set(ts.columns) - set(obs_vars)), axis=1)
+
+    # # save ts dataframe to file
+    # import os
+    # filename = os.path.abspath("./tmp_test.dat")
+    # fileobj = open(filename, mode='wb')
+    # off = np.array(ts, dtype=np.float32)
+    # off.tofile(fileobj)
+    # fileobj.close()
+
+
     return ts
 
 
@@ -201,13 +211,17 @@ def obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual, is_interv
     3. reduce pag_edgemarks with observatonal data and update pag_effect_sizes
     return: pag_edgemarks, pag_effect_sizes
     """
+    df = pd.DataFrame(ts_measured_actual)
+
     # first run case
     if pag_edgemarks == 'complete_graph' and pag_effect_sizes == np.inf:
-        df = pd.DataFrame(ts_measured_actual)
-        pag_effect_sizes, pag_edgemarks, var_names = causal_discovery(df)
+        pag_effect_sizes, pag_edgemarks, var_names = observational_causal_discovery(df)
 
     else:
-        ValueError("not implemented yet")
+        """
+        Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes
+        During CI tests, drop datapoints if the 
+        """
         # todo observational_ts = intersection of ts_measured_actual and is_intervention_list
         ts_observational = ts_measured_actual[not is_intervention_list]
 
@@ -231,16 +245,7 @@ def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
     return intervention_value
 
 
-def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_labels, ts_measured_actual):
-    """
-    Optimal control to find the most optimistic intervention.
-    """
-    # get target equations from graph
-    # target_eq, graph_combinations = compute_target_equations(
-    #     val_min=graph_effect_sizes,
-    #     graph=graph_edgemarks,
-    #     var_names=measured_labels_strings)
-
+def load_eq():
     # load target_ans_per_graph_dict and graph_combinations from file via pickle
     with open('/home/chrei/PycharmProjects/correlate/intervention_proposal/target_eq_simulated.pkl', 'rb') as f:
         target_eq = pickle.load(f)
@@ -248,6 +253,21 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_l
               'rb') as f:
         graph_combinations = pickle.load(f)
     print("attention: target_eq and graph_combinations loaded from file")
+    return target_eq, graph_combinations
+
+
+def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_labels, ts_measured_actual):
+    """
+    Optimal control to find the most optimistic intervention.
+    """
+    # get target equations from graph
+    target_eq, graph_combinations = compute_target_equations(
+        val_min=graph_effect_sizes,
+        graph=graph_edgemarks,
+        var_names=measured_labels)
+
+    # load eq instead of calculating them
+    # target_eq, graph_combinations = load_eq()
 
     # remove unintervenable variables
     target_eqs_intervenable = drop_unintervenable_variables(target_eq)
@@ -319,11 +339,34 @@ def get_measured_labels():
     return measured_labels
 
 
+def store_intervention(was_intervened, intervention_variable):
+    """
+    add data to boolean array of measured variables indicating if they were intervened upon
+    input: requires that intervention_variable is a string of the form 'char char int' e.g. 'u_0'
+    """
+    new_series = pd.Series(np.zeros(n_vars_measured, dtype=bool), index=was_intervened.columns)
+    intervention_idx = intervention_variable[2:]
+
+    # mark intervened var
+    new_series[intervention_idx] = True
+
+    # append new_series to was_intervened
+    was_intervened = was_intervened.append(new_series, ignore_index=True)
+
+    # # save was_intervened dataframe to file
+    # import os
+    # filename = os.path.abspath("./tmp_was_intervened.dat")
+    # was_intervened.to_csv(filename, index=False)
+    return was_intervened
+
+
+
 def main():
     # generate stationary scm
     scm, original_graph = generate_stationary_scm()
 
     # ini
+    ts_generated_actual = np.zeros((0, n_vars_all))
     ts_generated_actual = np.zeros((0, n_vars_all))
     is_intervention_list = obs_or_intervene(
         # n_ini_obs=n_ini_obs,
@@ -347,12 +390,15 @@ def main():
     # measure new data
     ts_measured_actual = measure(ts_df, obs_vars=measured_labels)
 
+    # keep track of where the intervention is
+    was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
+
     # obs discovery # todo compute and dont load
-    # pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph',
-    #                                                 pag_effect_sizes=np.inf,
-    #                                                 ts_measured_actual=ts_measured_actual,
-    #                                                 is_intervention_list=is_intervention_list)
-    pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
+    pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph',
+                                                    pag_effect_sizes=np.inf,
+                                                    ts_measured_actual=ts_measured_actual,
+                                                    is_intervention_list=is_intervention_list)
+    # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
     for is_intervention in is_intervention_list:
@@ -363,6 +409,8 @@ def main():
             intervention_variable, intervention_value = find_optimistic_intervention(pag_edgemarks, pag_effect_sizes,
                                                                                      measured_labels,
                                                                                      ts_measured_actual)
+            # keep track of where the intervention is
+            was_intervened =  store_intervention(was_intervened, intervention_variable)
 
             # optimal intervention todo
             # true_edgemarks, true_effectsizes = get_edgemarks_and_effect_sizes(scm)
@@ -370,6 +418,7 @@ def main():
         else:
             intervention_variable = None
             intervention_value = None
+
 
         # intervene as proposed and generate new data
         ts_new = data_generator(
@@ -389,19 +438,19 @@ def main():
 
         # append new measured data
         ts_measured_actual = pd.DataFrame(np.r_[ts_measured_actual, new_measurements], columns=measured_labels)
+
+        #     # intervene optimally and generate new data
+        #     ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
+        #                             n_vars_all)
+        #     ts_generated_optimal = ts_generated_optimal.append(ts_new)
         #
-        # #     # intervene optimally and generate new data
-        # #     ts_new = data_generator(scm, intervention_optimal, ts_generated_optimal, random_seed, n_samples,
-        # #                             n_vars_all)
-        # #     ts_generated_optimal = ts_generated_optimal.append(ts_new)
-        # #
+
         #
-        # #
-        # #     # regret
-        # #     regret_list = np.append(regret_list,
-        # #                             abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
-        # #
-        # # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
+        #     # regret
+        #     regret_list = np.append(regret_list,
+        #                             abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
+        #
+        # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
         #
         # pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
         #                                                    is_intervention_list)

@@ -1,3 +1,8 @@
+"""
+research module causal discovery:
+simulate data, causal discovery, evaluate
+
+"""
 import math
 import os
 import pickle

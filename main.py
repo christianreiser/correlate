@@ -1,5 +1,4 @@
-from causal_discovery.LPCMCI.experiment import causal_discovery
-from causal_discovery.LPCMCI.intervention import get_direct_influence_coeffs, intervention
+from causal_discovery.LPCMCI.observational_discovery import  observational_causal_discovery
 from config import *
 from correlation import corr_coefficients_and_p_values
 from data_cleaning_and_imputation import *
@@ -56,7 +55,7 @@ def main():
     fully_connected_nn_prediction(df_widest)
 
     # causal discovery
-    causal_discovery(df)
+    observational_causal_discovery(df)
 
     # intervention()
 
