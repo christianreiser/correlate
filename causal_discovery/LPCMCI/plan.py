@@ -316,11 +316,16 @@ def store_intervention(was_intervened, intervention_variable):
     add data to boolean array of measured variables indicating if they were intervened upon
     input: requires that intervention_variable is a string of the form 'char char int' e.g. 'u_0'
     """
-    new_series = pd.Series(np.zeros(n_vars_measured, dtype=bool), index=was_intervened.columns)
-    intervention_idx = intervention_variable[2:]
 
-    # mark intervened var
-    new_series[intervention_idx] = True
+
+    new_series = pd.Series(np.zeros(n_vars_measured, dtype=bool), index=was_intervened.columns)
+
+    # if intervened
+    if intervention_variable is not None:
+        # get ind
+        intervention_idx = intervention_variable[2:]
+        # mark intervened var
+        new_series[intervention_idx] = True
 
     # append new_series to was_intervened
     was_intervened = was_intervened.append(new_series, ignore_index=True)
@@ -390,6 +395,8 @@ def main():
         else:
             intervention_variable = None
             intervention_value = None
+            was_intervened =  store_intervention(was_intervened, intervention_variable)
+
 
 
         # intervene as proposed and generate new data
