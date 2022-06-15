@@ -124,23 +124,23 @@ def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_inte
         return val_min, graph
 
 
-# load ts dataframe from file
-import os
-
-filename = os.path.abspath("./tmp_test.dat")
-ts = pd.read_csv(filename, index_col=0)
-
-# get last row of ts and append to ts
-ts = ts.append(ts.iloc[-1])
-
-## load was_intervened dataframe from file
-filename = os.path.abspath("./tmp_was_intervened.dat")
-was_intervened = pd.read_csv(filename, index_col=0)
-
-pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
-    pag_edgemarks=None,
-    pag_effect_sizes=None,
-    df=ts,
-    was_intervened=was_intervened)
-
-print()
+# # load ts dataframe from file
+# import os
+#
+# filename = os.path.abspath("./tmp_test.dat")
+# ts = pd.read_csv(filename, index_col=0)
+#
+# # get last row of ts and append to ts
+# ts = ts.append(ts.iloc[-1])
+#
+# ## load was_intervened dataframe from file
+# filename = os.path.abspath("./tmp_was_intervened.dat")
+# was_intervened = pd.read_csv(filename, index_col=0)
+#
+# pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
+#     pag_edgemarks=None,
+#     pag_effect_sizes=None,
+#     df=ts,
+#     was_intervened=was_intervened)
+#
+# print()
