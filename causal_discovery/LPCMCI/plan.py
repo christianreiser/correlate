@@ -195,39 +195,11 @@ def measure(ts, obs_vars):
     # # save ts dataframe to file
     # import os
     # filename = os.path.abspath("./tmp_test.dat")
-    # fileobj = open(filename, mode='wb')
-    # off = np.array(ts, dtype=np.float32)
-    # off.tofile(fileobj)
-    # fileobj.close()
-
-
+    # ts.to_csv(filename, index=False)
     return ts
 
 
-def obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual, is_intervention_list):
-    """
-    1. get observational ts
-    2. ini graph with previous pag_edgemarks and pag_effect_sizes
-    3. reduce pag_edgemarks with observatonal data and update pag_effect_sizes
-    return: pag_edgemarks, pag_effect_sizes
-    """
-    df = pd.DataFrame(ts_measured_actual)
 
-    # first run case
-    if pag_edgemarks == 'complete_graph' and pag_effect_sizes == np.inf:
-        pag_effect_sizes, pag_edgemarks, var_names = observational_causal_discovery(df)
-
-    else:
-        """
-        Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes
-        During CI tests, drop datapoints if the 
-        """
-        # todo observational_ts = intersection of ts_measured_actual and is_intervention_list
-        ts_observational = ts_measured_actual[not is_intervention_list]
-
-    # save pag_edgemarks and pag_effect_sizes arrays to file
-
-    return pag_edgemarks, pag_effect_sizes
 
 
 def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
@@ -394,10 +366,10 @@ def main():
     was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
 
     # obs discovery # todo compute and dont load
-    pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks='complete_graph',
-                                                    pag_effect_sizes=np.inf,
-                                                    ts_measured_actual=ts_measured_actual,
-                                                    is_intervention_list=is_intervention_list)
+    pag_effect_sizes, pag_edgemarks = observational_causal_discovery(pag_edgemarks=None,
+                                                                     pag_effect_sizes=None,
+                                                                     df=ts_measured_actual,
+                                                                     was_intervened=was_intervened)
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
@@ -454,8 +426,10 @@ def main():
         #
         # pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
         #                                                    is_intervention_list)
-        # pag_edgemarks, pag_effect_sizes = obs_discovery(pag_edgemarks, pag_effect_sizes, ts_measured_actual,
-        #                                                 is_intervention_list)
+        pag_effect_sizes, pag_edgemarks = observational_causal_discovery(pag_edgemarks=None,
+                                                                         pag_effect_sizes=None,
+                                                                         df=ts_measured_actual,
+                                                                         was_intervened=was_intervened)
     #
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)

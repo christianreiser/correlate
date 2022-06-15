@@ -7,9 +7,8 @@ from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
 
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
-from causal_discovery.preprocessing import remove_nan_seq_from_top_and_bot
-from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_folder_path, remove_link_threshold, \
-    LPCMCI_or_PCMCI
+from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
+    remove_link_threshold
 
 """
 plain causal discovery
@@ -18,17 +17,32 @@ plain causal discovery
 
 # function that saves val_min, graph, and var_names to a file
 def save_results(val_min, graph, var_names, name_extension):
-    np.save(str(private_folder_path) + 'val_min_'+str(name_extension), val_min)
-    np.save(str(private_folder_path) + 'graph_'+str(name_extension), graph)
-    np.save(str(private_folder_path) + 'var_names_'+str(name_extension), var_names)
+    np.save(str(private_folder_path) + 'val_min_' + str(name_extension), val_min)
+    np.save(str(private_folder_path) + 'graph_' + str(name_extension), graph)
+    np.save(str(private_folder_path) + 'var_names_' + str(name_extension), var_names)
 
 
-# def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_intervened):
-def observational_causal_discovery(df):
+def if_intervened_replace_with_nan(ts, was_intervened):
+    # iterate over all rows and columns of ts
+    for i in range(len(ts)):
+        for j in range(len(ts.columns)):
+            if was_intervened.iloc[i, j]:
+                ts.iloc[i, j] = np.NaN
+    return ts
 
+
+def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_intervened):
+    """
+    1. get observational ts
+    2. ini graph with previous pag_edgemarks and pag_effect_sizes
+    3. reduce pag_edgemarks with observatonal data and update pag_effect_sizes
+    return: pag_edgemarks, pag_effect_sizes
+    """
     if causal_discovery_on:
 
+        """ below code is only needed for real world data"""
         """get non_zero_indices"""
+        """
         # non_zero_inices = pd.read_csv(str(private_folder_path) + 'results.csv', index_col=0)
         # # of non_zero_inices get column called 'ref_coeff_widestk=5'
         # non_zero_inices = non_zero_inices.loc[:, 'reg_coeff_widestk=5']
@@ -46,6 +60,10 @@ def observational_causal_discovery(df):
         # df = remove_nan_seq_from_top_and_bot(df)
         # df = non_contemporary_time_series_generation(df)  # todo, how to automate on and off
         # df = df.drop(['Date'], axis=1)  # drop date col
+        """
+        # handle interventions: in df set value to NaN if it was intervened
+        # during CI tests nans are then excluded
+        df = if_intervened_replace_with_nan(df, was_intervened)
 
         # # standardize data
         df -= df.mean(axis=0)
@@ -87,8 +105,8 @@ def observational_causal_discovery(df):
             graph = results['graph']
             val_min = results['val_matrix']
 
-        val_min[abs(val_min) < remove_link_threshold] = 0  # set values below threshold to zero
-        graph[abs(val_min) < remove_link_threshold] = ""  # set values below threshold to zero
+        # remove links if are below threshold
+        graph[abs(val_min) < remove_link_threshold] = ""
 
         # plot predicted PAG
         tp.plot_graph(
@@ -103,24 +121,26 @@ def observational_causal_discovery(df):
 
         # save results
         save_results(val_min, graph, var_names, 'simulated')
-        return val_min, graph, var_names
+        return val_min, graph
 
-# # load ts dataframe from file
-# import os
-# filename = os.path.abspath("./LPCMCI/tmp_test.dat")
-# fileobj = open(filename, mode='rb')
-# ts = np.fromfile(fileobj, dtype=np.float32)
-# fileobj.close()
-#
-# ## load was_intervened dataframe from file
-# import os
-# filename = os.path.abspath("./tmp_was_intervened.dat")
-# was_intervened = pd.read_csv(filename, index_col=0)
-# print()
-#
-#
-# pag_effect_sizes, pag_edgemarks, var_names = observational_causal_discovery(
-#     pag_edgemarks='fully connected',
-#     pag_effect_sizes=None,
-#     df=ts,
-#     was_intervened  =was_intervened)
+
+# load ts dataframe from file
+import os
+
+filename = os.path.abspath("./tmp_test.dat")
+ts = pd.read_csv(filename, index_col=0)
+
+# get last row of ts and append to ts
+ts = ts.append(ts.iloc[-1])
+
+## load was_intervened dataframe from file
+filename = os.path.abspath("./tmp_was_intervened.dat")
+was_intervened = pd.read_csv(filename, index_col=0)
+
+pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
+    pag_edgemarks=None,
+    pag_effect_sizes=None,
+    df=ts,
+    was_intervened=was_intervened)
+
+print()
