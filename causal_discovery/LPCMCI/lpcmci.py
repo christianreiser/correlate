@@ -395,13 +395,15 @@ class LPCMCI():
                 link_list = [product(range(self.N), range(self.N), range(-lag, -lag + 1)) for lag in
                              range(0, self.tau_max + 1)]
 
-            # Run through all elements of link_list. Each element of link_list specifies ordered pairs of variables whose connecting edges are then subjected to conditional independence tests
+            # Run through all elements of link_list. Each element of link_list specifies ordered pairs of variables
+            # whose connecting edges are then subjected to conditional independence tests
             for links in link_list:
 
                 # Memory variables for storing edges that are marked for removal
                 to_remove = {j: {} for j in range(self.N)}
 
-                # Iterate through all edges specified by links. Note that since the variables paris are ordered, (A, B) and (B, A) are seen as different pairs.
+                # Iterate through all edges specified by links.
+                # Note that since the variables paris are ordered, (A, B) and (B, A) are seen as different pairs.
                 for pair in links:
 
                     # Decode the elements of links into pairs of variables (X, Y)
@@ -428,7 +430,7 @@ class LPCMCI():
                         continue
 
                     # Get the current link
-                    link = self._get_link(X, Y)
+                    link = self._get_link(X, Y) # dict lookup e.g. from (0,1,1) to 'oL>'
 
                     # Moreover exclude the current link if ...
                     # ... X and Y are not adjacent anymore
@@ -441,7 +443,8 @@ class LPCMCI():
                     ######################################################################################################
                     ### Determine  which tests the link will be  subjected to  ###########################################
 
-                    # Depending on the middle mark on the link between X and Y as well as on some global options, we may not need to search for separating set among the potential parents of Y and/or X.
+                    # Depending on the middle mark on the link between X and Y as well as on some global options,
+                    # we may not need to search for separating set among the potential parents of Y and/or X.
                     test_Y = True if link[1] not in ["R", "!"] else False
                     test_X = True if (link[1] not in ["L", "!"] and (
                             X[1] == 0 or (self.max_cond_px > 0 and self.max_cond_px >= p_pc))) else False
@@ -722,7 +725,8 @@ class LPCMCI():
                 link_list = [product(range(self.N), range(self.N), range(-lag, -lag + 1)) for lag in
                              range(0, self.tau_max + 1)]
 
-            # Run through all elements of link_list. Each element of link_list specifies ordered pairs of variables whose connecting edges are then subjected to conditional independence tests
+            # Run through all elements of link_list. Each element of link_list specifies ordered pairs of variables
+            # whose connecting edges are then subjected to conditional independence tests
             for links in link_list:
 
                 # Memory variables for storing edges that are marked for removal

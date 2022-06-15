@@ -15,15 +15,31 @@ from config import target_label, verbosity, random_state, n_measured_links, n_va
     contemp_fraction, labels_strs
 from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
 from intervention_proposal.target_eqs_from_pag import plot_graph, load_results, compute_target_equations
+"""
+next todo:
+background: interventional discovery should be analogous to locmci, but lpcmci uses interventional as input. 
+-> first how lpcmci works and check if it's in and output formats are the same. 
+because then i could use the same output for interventional discovery and use it as input for lpcmci
 
+- understand how lpcmci works between link_list, get links, CI test, edge removal/orientation because it's needed for interventional discovery
+- build interventional discovery analogous to lpcmci steps above
+- should the interface between lpcmci and interventional discovery be links_list or graph (e.g. 'oL>')?
+- do i have to add into the dict to say that sth belongs to G ('-' edgemark) or that result is not adjacent ("")
+
+
+"""
 """
 main challenges to get algo running:
 1. 1 -> 1   Modify data generator to start from last sample 10. june
 1. 1 -> 2   intervene in datagenerator                      14->15. june
 2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
+5. 3 -> 1   Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 
 3. 5        Orient edges with interventional data           22 june
-4. 3        Initialize lpcmci with above result             28. june
-5. 3        Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 4. july
+                ini complete graph
+                    mby similar as 'link_list = ' 
+                for each intervened var do CI tests and remove edges
+4. 3        Initialize lpcmci with above result at all inis 28. june
+                (mby replace 'link_list = ' occurrences)            
 
 further TODOs
 1. 2        compute optimal intervention from SCM (for ground truth)6. july
@@ -280,10 +296,7 @@ def obs_or_intervene(
     return is_mixed
 
 
-def interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes, is_intervention_list):
-    pag_edgemarks_reduced = []  # todo
-    pag_effect_sizes_reduced = []  # todo: not sure how to update
-    return pag_edgemarks_reduced, pag_effect_sizes_reduced
+
 
 
 def get_last_outcome(ts_measured_actual):
@@ -431,8 +444,8 @@ def main():
         #
         # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
         #
-        # pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
-        #                                                    is_intervention_list)
+        pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
+                                                           is_intervention_list)
         pag_effect_sizes, pag_edgemarks = observational_causal_discovery(pag_edgemarks=None,
                                                                          pag_effect_sizes=None,
                                                                          df=ts_measured_actual,

@@ -46,7 +46,7 @@ pca_on = False
 
 # causal discovery
 causal_discovery_on = True
-LPCMCI_or_PCMCI = False  # True for LPCMCI, False for PCMCI
+LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
 tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
