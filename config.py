@@ -50,7 +50,7 @@ LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
 tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
-pc_alpha = 0.99
+pc_alpha = 0.95
 remove_link_threshold = 0.2
 
 # scm_config

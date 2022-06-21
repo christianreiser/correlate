@@ -1,23 +1,14 @@
 from itertools import product
 
 auto_first = False
-auto_first = True
+# auto_first = True
 
 N=7
 tau_max=1
 
-if auto_first:
 
-    link_list = [product(range(N), range(-tau_max, 0))]
-    link_list = link_list + [product(range(N), range(N), range(-lag, -lag + 1)) for lag in
-                             range(0, tau_max + 1)]
-    print()
-
-else:
-
-    link_list = [product(range(N), range(N), range(-lag, -lag + 1)) for lag in
-                 range(0, tau_max + 1)]
-    print()
+link_list = [product(range(N), range(N), range(-lag, -lag + 1)) for lag in
+             range(0, tau_max + 1)]
 
 # Run through all elements of link_list. Each element of link_list specifies ordered pairs of variables whose connecting edges are then subjected to conditional independence tests
 link_idx = -1
@@ -29,3 +20,20 @@ for links in link_list:
     for pair in links:
         pair_idx += 1
         print('link_idx', link_idx, 'pair_idx', pair_idx, 'pair', pair)
+
+        # Decode the elements of links into pairs of variables (X, Y)
+        X = (pair[0], pair[2])
+        Y = (pair[1], 0)
+
+        ######################################################################################################
+        ### Exclusion of links ###############################################################################
+
+        # Exclude the current link if ...
+        # ... X = Y
+        if X[1] == 0 and X[0] == Y[0]:
+            continue
+        # ... X > Y
+        # if self._is_smaller(Y, X):
+        #     continue
+
+print()

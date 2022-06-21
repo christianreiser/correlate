@@ -17,7 +17,7 @@ from intervention_proposal.propose_from_eq import drop_unintervenable_variables,
 from intervention_proposal.target_eqs_from_pag import plot_graph, load_results, compute_target_equations
 """
 next todo:
-background: interventional discovery should be analogous to locmci, but lpcmci uses interventional as input. 
+background: interventional discovery should be analogous to lpcmci, but lpcmci uses interventional as input. 
 -> first how lpcmci works and check if it's in and output formats are the same. 
 because then i could use the same output for interventional discovery and use it as input for lpcmci
 

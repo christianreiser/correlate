@@ -3,6 +3,12 @@ from itertools import product, combinations
 import numpy as np
 
 
+
+
+
+
+
+
 class LPCMCI():
     r"""
     This class implements the LPCMCI algorithm for constraint-based causal discovery on stationary times series with
@@ -351,6 +357,20 @@ class LPCMCI():
         # Return
         return True
 
+    def orient_with_interv_data(self, inv_orientation_list):
+        """
+        chrei: todo check if it works
+        for all items in list, remove ancestry of corresponding links
+        """
+        inv_orientation_list = [(0, 1, 0), (0, 2, -1), (0, 3, 0), (0, 4, -1), (0, 5, 0)] # todo remove
+
+        for orientation in inv_orientation_list:
+            X = (orientation[0], orientation[2])
+            Y = (orientation[1], 0)
+            (var_X, lag_X) = X
+            (var_Y, lag_Y) = Y
+            self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
+
     # chr: alpha
     def _run_ancestral_removal_phase(self, prelim=False):
         """Run an ancestral edge removal phase, this is Algorithm S2"""
@@ -431,6 +451,10 @@ class LPCMCI():
 
                     # Get the current link
                     link = self._get_link(X, Y) # dict lookup e.g. from (0,1,1) to 'oL>'
+
+                    # chrei: orient link if interventionasl data showed independence
+                    # update self.graph_dict[var_B][(var_A, lag_A - lag_B)]
+                    # self.orient_with_interv_data()
 
                     # Moreover exclude the current link if ...
                     # ... X and Y are not adjacent anymore
@@ -605,7 +629,9 @@ class LPCMCI():
             ### Orientations and next step ###############################################################################
 
             if any_removal:
-                # At least one edge was removed or at least one middle mark has been updated. Therefore: i) apply the restricted set of orientation rules, ii) restart the while loop at p_pc = 0, unless all edges have converged, then break the while loop
+                # At least one edge was removed or at least one middle mark has been updated. Therefore:
+                # i) apply the restricted set of orientation rules,
+                # ii) restart the while loop at p_pc = 0, unless all edges have converged, then break the while loop
 
                 only_lagged = False if self.orient_contemp == 2 else True
                 any_update = self._run_orientation_phase(rule_list=self._rules_prelim, only_lagged=only_lagged)
@@ -620,7 +646,9 @@ class LPCMCI():
                     p_pc = p_pc + 1
 
             else:
-                # The graph has not changed at all in this iteration of the while loop. Therefore, if all edges have converged, break the while loop. If at least one edge has not yet converged, increase p_pc by one.
+                # The graph has not changed at all in this iteration of the while loop.
+                # Therefore, if all edges have converged, break the while loop.
+                # If at least one edge has not yet converged, increase p_pc by one.
 
                 if has_converged:
                     break
@@ -2849,7 +2877,11 @@ class LPCMCI():
         return left_mark + link[1] + right_mark
 
     def _write_link(self, A, B, new_link, verbosity=0):
-        """Write the information that the link from node A to node B takes the form of new_link into self.graph_dict. Neither is it assumed that at least of the nodes is at lag 0, nor must A be before B. If A and B are contemporaneous, also the link from B to A is written as the reverse of new_link"""
+        """
+        Write the information that the link from node A to node B takes the form of new_link into self.graph_dict.
+        Neither is it assumed that at least of the nodes is at lag 0, nor must A be before B.
+        If A and B are contemporaneous, also the link from B to A is written as the reverse of new_link
+        """
 
         # Unpack A and B
         (var_A, lag_A) = A
