@@ -109,6 +109,7 @@ class LPCMCI():
         self.T, self.N = self.dataframe.values.shape
 
     def run_lpcmci(self,
+                   external_independencies,
                    tau_max=1,
                    pc_alpha=0.05,
                    n_preliminary_iterations=1,
@@ -130,7 +131,8 @@ class LPCMCI():
                    auto_first=True,
                    remember_only_parents=True,
                    no_apr=0,
-                   verbosity=0):
+                   verbosity=0,
+                   ):
         """Run LPCMCI on the dataset and with the conditional independence test passed to the class constructor and with the options passed to this function."""
 
         #######################################################################################################################
@@ -156,7 +158,7 @@ class LPCMCI():
             # In the preliminary phases, auto-lag links are tested with first priority. Among the auto-lag links,
             # different lags are not distinguished. All other links have lower priority, among which those which shorter
             # lags have higher priority
-            self._run_ancestral_removal_phase(prelim=True)
+            self._run_ancestral_removal_phase(external_independencies=external_independencies,prelim=True)
 
             # Verbose output
             if self.verbosity >= 1:
@@ -194,7 +196,7 @@ class LPCMCI():
                 print("Starting final ancestral phase")
 
             # In the standard ancestral phase, links are prioritized in the same as in the preliminary phases
-            self._run_ancestral_removal_phase()
+            self._run_ancestral_removal_phase(external_independencies=external_independencies)
 
             # Verbose output
             if self.verbosity >= 1:
@@ -215,7 +217,7 @@ class LPCMCI():
                 print("Starting non-ancestral phase")
 
             # In the non-ancestral phase, large lags are prioritized
-            self._run_non_ancestral_removal_phase()
+            self._run_non_ancestral_removal_phase(external_independencies=external_independencies)
 
             # Verbose output
             if self.verbosity >= 1:
@@ -362,17 +364,19 @@ class LPCMCI():
         chrei: todo check if it works
         for all items in list, remove ancestry of corresponding links
         """
-        inv_orientation_list = [(0, 1, 0), (0, 2, -1), (0, 3, 0), (0, 4, -1), (0, 5, 0)] # todo remove
-
-        for orientation in inv_orientation_list:
-            X = (orientation[0], orientation[2])
-            Y = (orientation[1], 0)
-            (var_X, lag_X) = X
-            (var_Y, lag_Y) = Y
-            self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
+        if inv_orientation_list is not None and len(inv_orientation_list) > 0:
+            for orientation in inv_orientation_list:
+                X = (orientation[0], orientation[2])
+                Y = (orientation[1], 0)
+                (var_X, lag_X) = X
+                (var_Y, lag_Y) = Y
+                if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] == "o":
+                    self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
+                else:
+                    ValueError("orient_with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0])
 
     # chr: alpha
-    def _run_ancestral_removal_phase(self, prelim=False):
+    def _run_ancestral_removal_phase(self, external_independencies, prelim=False):
         """Run an ancestral edge removal phase, this is Algorithm S2"""
 
         # Iterate until convergence
@@ -452,9 +456,9 @@ class LPCMCI():
                     # Get the current link
                     link = self._get_link(X, Y) # dict lookup e.g. from (0,1,1) to 'oL>'
 
-                    # chrei: orient link if interventionasl data showed independence
-                    # update self.graph_dict[var_B][(var_A, lag_A - lag_B)]
-                    # self.orient_with_interv_data()
+                    # chrei: orient link in self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] if interventional data shows independence
+                    self.orient_with_interv_data(external_independencies)
+                    # todo check if it works
 
                     # Moreover exclude the current link if ...
                     # ... X and Y are not adjacent anymore
@@ -492,7 +496,7 @@ class LPCMCI():
                         if len(S_search_YX) < p_pc:
                             # Note that X is smaller than Y. If S_search_YX exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(Y). Therefore, the middle mark on the edge between X and Y can be updated with 'R'
                             if (X, Y) not in self._cannot_mark:
-                                self._apply_middle_mark(X, Y, "R")
+                                self._apply_middle_mark(X, Y, "R", external_independencies)
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.
                             has_converged = False
@@ -501,7 +505,7 @@ class LPCMCI():
                         if len(S_search_XY) < p_pc:
                             # Note that X is smaller than Y. If S_search_XY exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(X). Therefore, the middle mark on the edge between X and Y can be updated with 'L'
                             if (X, Y) not in self._cannot_mark:
-                                self._apply_middle_mark(X, Y, "L")
+                                self._apply_middle_mark(X, Y, "L",external_independencies)
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.
                             has_converged = False
@@ -708,7 +712,7 @@ class LPCMCI():
         return True
 
     # chr: alpha
-    def _run_non_ancestral_removal_phase(self):
+    def _run_non_ancestral_removal_phase(self, external_independencies):
         """Run the non-ancestral edge removal phase, this is Algorithm S3"""
 
         # Update of middle marks
@@ -787,6 +791,10 @@ class LPCMCI():
 
                     # Get the current link
                     link = self._get_link(X, Y)
+                    
+                    # chrei: orient link in self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] if interventional data shows independence
+                    # todo check if this is correct
+                    self.orient_with_interv_data(external_independencies)
 
                     # Exclude the current link if ...
                     if link == "":
@@ -1918,11 +1926,15 @@ class LPCMCI():
                 return out.union({(var, lag + A[1]) for ((var, lag), link) in self.graph_dict[A[0]].items() if
                                   len(link) > 0 and link[0] == "-" and lag + A[1] >= -self.tau_max})
 
-    def _apply_middle_mark(self, X, Y, char):
+    def _apply_middle_mark(self, X, Y, char, external_independencies):
         """Update the middle mark on the link between X and Y with the character char"""
 
         # Get the old link
         old_link = self._get_link(X, Y)
+
+        # chrei: orient link in self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] if interventional data shows independence
+        # todo check if this is correct
+        self.orient_with_interv_data(external_independencies)
 
         # Determine the new link
         if old_link[1] == "?":

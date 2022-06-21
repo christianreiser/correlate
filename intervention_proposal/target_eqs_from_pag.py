@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from tigramite import plotting as tp
 from tqdm import tqdm
 
-from config import target_label, private_folder_path, verbosity
+from config import target_label, private_folder_path, verbosity_thesis
 
 """
 This file contains the functions to compute the target equations from the PAG.
@@ -37,27 +37,27 @@ def load_results(name_extension):
     return val_min, graph, var_names
 
 
-def plot_graph(val_min, graph, var_names):
+def plot_graph(val_min, graph, var_names, label):
     graph = make_redundant_information_with_symmetry(graph)
     tp.plot_graph(
         val_matrix=val_min,
         link_matrix=graph,
         var_names=var_names,
-        # link_colorbar_label='cross-MCI',
+        link_colorbar_label=label,
         # node_colorbar_label='auto-MCI',
         figsize=(10, 6),
     )
     plt.show()
 
     # Plot time series graph
-    tp.plot_time_series_graph(
-        figsize=(12, 8),
-        val_matrix=val_min,
-        link_matrix=graph,
-        var_names=var_names,
-        link_colorbar_label='MCI',
-    )
-    plt.show()
+    # tp.plot_time_series_graph(
+    #     figsize=(12, 8),
+    #     val_matrix=val_min,
+    #     link_matrix=graph,
+    #     var_names=var_names,
+    #     link_colorbar_label='MCI',
+    # )
+    # plt.show()
 
 
 def drop_redundant_information_due_to_symmetry(graph):
@@ -186,7 +186,7 @@ def make_links_point_forward(graph):
             for j in range(graph.shape[1]):
                 if graph[i, j, tau] == '<--':
                     graph_forward[i, j, tau] = ''
-                    if graph[j, i, tau] != '':
+                    if graph[j, i, tau] != '' and i!=j:
                         raise ValueError('graph[j, i, tau] != ''')
                     graph_forward[j, i, tau] = '-->'
     return graph_forward
@@ -241,10 +241,14 @@ def write_one_graph_combination_to_file(ambiguous_locations, links_permutations,
         i = ambiguous_location[0]
         j = ambiguous_location[1]
         k = ambiguous_location[2]
+
         new_link = links_permutations[graph_idx][ambiguous_location_idx]
 
         # get old link string
         old_link = graph_combinations[graph_idx][i, j, k]
+
+        if i==j and new_link == '<--':
+            print() # todo check that there is no going back in time or instantan cycle
 
         # replace graph_combinations[graph_idx][i, j, k] with new_link string
         graph_combinations[graph_idx][i, j, k] = old_link.replace(original_link, new_link)
@@ -415,11 +419,11 @@ def compute_target_equations(val_min, graph, var_names):
     input: val_min, graph, var_names (loads from file)
     output: target_equations_per_graph_dict
     """
-    if verbosity > 0:
+    if verbosity_thesis > 0:
         print('compute target equations')
 
     # plot graph
-    # plot_graph(val_min, graph, var_names)
+    plot_graph(val_min, graph, var_names, 'current graph estimate')
 
     # drop redundant info in graph
     graph = drop_redundant_information_due_to_symmetry(graph)

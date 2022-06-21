@@ -1,3 +1,4 @@
+print('import...')
 import math
 import pickle
 
@@ -10,11 +11,14 @@ from tigramite import plotting as tp
 import generate_data_mod as mod
 from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
-from config import target_label, verbosity, random_state, n_measured_links, n_vars_measured, coeff, \
+from causal_discovery.interventional_discovery import get_independencies_from_interv_data
+from config import target_label, verbosity_thesis, random_state, n_measured_links, n_vars_measured, coeff, \
     min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, frac_latents, random_seed, noise_sigma, tau_max, \
     contemp_fraction, labels_strs
 from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
-from intervention_proposal.target_eqs_from_pag import plot_graph, load_results, compute_target_equations
+from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target_equations, \
+    make_redundant_information_with_symmetry
+
 """
 next todo:
 background: interventional discovery should be analogous to lpcmci, but lpcmci uses interventional as input. 
@@ -34,11 +38,11 @@ main challenges to get algo running:
 1. 1 -> 2   intervene in datagenerator                      14->15. june
 2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
 5. 3 -> 1   Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 
-3. 5        Orient edges with interventional data           22 june
+3. 5        Orient edges with interventional data           22 june -> 21. june
                 ini complete graph
                     mby similar as 'link_list = ' 
                 for each intervened var do CI tests and remove edges
-4. 3        Initialize lpcmci with above result at all inis 28. june
+4. 3        Initialize lpcmci with above result at all inis 28. june -> 21. june
                 (mby replace 'link_list = ' occurrences)            
 
 further TODOs
@@ -79,6 +83,7 @@ def generate_stationary_scm():
     """
     generate scms until a stationary one is found
     """
+    print('generate_stationary_scm...')
     nonstationary = True
     scm = []  # stupid ini
     counter = 0
@@ -112,7 +117,7 @@ def generate_stationary_scm():
 
 
 def plot_scm(scm):
-    if verbosity > 0:
+    if verbosity_thesis > 0:
         # ts_df = pp.DataFrame(ts)
         original_graph, original_vals = modify_dict_get_graph_and_link_vals(scm)
 
@@ -133,8 +138,8 @@ def plot_scm(scm):
             val_matrix=original_vals,  # original_vals None
             link_matrix=original_graph,
             var_names=range(n_vars_all),
-            link_colorbar_label='cross-MCI',
-            node_colorbar_label='auto-MCI',
+            link_colorbar_label='original SCM',
+            node_colorbar_label='auto-',
             figsize=(10, 6),
         )
         plt.show()
@@ -193,8 +198,6 @@ def data_generator(scm,
                                                    intervention_variable=intervention_variable,
                                                    intervention_value=intervention_value)
 
-
-
     # ts to pandas dataframe and set labels_strs as headers
     ts_df = pd.DataFrame(ts, columns=labels_strs)
 
@@ -213,9 +216,6 @@ def measure(ts, obs_vars):
     # filename = os.path.abspath("./tmp_test.dat")
     # ts.to_csv(filename, index=False)
     return ts
-
-
-
 
 
 def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
@@ -264,12 +264,23 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_l
     largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
         target_eqs_intervenable)
 
+
+    # tp.plot_graph(
+    #     val_matrix=graph_effect_sizes,
+    #     link_matrix=make_redundant_information_with_symmetry(graph_combinations[most_optimistic_graph_idx]),
+    #     var_names=measured_labels,
+    #     link_colorbar_label='current estimate with ambiguities',
+    #     # node_colorbar_label='auto-MCI',
+    #     figsize=(10, 6),
+    # )
+    # plt.show()
+
     # most optimistic graph
     most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
 
     # plot most optimistic graph
-    if verbosity > 0:
-        plot_graph(graph_effect_sizes, most_optimistic_graph, measured_labels)
+    if verbosity_thesis > 0:
+        plot_graph(graph_effect_sizes, most_optimistic_graph, measured_labels, 'most optimistic')
 
     intervention_value = get_intervention_value(best_intervention_var_name, intervention_coeff, ts_measured_actual)
     return best_intervention_var_name, intervention_value
@@ -294,9 +305,6 @@ def obs_or_intervene(
             is_mixed[i] = False
     # is_intervention_list = np.append(is_obs, is_mixed)
     return is_mixed
-
-
-
 
 
 def get_last_outcome(ts_measured_actual):
@@ -330,7 +338,6 @@ def store_intervention(was_intervened, intervention_variable):
     input: requires that intervention_variable is a string of the form 'char char int' e.g. 'u_0'
     """
 
-
     new_series = pd.Series(np.zeros(n_vars_measured, dtype=bool), index=was_intervened.columns)
 
     # if intervened
@@ -348,7 +355,6 @@ def store_intervention(was_intervened, intervention_variable):
     # filename = os.path.abspath("./tmp_was_intervened.dat")
     # was_intervened.to_csv(filename, index=False)
     return was_intervened
-
 
 
 def main():
@@ -383,9 +389,7 @@ def main():
     # keep track of where the intervention is
     was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
 
-    # obs discovery # todo compute and dont load
-    pag_effect_sizes, pag_edgemarks = observational_causal_discovery(pag_edgemarks=None,
-                                                                     pag_effect_sizes=None,
+    pag_effect_sizes, pag_edgemarks = observational_causal_discovery(external_independencies=None,
                                                                      df=ts_measured_actual,
                                                                      was_intervened=was_intervened)
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
@@ -400,7 +404,7 @@ def main():
                                                                                      measured_labels,
                                                                                      ts_measured_actual)
             # keep track of where the intervention is
-            was_intervened =  store_intervention(was_intervened, intervention_variable)
+            was_intervened = store_intervention(was_intervened, intervention_variable)
 
             # optimal intervention todo
             # true_edgemarks, true_effectsizes = get_edgemarks_and_effect_sizes(scm)
@@ -408,9 +412,7 @@ def main():
         else:
             intervention_variable = None
             intervention_value = None
-            was_intervened =  store_intervention(was_intervened, intervention_variable)
-
-
+            was_intervened = store_intervention(was_intervened, intervention_variable)
 
         # intervene as proposed and generate new data
         ts_new = data_generator(
@@ -444,12 +446,12 @@ def main():
         #
         # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
         #
-        pag_edgemarks, pag_effect_sizes = interv_discovery(ts_measured_actual, pag_edgemarks, pag_effect_sizes,
-                                                           is_intervention_list)
-        pag_effect_sizes, pag_edgemarks = observational_causal_discovery(pag_edgemarks=None,
-                                                                         pag_effect_sizes=None,
-                                                                         df=ts_measured_actual,
-                                                                         was_intervened=was_intervened)
+
+        independencies_from_interv_data = get_independencies_from_interv_data(ts_measured_actual, was_intervened)
+
+        pag_effect_sizes, pag_edgemarks = observational_causal_discovery(df=ts_measured_actual,
+                                                                         was_intervened=was_intervened,
+                                                                         external_independencies=independencies_from_interv_data)
     #
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)

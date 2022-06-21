@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
 from tigramite import data_processing as pp
 from tigramite import plotting as tp
@@ -7,8 +6,8 @@ from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
 
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
-from config import verbosity, causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
-    remove_link_threshold
+from config import verbosity_thesis, causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
+    remove_link_threshold, verbosity
 
 """
 plain causal discovery
@@ -31,7 +30,7 @@ def if_intervened_replace_with_nan(ts, was_intervened):
     return ts
 
 
-def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_intervened):
+def observational_causal_discovery(df, was_intervened, external_independencies):
     """
     1. get observational ts
     2. ini graph with previous pag_edgemarks and pag_effect_sizes
@@ -81,6 +80,7 @@ def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_inte
                     recycle_residuals=True))
 
             lpcmci.run_lpcmci(
+                external_independencies = external_independencies,
                 tau_max=tau_max,
                 pc_alpha=pc_alpha,
                 max_p_non_ancestral=3,
@@ -96,7 +96,7 @@ def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_inte
             pcmci = PCMCI(
                 dataframe=dataframe,
                 cond_ind_test=ParCorr(significance='analytic'),
-                verbosity=1)
+                verbosity=verbosity)
 
             results = pcmci.run_pcmciplus(tau_min=0, tau_max=tau_max, pc_alpha=pc_alpha)
             q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], fdr_method='fdr_bh',
@@ -108,16 +108,16 @@ def observational_causal_discovery(pag_edgemarks, pag_effect_sizes, df, was_inte
         # remove links if are below threshold
         graph[abs(val_min) < remove_link_threshold] = ""
 
-        # plot predicted PAG
-        tp.plot_graph(
-            val_matrix=val_min,
-            link_matrix=graph,
-            var_names=var_names,
-            link_colorbar_label='cross-MCI',
-            node_colorbar_label='auto-MCI',
-            figsize=(10, 6),
-        )
-        plt.show()
+        # # plot predicted PAG
+        # tp.plot_graph(
+        #     val_matrix=val_min,
+        #     link_matrix=graph,
+        #     var_names=var_names,
+        #     link_colorbar_label='cross-MCI',
+        #     node_colorbar_label='auto-MCI',
+        #     figsize=(10, 6),
+        # )
+        # plt.show()
 
         # save results
         save_results(val_min, graph, var_names, 'simulated')

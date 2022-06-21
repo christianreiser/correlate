@@ -2,7 +2,7 @@ import pickle
 
 import numpy as np
 
-from config import target_label, verbosity
+from config import target_label, verbosity_thesis
 
 
 def drop_unintervenable_variables(target_eq):
@@ -71,7 +71,7 @@ def find_most_optimistic_intervention(target_eqs):
 
                 most_optimistic_graph_idx = equation_idx
 
-    if verbosity >0:
+    if verbosity_thesis >0:
         print('largest_abs_coeff: ' + str(largest_abs_coeff)+'\n')
         print('best_intervention: ' + str(best_intervention_var_name)+'\n')
         print('most_optimistic_graph_idx: ' + str(most_optimistic_graph_idx)+'\n')

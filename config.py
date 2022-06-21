@@ -6,6 +6,7 @@ import math
 import numpy as np
 
 verbosity = 0
+verbosity_thesis = 9
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
@@ -50,7 +51,7 @@ LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
 tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
-pc_alpha = 0.95
+pc_alpha = 0.4 # todo 0.95 or so
 remove_link_threshold = 0.2
 
 # scm_config
