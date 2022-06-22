@@ -62,7 +62,9 @@ further TODOs
 opportunities for computational speedup:
 - parallelize
 - recycle residuals from lpcmci
-- don't run lpcmci when there is no intervention comming
+x don't run lpcmci when there is no intervention coming
+- orient ambiguities towards target var to reduce number of possible graphs
+x prune weak links
 """
 
 
@@ -230,11 +232,15 @@ def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
     intervention_value = 0  # ini
     intervention_idx = var_name[2:]  # 'u_0' -> '0'
     intervention_var_measured_values = ts_measured_actual[intervention_idx]
+
+
+
+
     # get 90th percentile of intervention_var_measured_values
     if intervention_coeff > 0:
-        intervention_value = np.percentile(intervention_var_measured_values, 90)
+        intervention_value = np.percentile(intervention_var_measured_values, np.random.uniform(75, 95, size=1)) # todo is a bit exploration vs exploitation
     elif intervention_coeff < 0:
-        intervention_value = np.percentile(intervention_var_measured_values, 10)
+        intervention_value = np.percentile(intervention_var_measured_values, np.random.uniform(5, 25, size=1))
     else:
         ValueError("intervention_coeff must be positive or negative")
     return intervention_value
@@ -343,7 +349,7 @@ def get_measured_labels():
     return measured_labels, measured_label_to_idx
 
 
-def store_intervention(was_intervened, intervention_variable):
+def store_intervention(was_intervened, intervention_variable,n_samples):
     """
     add data to boolean array of measured variables indicating if they were intervened upon
     input: requires that intervention_variable is a string of the form 'char char int' e.g. 'u_0'
@@ -359,7 +365,8 @@ def store_intervention(was_intervened, intervention_variable):
         new_series[intervention_idx] = True
 
     # append new_series to was_intervened
-    was_intervened = was_intervened.append(new_series, ignore_index=True)
+    for i in range(n_samples):
+        was_intervened = was_intervened.append(new_series, ignore_index=True)
 
     # # save was_intervened dataframe to file
     # import os
@@ -379,7 +386,7 @@ def main():
         # n_ini_obs=n_ini_obs,
         n_mixed=n_mixed,
         nth=nth)  # 500 obs + 500 with every 4th intervention
-    n_samples = 1  # len(is_intervention_list)
+    n_samples = 10  # len(is_intervention_list) # todo 1
 
     measured_labels, measured_label_to_idx = get_measured_labels()
 
@@ -407,7 +414,8 @@ def main():
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
-    for is_intervention in is_intervention_list:
+    for is_intervention_idx in range(len(is_intervention_list)):
+        is_intervention = is_intervention_list[is_intervention_idx]
         # get interventions of actual PAG and true SCM.
         # output: None if observational or find via optimal control.
         if is_intervention:
@@ -416,7 +424,7 @@ def main():
                                                                                      measured_labels,
                                                                                      ts_measured_actual)
             # keep track of where the intervention is
-            was_intervened = store_intervention(was_intervened, intervention_variable)
+            was_intervened = store_intervention(was_intervened, intervention_variable, n_samples)
 
             # optimal intervention todo
             # true_edgemarks, true_effectsizes = get_edgemarks_and_effect_sizes(scm)
@@ -424,7 +432,7 @@ def main():
         else:
             intervention_variable = None
             intervention_value = None
-            was_intervened = store_intervention(was_intervened, intervention_variable)
+            was_intervened = store_intervention(was_intervened, intervention_variable, n_samples)
 
         # intervene as proposed and generate new data
         ts_new = data_generator(
@@ -459,12 +467,14 @@ def main():
         # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
         #
 
-        independencies_from_interv_data = get_independencies_from_interv_data(ts_measured_actual.copy(), was_intervened)
+        # only do causal discovery if next iteration is intervention
+        if is_intervention_list[is_intervention_idx+1]:
+            independencies_from_interv_data = get_independencies_from_interv_data(ts_measured_actual.copy(), was_intervened)
 
-        pag_effect_sizes, pag_edgemarks = observational_causal_discovery(df=ts_measured_actual.copy(),
-                                                                         was_intervened=was_intervened.copy(),
-                                                                         external_independencies=independencies_from_interv_data,
-                                                                         measured_label_to_idx=measured_label_to_idx)
+            pag_effect_sizes, pag_edgemarks = observational_causal_discovery(df=ts_measured_actual.copy(),
+                                                                             was_intervened=was_intervened.copy(),
+                                                                             external_independencies=independencies_from_interv_data,
+                                                                             measured_label_to_idx=measured_label_to_idx)
     #
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)

@@ -370,10 +370,15 @@ class LPCMCI():
                 Y = (independency[1], 0)
                 (var_X, lag_X) = X
                 (var_Y, lag_Y) = Y
-                if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] == "o":
-                    self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
-                else:
-                    ValueError("orient_with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0])
+                lag_X = -lag_X # todo check if needed
+                lag_Y = -lag_Y # todo
+                if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] != "":
+                    if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["o"]:
+                        self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
+                    elif self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["<"]:
+                        pass
+                    else:
+                        ValueError("orient_with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0])
 
     # chr: alpha
     def _run_ancestral_removal_phase(self, external_independencies, prelim=False):

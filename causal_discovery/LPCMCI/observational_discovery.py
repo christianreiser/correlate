@@ -4,12 +4,8 @@ from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
 
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
-from config import verbosity_thesis, causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
+from config import causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
     remove_link_threshold, verbosity
-
-"""
-plain causal discovery
-"""
 
 
 # function that saves val_min, graph, and var_names to a file
@@ -30,11 +26,13 @@ def if_intervened_replace_with_nan(ts, was_intervened):
 
 def external_independencies_var_names_to_int(external_independencies, measured_label_to_idx):
     if external_independencies is not None and len(external_independencies) > 0:
-        for independency_idx in external_independencies:
-            external_independencies[independency_idx][0] = measured_label_to_idx(
-                external_independencies[independency_idx][0])
-            external_independencies[independency_idx][1] = measured_label_to_idx(
-                external_independencies[independency_idx][1])
+        for independency_idx in range(len(external_independencies)):
+            lst = list(external_independencies[independency_idx])
+            lst[0] = measured_label_to_idx[
+                external_independencies[independency_idx][0]]
+            lst[1] = measured_label_to_idx[
+                external_independencies[independency_idx][1]]
+            external_independencies[independency_idx] = tuple(lst)
     return external_independencies
 
 
@@ -71,6 +69,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 
         print('observational_causal_discovery ...')
 
+
         # handle interventions: in df set value to NaN if it was intervened
         # during CI tests nans are then excluded
         df = if_intervened_replace_with_nan(df, was_intervened)
@@ -83,7 +82,8 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         dataframe = pp.DataFrame(df.values, datatime=np.arange(len(df)),
                                  var_names=var_names)
 
-        external_independencies = external_independencies_var_names_to_int(external_independencies, measured_label_to_idx)
+        external_independencies = external_independencies_var_names_to_int(external_independencies,
+                                                                           measured_label_to_idx)
 
         if LPCMCI_or_PCMCI:
             lpcmci = LPCMCI(
@@ -93,7 +93,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                     recycle_residuals=True))
 
             lpcmci.run_lpcmci(
-                external_independencies = external_independencies,
+                external_independencies=external_independencies,
                 tau_max=tau_max,
                 pc_alpha=pc_alpha,
                 max_p_non_ancestral=3,
@@ -136,10 +136,28 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         save_results(val_min, graph, var_names, 'simulated')
         return val_min, graph
 
+# load ts dataframe from file
+import os
+from config import random_state, n_vars_all, frac_latents
+import math
+import pandas as pd
 
-# # load ts dataframe from file
-# import os
-#
+
+def get_measured_labels():
+    measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
+                                                  size=math.ceil(
+                                                      (1. - frac_latents) *
+                                                      n_vars_all),
+                                                  replace=False)).tolist()
+    # measured_labels to strings
+    measured_labels = [str(x) for x in measured_labels]
+
+    """ key value map of label to index """
+    measured_label_to_idx = {label: idx for idx, label in enumerate(measured_labels)}
+
+    return measured_labels, measured_label_to_idx
+
+
 # filename = os.path.abspath("./tmp_test.dat")
 # ts = pd.read_csv(filename, index_col=0)
 #
@@ -149,11 +167,13 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 # ## load was_intervened dataframe from file
 # filename = os.path.abspath("./tmp_was_intervened.dat")
 # was_intervened = pd.read_csv(filename, index_col=0)
+# measured_labels, measured_label_to_idx = get_measured_labels()
+# external_independencies = [('2', '0', 0), ('2', '1', 0), ('2', '6', 0)]
 #
 # pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
-#     pag_edgemarks=None,
-#     pag_effect_sizes=None,
+#     external_independencies=external_independencies,
 #     df=ts,
-#     was_intervened=was_intervened)
+#     was_intervened=was_intervened.copy(),
+#     measured_label_to_idx=measured_label_to_idx)
 #
 # print()

@@ -6,7 +6,9 @@ import sympy as sp
 from tqdm import tqdm
 
 from config import target_label, private_folder_path, verbosity_thesis
-
+target_label = '0'
+verbosity_thesis = False
+private_folder_path = '../../private/'
 """
 This file contains the functions to compute the target equations from the PAG.
 The steps are:

@@ -97,7 +97,7 @@ def get_independencies_from_interv_data(df, was_intervened):
                                 # save independency information
                                 independencies_from_interv_data.append((cause, effect, tau))
                                 if verbosity_thesis > 0:
-                                    print("\nindependency in interventional data: intervened var ", cause,
+                                    print("independency in interventional data: intervened var ", cause,
                                           " is independent of var", effect, "with lag=", tau, ", p-value=",
                                           probability_independent)
     return independencies_from_interv_data
