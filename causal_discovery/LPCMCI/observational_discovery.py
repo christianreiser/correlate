@@ -1,7 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
 from tigramite import data_processing as pp
-from tigramite import plotting as tp
 from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
 
@@ -60,6 +58,9 @@ def observational_causal_discovery(df, was_intervened, external_independencies):
         # df = non_contemporary_time_series_generation(df)  # todo, how to automate on and off
         # df = df.drop(['Date'], axis=1)  # drop date col
         """
+
+        print('observational_causal_discovery ...')
+
         # handle interventions: in df set value to NaN if it was intervened
         # during CI tests nans are then excluded
         df = if_intervened_replace_with_nan(df, was_intervened)

@@ -170,6 +170,7 @@ def data_generator(scm,
     # todo implement interventions
     """
 
+    print('data_generator ...')
     random_state = np.random.RandomState(random_seed)
 
     class NoiseModel:
@@ -390,8 +391,8 @@ def main():
     was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
 
     pag_effect_sizes, pag_edgemarks = observational_causal_discovery(external_independencies=None,
-                                                                     df=ts_measured_actual,
-                                                                     was_intervened=was_intervened)
+                                                                     df=ts_measured_actual.copy(),
+                                                                     was_intervened=was_intervened.copy())
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
@@ -447,10 +448,10 @@ def main():
         # causal discovery: reduce pag_edgemarks and compute pag_effect_sizes
         #
 
-        independencies_from_interv_data = get_independencies_from_interv_data(ts_measured_actual, was_intervened)
+        independencies_from_interv_data = get_independencies_from_interv_data(ts_measured_actual.copy(), was_intervened)
 
-        pag_effect_sizes, pag_edgemarks = observational_causal_discovery(df=ts_measured_actual,
-                                                                         was_intervened=was_intervened,
+        pag_effect_sizes, pag_edgemarks = observational_causal_discovery(df=ts_measured_actual.copy(),
+                                                                         was_intervened=was_intervened.copy(),
                                                                          external_independencies=independencies_from_interv_data)
     #
     # regret_sum = sum(regret_list)

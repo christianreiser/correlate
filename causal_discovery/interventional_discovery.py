@@ -60,6 +60,7 @@ def get_independencies_from_interv_data(df, was_intervened):
     output: (causeing intervened var, intependent var, tau)
     """
 
+    print('get_independencies_from_interv_data ...')
     # get interventional data per variable
     interventional_dict = get_interventional_data_per_var(df, was_intervened)
 

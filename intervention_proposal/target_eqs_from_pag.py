@@ -420,7 +420,7 @@ def compute_target_equations(val_min, graph, var_names):
     output: target_equations_per_graph_dict
     """
     if verbosity_thesis > 0:
-        print('compute target equations')
+        print('compute target equations ...')
 
     # plot graph
     plot_graph(val_min, graph, var_names, 'current graph estimate')
@@ -438,7 +438,7 @@ def compute_target_equations(val_min, graph, var_names):
     target_ans_per_graph_dict = {}
 
     # for all graph combinations
-    for graph_idx in tqdm(range(len(graph_combinations))):
+    for graph_idx in tqdm(range(len(graph_combinations))): # todo parallelize
         graph_unambiguous = graph_combinations[graph_idx]
 
         # ini symbolic vars dict
