@@ -2,13 +2,6 @@ from itertools import product, combinations
 
 import numpy as np
 
-
-
-
-
-
-
-
 class LPCMCI():
     r"""
     This class implements the LPCMCI algorithm for constraint-based causal discovery on stationary times series with
@@ -138,7 +131,7 @@ class LPCMCI():
         #######################################################################################################################
         #######################################################################################################################
         # Step 0: Initializations
-        self._initialize(tau_max, pc_alpha, n_preliminary_iterations, max_cond_px, max_p_global, max_p_non_ancestral,
+        self._initialize(external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px, max_p_global, max_p_non_ancestral,
                          max_q_global, max_pds_set, prelim_with_collider_rules, parents_of_lagged, prelim_only,
                          break_once_separated, no_non_ancestral_phase, use_a_pds_t_for_majority, orient_contemp,
                          update_middle_marks, prelim_rules, fix_all_edges_before_final_orientation, auto_first,
@@ -158,7 +151,7 @@ class LPCMCI():
             # In the preliminary phases, auto-lag links are tested with first priority. Among the auto-lag links,
             # different lags are not distinguished. All other links have lower priority, among which those which shorter
             # lags have higher priority
-            self._run_ancestral_removal_phase(external_independencies=external_independencies,prelim=True)
+            self._run_ancestral_removal_phase(prelim=True)
 
             # Verbose output
             if self.verbosity >= 1:
@@ -181,7 +174,7 @@ class LPCMCI():
                                            self._get_link((i, lag_i), (j, 0)) != ""}
                 def_ancs = smaller_def_ancs
 
-            self._initialize_run_memory()
+            self._initialize_run_memory(external_independencies=external_independencies)
             self._apply_new_ancestral_information(None, def_ancs)
 
         #######################################################################################################################
@@ -196,7 +189,7 @@ class LPCMCI():
                 print("Starting final ancestral phase")
 
             # In the standard ancestral phase, links are prioritized in the same as in the preliminary phases
-            self._run_ancestral_removal_phase(external_independencies=external_independencies)
+            self._run_ancestral_removal_phase()
 
             # Verbose output
             if self.verbosity >= 1:
@@ -217,7 +210,7 @@ class LPCMCI():
                 print("Starting non-ancestral phase")
 
             # In the non-ancestral phase, large lags are prioritized
-            self._run_non_ancestral_removal_phase(external_independencies=external_independencies)
+            self._run_non_ancestral_removal_phase()
 
             # Verbose output
             if self.verbosity >= 1:
@@ -254,7 +247,7 @@ class LPCMCI():
         # Return the estimated graph
         return self.graph
 
-    def _initialize(self, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px, max_p_global, max_p_non_ancestral,
+    def _initialize(self, external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px, max_p_global, max_p_non_ancestral,
                     max_q_global, max_pds_set, prelim_with_collider_rules, parents_of_lagged, prelim_only,
                     break_once_separated, no_non_ancestral_phase, use_a_pds_t_for_majority, orient_contemp,
                     update_middle_marks, prelim_rules, fix_all_edges_before_final_orientation, auto_first,
@@ -300,12 +293,34 @@ class LPCMCI():
                            ["ER-09"], ["ER-10"], ["ER-00-b"], ["ER-00-a"]]
 
         # Initialize various memory variables for storing the current graph, sepsets etc.
-        self._initialize_run_memory()
+        self._initialize_run_memory(external_independencies=external_independencies)
 
         # Return
         return True
 
-    def _initialize_run_memory(self):
+
+    def orient_with_interv_data(self, intervewntional_independencies):
+        """
+        chrei: todo check if it works
+        for all items in list, remove ancestry of corresponding links
+        """
+        if intervewntional_independencies is not None and len(intervewntional_independencies) > 0:
+            for independency in intervewntional_independencies:
+                X = (independency[0], independency[2])
+                Y = (independency[1], 0)
+                (var_X, lag_X) = X
+                (var_Y, lag_Y) = Y
+                lag_X = -lag_X # todo check if needed
+                lag_Y = -lag_Y # todo
+                if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["o"]:
+                    self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
+                # elif self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["<"]:
+                #     pass
+                else:
+                    ValueError("orient with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0])
+
+
+    def _initialize_run_memory(self, external_independencies):
         """Function for initializing various memory variables for storing the current graph, sepsets etc."""
 
         # Initialize the nested dictionary for storing the current graph.
@@ -321,6 +336,10 @@ class LPCMCI():
             else:
                 self.graph_dict[j].update(
                     {(i, -tau): "o?>" for i in range(self.N) for tau in range(1, self.tau_max + 1)})
+
+        # chrei: todo check
+        self.orient_with_interv_data(external_independencies)
+        # todo check if it works
 
         # Initialize the nested dictionary for storing separating sets
         # Syntax: self.sepsets[j][(i, -tau)] stores separating sets of X^i_{t-tau} to X^j_t. For tau = 0, i < j.
@@ -359,29 +378,8 @@ class LPCMCI():
         # Return
         return True
 
-    def orient_with_interv_data(self, external_independencies):
-        """
-        chrei: todo check if it works
-        for all items in list, remove ancestry of corresponding links
-        """
-        if external_independencies is not None and len(external_independencies) > 0:
-            for independency in external_independencies:
-                X = (independency[0], independency[2])
-                Y = (independency[1], 0)
-                (var_X, lag_X) = X
-                (var_Y, lag_Y) = Y
-                lag_X = -lag_X # todo check if needed
-                lag_Y = -lag_Y # todo
-                if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] != "":
-                    if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["o"]:
-                        self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
-                    elif self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["<"]:
-                        pass
-                    else:
-                        ValueError("orient_with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0])
-
     # chr: alpha
-    def _run_ancestral_removal_phase(self, external_independencies, prelim=False):
+    def _run_ancestral_removal_phase(self, prelim=False):
         """Run an ancestral edge removal phase, this is Algorithm S2"""
 
         # Iterate until convergence
@@ -459,11 +457,7 @@ class LPCMCI():
                         continue
 
                     # Get the current link
-                    link = self._get_link(X, Y) # dict lookup e.g. from (0,1,1) to 'oL>'
-
-                    # chrei: orient link in self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] if interventional data shows independence
-                    self.orient_with_interv_data(external_independencies)
-                    # todo check if it works
+                    link = self._get_link(X, Y)  # dict lookup e.g. from (0,1,1) to 'oL>'
 
                     # Moreover exclude the current link if ...
                     # ... X and Y are not adjacent anymore
@@ -501,7 +495,7 @@ class LPCMCI():
                         if len(S_search_YX) < p_pc:
                             # Note that X is smaller than Y. If S_search_YX exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(Y). Therefore, the middle mark on the edge between X and Y can be updated with 'R'
                             if (X, Y) not in self._cannot_mark:
-                                self._apply_middle_mark(X, Y, "R", external_independencies)
+                                self._apply_middle_mark(X, Y, "R")
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.
                             has_converged = False
@@ -510,7 +504,7 @@ class LPCMCI():
                         if len(S_search_XY) < p_pc:
                             # Note that X is smaller than Y. If S_search_XY exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(X). Therefore, the middle mark on the edge between X and Y can be updated with 'L'
                             if (X, Y) not in self._cannot_mark:
-                                self._apply_middle_mark(X, Y, "L",external_independencies)
+                                self._apply_middle_mark(X, Y, "L")
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.
                             has_converged = False
@@ -556,7 +550,7 @@ class LPCMCI():
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))
 
-                            #chr: pvalalpha
+                            # chr: pvalalpha
                             # Check whether test result was significant
                             if pval > self.pc_alpha:
 
@@ -717,7 +711,7 @@ class LPCMCI():
         return True
 
     # chr: alpha
-    def _run_non_ancestral_removal_phase(self, external_independencies):
+    def _run_non_ancestral_removal_phase(self):
         """Run the non-ancestral edge removal phase, this is Algorithm S3"""
 
         # Update of middle marks
@@ -796,10 +790,6 @@ class LPCMCI():
 
                     # Get the current link
                     link = self._get_link(X, Y)
-                    
-                    # chrei: orient link in self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] if interventional data shows independence
-                    # todo check if this is correct
-                    self.orient_with_interv_data(external_independencies)
 
                     # Exclude the current link if ...
                     if link == "":
@@ -1931,15 +1921,11 @@ class LPCMCI():
                 return out.union({(var, lag + A[1]) for ((var, lag), link) in self.graph_dict[A[0]].items() if
                                   len(link) > 0 and link[0] == "-" and lag + A[1] >= -self.tau_max})
 
-    def _apply_middle_mark(self, X, Y, char, external_independencies):
+    def _apply_middle_mark(self, X, Y, char):
         """Update the middle mark on the link between X and Y with the character char"""
 
         # Get the old link
         old_link = self._get_link(X, Y)
-
-        # chrei: orient link in self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] if interventional data shows independence
-        # todo check if this is correct
-        self.orient_with_interv_data(external_independencies)
 
         # Determine the new link
         if old_link[1] == "?":
