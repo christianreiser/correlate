@@ -413,6 +413,55 @@ def chr_test(target_ans_per_graph_dict):
         ValueError('target_ans_per_graph_dict is not the same')
 
 
+def fill_target_ans_per_graph_dict(graph_combinations, var_names, val_min, target_ans_per_graph_dict, graph_idx):
+    graph_unambiguous = graph_combinations[graph_idx]
+
+    # ini symbolic vars dict
+    symbolic_vars_dict, symbolic_u_vars_dict, plain_var_names = generate_symbolic_vars_dicts(var_names)
+
+    # ini eq_dict
+    eq_list = []
+
+    # find causes of all variables
+    for var_name in var_names:
+        # fill causes of target var
+        symbolic_vars_dict = fill_causes_of_one_affected_var(affected_var_label=var_name,
+                                                             graph=graph_unambiguous,
+                                                             val_min=val_min,
+                                                             var_names=var_names,
+                                                             symbolic_vars_dict=symbolic_vars_dict,
+                                                             symbolic_u_vars_dict=symbolic_u_vars_dict,
+                                                             plain_var_names=plain_var_names)
+
+        # eq list: eq(long_equation, short_var_name)
+        eq_list.append(sp.Eq(symbolic_vars_dict[var_name], plain_var_names[var_name]))
+
+    # var list: [var_name1, var_name2, ..., noise_var_name1, noise_var_name2, ...]
+    var_list = []
+    # var names
+    for var_name in plain_var_names:
+        var_list.append(plain_var_names[var_name])
+    # noise names
+    for var_name in symbolic_u_vars_dict:
+        var_list.append(symbolic_u_vars_dict[var_name])
+
+    # solve(equations, symbols)
+    ans = sp.solve(eq_list, var_list)  # [target_label]
+
+    # store target result
+    # find target key
+    for i in range(len(list(ans.items()))):
+        if str(list(ans.items())[i][0]) == target_label:
+            target_ans_per_graph_dict[graph_idx] = list(ans.items())[i][1]
+    # test if target key was found by calling where it sould be stored
+    try:
+        test = target_ans_per_graph_dict[graph_idx]
+    except KeyError:
+        ValueError('first item is not target_label')
+        print('valueerror: first item is not target_label')
+    return target_ans_per_graph_dict
+
+
 def compute_target_equations(val_min, graph, var_names):
     """
     compute target equations of all graph combinations
@@ -439,51 +488,7 @@ def compute_target_equations(val_min, graph, var_names):
 
     # for all graph combinations
     for graph_idx in tqdm(range(len(graph_combinations))): # todo parallelize
-        graph_unambiguous = graph_combinations[graph_idx]
-
-        # ini symbolic vars dict
-        symbolic_vars_dict, symbolic_u_vars_dict, plain_var_names = generate_symbolic_vars_dicts(var_names)
-
-        # ini eq_dict
-        eq_list = []
-
-        # find causes of all variables
-        for var_name in var_names:
-            # fill causes of target var
-            symbolic_vars_dict = fill_causes_of_one_affected_var(affected_var_label=var_name,
-                                                                 graph=graph_unambiguous,
-                                                                 val_min=val_min,
-                                                                 var_names=var_names,
-                                                                 symbolic_vars_dict=symbolic_vars_dict,
-                                                                 symbolic_u_vars_dict=symbolic_u_vars_dict,
-                                                                 plain_var_names=plain_var_names)
-
-            # eq list: eq(long_equation, short_var_name)
-            eq_list.append(sp.Eq(symbolic_vars_dict[var_name], plain_var_names[var_name]))
-
-        # var list: [var_name1, var_name2, ..., noise_var_name1, noise_var_name2, ...]
-        var_list = []
-        # var names
-        for var_name in plain_var_names:
-            var_list.append(plain_var_names[var_name])
-        # noise names
-        for var_name in symbolic_u_vars_dict:
-            var_list.append(symbolic_u_vars_dict[var_name])
-
-        # solve(equations, symbols)
-        ans = sp.solve(eq_list, var_list)  # [target_label]
-
-        # store target result
-        # find target key
-        for i in range(len(list(ans.items()))):
-            if str(list(ans.items())[i][0]) == target_label:
-                target_ans_per_graph_dict[graph_idx] = list(ans.items())[i][1]
-        # test if target key was found by calling where it sould be stored
-        try:
-            test = target_ans_per_graph_dict[graph_idx]
-        except KeyError:
-            ValueError('first item is not target_label')
-            print('valueerror: first item is not target_label')
+        target_ans_per_graph_dict = fill_target_ans_per_graph_dict(graph_combinations, var_names, val_min, target_ans_per_graph_dict, graph_idx)
 
     # conduct test
     # chr_test(target_ans_per_graph_dict)

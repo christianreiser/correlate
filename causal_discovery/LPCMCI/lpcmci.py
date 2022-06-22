@@ -359,15 +359,15 @@ class LPCMCI():
         # Return
         return True
 
-    def orient_with_interv_data(self, inv_orientation_list):
+    def orient_with_interv_data(self, external_independencies):
         """
         chrei: todo check if it works
         for all items in list, remove ancestry of corresponding links
         """
-        if inv_orientation_list is not None and len(inv_orientation_list) > 0:
-            for orientation in inv_orientation_list:
-                X = (orientation[0], orientation[2])
-                Y = (orientation[1], 0)
+        if external_independencies is not None and len(external_independencies) > 0:
+            for independency in external_independencies:
+                X = (independency[0], independency[2])
+                Y = (independency[1], 0)
                 (var_X, lag_X) = X
                 (var_Y, lag_Y) = Y
                 if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] == "o":

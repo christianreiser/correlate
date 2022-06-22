@@ -46,6 +46,7 @@ main challenges to get algo running:
                 (mby replace 'link_list = ' occurrences)            
 
 further TODOs
+0. 1        get negative link colors in lpcmci
 1. 2        compute optimal intervention from SCM (for ground truth)6. july
 2. 2        calculate regret 11. july
 3. 5        set up simulation study 19. july
@@ -57,6 +58,11 @@ further TODOs
 
 -> 75 coding days + 60 writing days = 135 days = 22 weeks = 5.5 months (guess delay factor: 2.8x coding, 1.5x writing) 
     => 7 with phinc => end of end of year
+    
+opportunities for computational speedup:
+- parallelize
+- recycle residuals from lpcmci
+- don't run lpcmci when there is no intervention comming
 """
 
 
@@ -330,7 +336,11 @@ def get_measured_labels():
                                                   replace=False)).tolist()
     # measured_labels to strings
     measured_labels = [str(x) for x in measured_labels]
-    return measured_labels
+
+    """ key value map of label to index """
+    measured_label_to_idx = {label: idx for idx, label in enumerate(measured_labels)}
+
+    return measured_labels, measured_label_to_idx
 
 
 def store_intervention(was_intervened, intervention_variable):
@@ -371,7 +381,7 @@ def main():
         nth=nth)  # 500 obs + 500 with every 4th intervention
     n_samples = 1  # len(is_intervention_list)
 
-    measured_labels = get_measured_labels()
+    measured_labels, measured_label_to_idx = get_measured_labels()
 
     """ observe first 500 samples"""
     # generate observational data
@@ -392,7 +402,8 @@ def main():
 
     pag_effect_sizes, pag_edgemarks = observational_causal_discovery(external_independencies=None,
                                                                      df=ts_measured_actual.copy(),
-                                                                     was_intervened=was_intervened.copy())
+                                                                     was_intervened=was_intervened.copy(),
+                                                                     measured_label_to_idx=measured_label_to_idx)
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
@@ -452,7 +463,8 @@ def main():
 
         pag_effect_sizes, pag_edgemarks = observational_causal_discovery(df=ts_measured_actual.copy(),
                                                                          was_intervened=was_intervened.copy(),
-                                                                         external_independencies=independencies_from_interv_data)
+                                                                         external_independencies=independencies_from_interv_data,
+                                                                         measured_label_to_idx=measured_label_to_idx)
     #
     # regret_sum = sum(regret_list)
     # print('regret_sum:', regret_sum)

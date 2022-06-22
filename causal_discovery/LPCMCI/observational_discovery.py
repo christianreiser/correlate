@@ -28,7 +28,17 @@ def if_intervened_replace_with_nan(ts, was_intervened):
     return ts
 
 
-def observational_causal_discovery(df, was_intervened, external_independencies):
+def external_independencies_var_names_to_int(external_independencies, measured_label_to_idx):
+    if external_independencies is not None and len(external_independencies) > 0:
+        for independency_idx in external_independencies:
+            external_independencies[independency_idx][0] = measured_label_to_idx(
+                external_independencies[independency_idx][0])
+            external_independencies[independency_idx][1] = measured_label_to_idx(
+                external_independencies[independency_idx][1])
+    return external_independencies
+
+
+def observational_causal_discovery(df, was_intervened, external_independencies, measured_label_to_idx):
     """
     1. get observational ts
     2. ini graph with previous pag_edgemarks and pag_effect_sizes
@@ -72,6 +82,8 @@ def observational_causal_discovery(df, was_intervened, external_independencies):
         var_names = df.columns
         dataframe = pp.DataFrame(df.values, datatime=np.arange(len(df)),
                                  var_names=var_names)
+
+        external_independencies = external_independencies_var_names_to_int(external_independencies, measured_label_to_idx)
 
         if LPCMCI_or_PCMCI:
             lpcmci = LPCMCI(
