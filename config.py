@@ -52,6 +52,7 @@ tau_max = 1
 # alpha_level = 0.26
 # corr_threshold = 0.02
 pc_alpha = 0.5 # todo 0.95 or so
+interv_alpha = 0.9 # todo pc_alpha or so
 remove_link_threshold = 0.2
 
 # scm_config

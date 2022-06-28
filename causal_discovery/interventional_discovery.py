@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
-from config import verbosity_thesis, tau_max, pc_alpha
+from config import verbosity_thesis, tau_max, interv_alpha
 
 
 def interventional_pass_filter(ts, was_intervened):
@@ -64,21 +64,37 @@ def get_independencies_from_interv_data(df, was_intervened):
     # get interventional data per variable
     interventional_dict = get_interventional_data_per_var(df, was_intervened)
 
+    # ini dependencies list
     independencies_from_interv_data = []
+
+    # iterate over causes/interventions
     for cause in interventional_dict:
+
+        # stop if less than 3 samples, as corr coeff is not defined
         if len(interventional_dict[cause]) > 2:
+
+            # get data where on one specific var was intervened on
             df_with_intervention_on_one_cause = interventional_dict[cause]
+
+            # get values of cause var
             cause_values = df_with_intervention_on_one_cause[cause]
+
+            # iterate over all other (potentially effect) variables
             for effect in df_with_intervention_on_one_cause:
+
+                # get values of effect var
                 effect_values = df_with_intervention_on_one_cause[effect]
-                # make cause and effect series into df as columns
+
+                # cause and effect series as columns in df
                 cause_and_effect = pd.DataFrame(dict(cause=cause_values, effect=effect_values))
 
+                # ini tau shifted var
                 cause_and_effect_tau_shifted = cause_and_effect.copy()
+                # iterate over all taus
                 for tau in range(tau_max + 1):
-                    # if tau ==1:
-                    #     continue
-                    if (cause != effect) or (tau != 0):  # ignore contemporaneous auto-dependencies
+
+                    # ignore contemporaneous auto-dependencies
+                    if (cause != effect) or (tau != 0):
 
                         # data needs to be at least 3 (due to corr) + tau (shift drop nan) long
                         if len(cause_and_effect) > 2 + tau:
@@ -89,11 +105,11 @@ def get_independencies_from_interv_data(df, was_intervened):
                                 cause_and_effect_tau_shifted = cause_and_effect_tau_shifted.dropna()
 
                             # statistical test
-                            r, probability_independent = pearsonr(df_with_intervention_on_one_cause[cause],
-                                                                  df_with_intervention_on_one_cause[effect])
+                            r, probability_independent = pearsonr(cause_and_effect_tau_shifted['cause'],
+                                                                  cause_and_effect_tau_shifted['effect'])
+                            # if significantly independent:
+                            if probability_independent > interv_alpha:
 
-                            # if independency probability is above pc_alpha:
-                            if probability_independent > pc_alpha:
                                 # save independency information
                                 independencies_from_interv_data.append((cause, effect, tau))
                                 if verbosity_thesis > 0:

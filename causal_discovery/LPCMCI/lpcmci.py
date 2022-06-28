@@ -2822,12 +2822,24 @@ class LPCMCI():
         return out
 
     def _update_val_min(self, X, Y, val):
+        """chrei: modified to allow negative link values"""
         """Some conditional independence test for X and Y has given the test statistic value val. Update the val_min dictionary accordingly"""
 
         if X[1] < 0 or X[0] < Y[0]:
-            self.val_min[Y[0]][X] = min(self.val_min[Y[0]][X], np.abs(val))
+            old_abs_min = np.abs(self.val_min[Y[0]][X])
+            new_abs_min = np.abs(val)
+            if new_abs_min < old_abs_min:
+                self.val_min[Y[0]][X] = val
+            else:
+                self.val_min[Y[0]][X] =self.val_min[Y[0]][X]
         else:
-            self.val_min[X[0]][Y] = min(self.val_min[X[0]][Y], np.abs(val))
+            old_abs_min = np.abs(self.val_min[X[0]][Y])
+            new_abs_min = np.abs(val)
+            if new_abs_min < old_abs_min:
+                self.val_min[X[0]][Y] = val
+            else:
+                self.val_min[X[0]][Y] = self.val_min[X[0]][Y]
+            # self.val_min[X[0]][Y] = min(self.val_min[X[0]][Y], np.abs(val))
 
     def _update_cardinality(self, X, Y, cardinality):
         """Some conditional independence test for X and Y has given the p-value val. Update the pval_max dictionary accordingly"""

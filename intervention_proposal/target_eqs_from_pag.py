@@ -6,6 +6,7 @@ import numpy as np
 import sympy as sp
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
+from tqdm import tqdm
 
 from config import target_label, private_folder_path, verbosity_thesis
 
@@ -449,10 +450,6 @@ def fill_target_ans_per_graph_dict(input_multiprocessing):
 
     # plot_graph(val_min, graph_unambiguous, var_names, 'unambiguous graph no' +str(graph_combination_idx))
 
-
-
-    print('graph_combination_idx:', graph_combination_idx)
-
     # ini symbolic vars dict
     symbolic_vars_dict, symbolic_u_vars_dict, plain_var_names = generate_symbolic_vars_dicts(var_names)
 
@@ -530,7 +527,7 @@ def compute_target_equations(val_min, graph, var_names):
 
     # multiprocessing
     with Pool() as pool:
-        target_ans_per_graph_list = pool.map(fill_target_ans_per_graph_dict, input_multiprocessing)
+        target_ans_per_graph_list = list(tqdm(pool.imap(fill_target_ans_per_graph_dict, input_multiprocessing)))
     # target_ans_per_graph_list = []
     # for input_multiprocessing_i in input_multiprocessing:
     #     target_ans_per_graph_list.append(fill_target_ans_per_graph_dict(input_multiprocessing_i))

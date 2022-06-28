@@ -20,12 +20,7 @@ from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target
     make_redundant_information_with_symmetry, load_results
 
 """
-next todo:
-0. if no ambiguity then link matrix is not redundant for plotting. see current exception breakpoint: 
-(<class 'ValueError'>, ValueError("link_matrix needs to have consistent lag-zero patterns (eg link_matrix[i,j,0]='-->' requires link_matrix[j,i,0]='<--')"), <traceback object at 0x7f98d059cac0>)
-1. check if finding optimistic intervention is correct: suspicious due to: always graph idx 0, sometimes random intervention vars?
-2. further todos
-3. 
+
 
 
 """
@@ -43,7 +38,7 @@ main challenges to get algo running:
                 (mby replace 'link_list = ' occurrences)            
 
 further TODOs
-0. 1        get negative link colors in lpcmci
+0. 1->0.3   get negative link colors in lpcmci -> 28.june
 1. 2        compute optimal intervention from SCM (for ground truth)6. july
 2. 2        calculate regret 11. july
 3. 5        set up simulation study 19. july
@@ -173,7 +168,6 @@ def data_generator(scm,
     generate new sample
     intervention=None for observational time series
     output: time series data (might be non-stationary)
-    # todo implement interventions
     """
 
     print('data_generator ...')
@@ -231,9 +225,6 @@ def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
     intervention_idx = var_name[2:]  # 'u_0' -> '0'
     intervention_var_measured_values = ts_measured_actual[intervention_idx]
 
-
-
-
     # get 90th percentile of intervention_var_measured_values
     if intervention_coeff > 0:
         intervention_value = np.percentile(intervention_var_measured_values, np.random.uniform(75, 95, size=1)) # todo is a bit exploration vs exploitation
@@ -275,7 +266,7 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_l
     largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
         target_eqs_intervenable)
 
-    """ check if intervention is possible """
+    # if intervention was found
     if best_intervention_var_name is not None:
 
         # most optimistic graph
@@ -286,6 +277,7 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_l
             plot_graph(graph_effect_sizes, most_optimistic_graph, measured_labels, 'most optimistic')
 
         intervention_value = get_intervention_value(best_intervention_var_name, intervention_coeff, ts_measured_actual)
+    # if intervention was not found
     else:
         intervention_value = None
     return best_intervention_var_name, intervention_value
