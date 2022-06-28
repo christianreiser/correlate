@@ -301,7 +301,7 @@ class LPCMCI():
 
     def orient_with_interv_data(self, intervewntional_independencies):
         """
-        chrei: todo check if it works
+        chrei:
         for all items in list, remove ancestry of corresponding links
         """
         if intervewntional_independencies is not None and len(intervewntional_independencies) > 0:
@@ -310,8 +310,8 @@ class LPCMCI():
                 Y = (independency[1], 0)
                 (var_X, lag_X) = X
                 (var_Y, lag_Y) = Y
-                lag_X = -lag_X # todo check if needed
-                lag_Y = -lag_Y # todo
+                lag_X = -lag_X
+                lag_Y = -lag_Y
                 if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["o"]:
                     self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
                 # elif self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["<"]:
@@ -337,9 +337,8 @@ class LPCMCI():
                 self.graph_dict[j].update(
                     {(i, -tau): "o?>" for i in range(self.N) for tau in range(1, self.tau_max + 1)})
 
-        # chrei: todo check
+        # chrei:
         self.orient_with_interv_data(external_independencies)
-        # todo check if it works
 
         # Initialize the nested dictionary for storing separating sets
         # Syntax: self.sepsets[j][(i, -tau)] stores separating sets of X^i_{t-tau} to X^j_t. For tau = 0, i < j.

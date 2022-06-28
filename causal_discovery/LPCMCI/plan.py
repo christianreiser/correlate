@@ -21,14 +21,11 @@ from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target
 
 """
 next todo:
-background: interventional discovery should be analogous to lpcmci, but lpcmci uses interventional as input. 
--> first how lpcmci works and check if it's in and output formats are the same. 
-because then i could use the same output for interventional discovery and use it as input for lpcmci
-
-- understand how lpcmci works between link_list, get links, CI test, edge removal/orientation because it's needed for interventional discovery
-- build interventional discovery analogous to lpcmci steps above
-- should the interface between lpcmci and interventional discovery be links_list or graph (e.g. 'oL>')?
-- do i have to add into the dict to say that sth belongs to G ('-' edgemark) or that result is not adjacent ("")
+0. if no ambiguity then link matrix is not redundant for plotting. see current exception breakpoint: 
+(<class 'ValueError'>, ValueError("link_matrix needs to have consistent lag-zero patterns (eg link_matrix[i,j,0]='-->' requires link_matrix[j,i,0]='<--')"), <traceback object at 0x7f98d059cac0>)
+1. check if finding optimistic intervention is correct: suspicious due to: always graph idx 0, sometimes random intervention vars?
+2. further todos
+3. 
 
 
 """
@@ -38,11 +35,11 @@ main challenges to get algo running:
 1. 1 -> 2   intervene in datagenerator                      14->15. june
 2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
 5. 3 -> 1   Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 
-3. 5        Orient edges with interventional data           22 june -> 21. june
+3. 5 -> 2   Orient edges with interventional data           22 june -> 21. june
                 ini complete graph
                     mby similar as 'link_list = ' 
                 for each intervened var do CI tests and remove edges
-4. 3        Initialize lpcmci with above result at all inis 28. june -> 21. june
+4. 3 -> 2   Initialize lpcmci with above result at all inis 28. june -> 21. june
                 (mby replace 'link_list = ' occurrences)            
 
 further TODOs
@@ -51,6 +48,7 @@ further TODOs
 2. 2        calculate regret 11. july
 3. 5        set up simulation study 19. july
 4. 5        interpret results 27. july
+4.5 opt     stochastic intervention? / multiple interventions?
 5. 40       write 5. oct
 
 -> 27 coding days + 40 writing days = 57 days = 11.5 weeks = 3 months (optimistic guess) 
@@ -60,7 +58,7 @@ further TODOs
     => 7 with phinc => end of end of year
     
 opportunities for computational speedup:
-- parallelize
+X parallelize
 - recycle residuals from lpcmci
 x don't run lpcmci when there is no intervention coming
 - orient ambiguities towards target var to reduce number of possible graphs
@@ -277,17 +275,6 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_l
     largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
         target_eqs_intervenable)
 
-
-    # tp.plot_graph(
-    #     val_matrix=graph_effect_sizes,
-    #     link_matrix=make_redundant_information_with_symmetry(graph_combinations[most_optimistic_graph_idx]),
-    #     var_names=measured_labels,
-    #     link_colorbar_label='current estimate with ambiguities',
-    #     # node_colorbar_label='auto-MCI',
-    #     figsize=(10, 6),
-    # )
-    # plt.show()
-
     # most optimistic graph
     most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
 
@@ -411,6 +398,9 @@ def main():
                                                                      df=ts_measured_actual.copy(),
                                                                      was_intervened=was_intervened.copy(),
                                                                      measured_label_to_idx=measured_label_to_idx)
+
+
+
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
@@ -418,9 +408,11 @@ def main():
         is_intervention = is_intervention_list[is_intervention_idx]
         # get interventions of actual PAG and true SCM.
         # output: None if observational or find via optimal control.
+        if is_intervention_idx == 8:
+            print('intervention') # todo remove
         if is_intervention:
             # actual intervention
-            intervention_variable, intervention_value = find_optimistic_intervention(pag_edgemarks, pag_effect_sizes,
+            intervention_variable, intervention_value = find_optimistic_intervention(pag_edgemarks.copy(), pag_effect_sizes.copy(),
                                                                                      measured_labels,
                                                                                      ts_measured_actual)
             # keep track of where the intervention is

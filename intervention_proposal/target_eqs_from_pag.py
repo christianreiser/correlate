@@ -1,11 +1,11 @@
 import itertools
 import pickle
+from multiprocessing import Pool
 
 import numpy as np
 import sympy as sp
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
-from tqdm import tqdm
 
 from config import target_label, private_folder_path, verbosity_thesis
 
@@ -37,7 +37,8 @@ def load_results(name_extension):
     return val_min, graph, var_names
 
 
-def plot_graph(val_min, graph, var_names, label):
+def plot_graph(val_min, pag, var_names, label):
+    graph = pag.copy()
     graph = make_redundant_information_with_symmetry(graph)
     tp.plot_graph(
         val_matrix=val_min,
@@ -63,6 +64,7 @@ def plot_graph(val_min, graph, var_names, label):
 def drop_redundant_information_due_to_symmetry(graph):
     """
     drop redundant link information of a graph due to diagonal symmetry in matrix representation.
+    meaning, dropping values above diagonal
     e.g. A-->B = B<--A
     """
     # iterate through 3ed dimension (tau) of graph
@@ -74,6 +76,7 @@ def drop_redundant_information_due_to_symmetry(graph):
                     graph[i, j, tau] = ''
     return graph
 
+
 def make_redundant_information_with_symmetry(graph):
     """
     make redundant link information of a graph with diagonal symmetry in matrix representation.
@@ -84,8 +87,24 @@ def make_redundant_information_with_symmetry(graph):
         # if arrow is forward pointing insert symmetric backward arrow
         for i in range(graph.shape[0]):
             for j in range(graph.shape[1]):
-                if graph[i, j, tau] == '-->':
-                    graph[j, i, tau] = '<--'
+                if i != j:
+                    if graph[i, j, tau] == '':
+                        pass
+                    elif graph[i, j, tau] == '-->':
+                        graph[j, i, tau] = '<--'
+                    elif graph[i, j, tau] == '<--':
+                        graph[j, i, tau] = '-->'
+                    elif graph[i, j, tau] == 'x-x':
+                        graph[j, i, tau] = 'x-x'
+                    elif graph[i, j, tau] == '<->':
+                        graph[j, i, tau] = '<->'
+                    elif graph[i, j, tau] == 'o->':
+                        graph[j, i, tau] = '<-o'
+                    elif graph[i, j, tau] == '<-o':
+                        graph[j, i, tau] = 'o->'
+
+                    else:  # if arrow is not forward pointing, error
+                        ValueError('Error: graph[i, j, tau] is not an arrow')
     return graph
 
 
@@ -186,7 +205,7 @@ def make_links_point_forward(graph):
             for j in range(graph.shape[1]):
                 if graph[i, j, tau] == '<--':
                     graph_forward[i, j, tau] = ''
-                    if graph[j, i, tau] != '' and i!=j:
+                    if graph[j, i, tau] != '' and i != j:
                         raise ValueError('graph[j, i, tau] != ''')
                     graph_forward[j, i, tau] = '-->'
     return graph_forward
@@ -198,24 +217,29 @@ def create_all_graph_combinations(graph, ambiguous_locations):
     - [i, j, k, original_link, new_links]
     - e.g. [0, 1, 0, ['o-o'], [["-->", " <->", "<--"]]]
     """
-    # create number_of_graph_combinations original graphs
-    number_of_graph_combinations = get_number_of_graph_combinations(ambiguous_locations)
 
-    # initialize graph_combinations
-    graph_combinations = []
-    for combi_idx in range(number_of_graph_combinations):
-        graph_combinations.append(np.copy(graph))
+    # if not ambiguous_locations:
+    if ambiguous_locations is None or len(ambiguous_locations) == 0:
+        return [graph]
+    # if ambiguous_locations:
+    else:
+        # create number_of_graph_combinations original graphs
+        number_of_graph_combinations = get_number_of_graph_combinations(ambiguous_locations)
 
-    corresponding_unambiguous_links_list = get_unambiguous_links(ambiguous_locations)
-    links_permutations = get_links_permutations(corresponding_unambiguous_links_list)
+        # initialize graph_combinations
+        graph_combinations = []
+        for combi_idx in range(number_of_graph_combinations):
+            graph_combinations.append(np.copy(graph))
 
+        corresponding_unambiguous_links_list = get_unambiguous_links(ambiguous_locations)
+        links_permutations = get_links_permutations(corresponding_unambiguous_links_list)
 
-    for graph_idx in (range(number_of_graph_combinations)):
-        write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
+        for graph_idx in (range(number_of_graph_combinations)):
+            write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
 
-    graph_combinations = load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations)
+        graph_combinations = load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations)
 
-    return graph_combinations
+        return graph_combinations
 
 
 def load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations):
@@ -247,8 +271,8 @@ def write_one_graph_combination_to_file(ambiguous_locations, links_permutations,
         # get old link string
         old_link = graph_combinations[graph_idx][i, j, k]
 
-        if i==j and new_link == '<--':
-            print() # todo check that there is no going back in time or instantan cycle
+        if i == j and new_link == '<--':
+            print()  # todo check that there is no going back in time or instantan cycle
 
         # replace graph_combinations[graph_idx][i, j, k] with new_link string
         graph_combinations[graph_idx][i, j, k] = old_link.replace(original_link, new_link)
@@ -330,14 +354,22 @@ def get_direct_influence_coeffs(
 
 
 def get_noise_value(symbolic_vars_dict, affected_var_label):
-
     # get coeffs
     coeffs = []
-    for i in symbolic_vars_dict[
-        affected_var_label].expr_free_symbols:
-        # if datatype of i is float, then add it to coeffs
-        if type(i).is_Float:
-            coeffs.append(i)
+    for coeff_and_symbol in symbolic_vars_dict[affected_var_label].args:
+
+        # if there is only one element in coeff_and_symbol, then it's already the coeff. add it then
+        if type(coeff_and_symbol).is_Float:
+            coeffs.append(coeff_and_symbol)
+
+        # if is_Mul, then it's coeff_and_symbol, and we need to get the coeff
+        elif type(coeff_and_symbol).is_Mul:
+            coeff = coeff_and_symbol.args[0]
+            # if datatype of i is float, then add it to coeffs
+            if type(coeff).is_Float:
+                coeffs.append(coeff)
+            else:
+                raise ValueError("did not get value:" + str(type(coeff)))
 
     # make every coeff absolute
     for i in range(len(coeffs)):
@@ -413,8 +445,10 @@ def chr_test(target_ans_per_graph_dict):
         ValueError('target_ans_per_graph_dict is not the same')
 
 
-def fill_target_ans_per_graph_dict(graph_combinations, var_names, val_min, target_ans_per_graph_dict, graph_idx):
-    graph_unambiguous = graph_combinations[graph_idx]
+def fill_target_ans_per_graph_dict(input_multiprocessing):
+    # unpack input_multiprocessing
+    graph_unambiguous, var_names, val_min, graph_combination_idx = input_multiprocessing
+    print('graph_combination_idx:', graph_combination_idx)
 
     # ini symbolic vars dict
     symbolic_vars_dict, symbolic_u_vars_dict, plain_var_names = generate_symbolic_vars_dicts(var_names)
@@ -452,14 +486,14 @@ def fill_target_ans_per_graph_dict(graph_combinations, var_names, val_min, targe
     # find target key
     for i in range(len(list(ans.items()))):
         if str(list(ans.items())[i][0]) == target_label:
-            target_ans_per_graph_dict[graph_idx] = list(ans.items())[i][1]
+            target_ans_per_graph = list(ans.items())[i][1]
     # test if target key was found by calling where it sould be stored
     try:
-        test = target_ans_per_graph_dict[graph_idx]
+        test = target_ans_per_graph
     except KeyError:
         ValueError('first item is not target_label')
         print('valueerror: first item is not target_label')
-    return target_ans_per_graph_dict
+    return graph_combination_idx, target_ans_per_graph
 
 
 def compute_target_equations(val_min, graph, var_names):
@@ -483,12 +517,29 @@ def compute_target_equations(val_min, graph, var_names):
     # create a list of all unique graph combinations
     graph_combinations = create_all_graph_combinations(graph, ambiguous_locations)
 
-    # ini result dict
-    target_ans_per_graph_dict = {}
+    # fill_target_ans_per_graph_dict
+    print('fill_target_ans_per_graph_dict ...')
+    # create input list
+    input_multiprocessing = []
+    for graph_combination_idx in range(len(graph_combinations)):
+        graph_combination = graph_combinations[graph_combination_idx]
+        input_multiprocessing.append((graph_combination, var_names, val_min, graph_combination_idx))
 
-    # for all graph combinations
-    for graph_idx in tqdm(range(len(graph_combinations))): # todo parallelize
-        target_ans_per_graph_dict = fill_target_ans_per_graph_dict(graph_combinations, var_names, val_min, target_ans_per_graph_dict, graph_idx)
+    # multiprocessing
+    with Pool() as pool:
+        target_ans_per_graph_list = pool.map(fill_target_ans_per_graph_dict, input_multiprocessing)
+
+    # target_ans_per_graph_list = [] # for debugging todo remove
+    # for input_multiprocessing_i in input_multiprocessing:
+    #     target_ans_per_graph_list.append(fill_target_ans_per_graph_dict(input_multiprocessing_i))
+
+
+    # results to dict
+    target_ans_per_graph_dict = {}
+    for i in range(len(target_ans_per_graph_list)):
+        target_ans_per_graph_dict[target_ans_per_graph_list[i][0]] = target_ans_per_graph_list[i][1]
+
+    print('... end fill_target_ans_per_graph_dict.')
 
     # conduct test
     # chr_test(target_ans_per_graph_dict)
@@ -496,7 +547,8 @@ def compute_target_equations(val_min, graph, var_names):
     # save target_ans_per_graph_dict and graph_combinations to file via pickle
     with open('/home/chrei/PycharmProjects/correlate/intervention_proposal/target_eq_simulated.pkl', 'wb') as f:
         pickle.dump(target_ans_per_graph_dict, f)
-    with open('/home/chrei/PycharmProjects/correlate/intervention_proposal/graph_combinations_simulated.pkl', 'wb') as f:
+    with open('/home/chrei/PycharmProjects/correlate/intervention_proposal/graph_combinations_simulated.pkl',
+              'wb') as f:
         pickle.dump(graph_combinations, f)
 
     return target_ans_per_graph_dict, graph_combinations
