@@ -17,7 +17,7 @@ from config import target_label, verbosity_thesis, random_state, n_measured_link
     contemp_fraction, labels_strs
 from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
 from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target_equations, \
-    make_redundant_information_with_symmetry
+    make_redundant_information_with_symmetry, load_results
 
 """
 next todo:
@@ -275,14 +275,19 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, measured_l
     largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
         target_eqs_intervenable)
 
-    # most optimistic graph
-    most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
+    """ check if intervention is possible """
+    if best_intervention_var_name is not None:
 
-    # plot most optimistic graph
-    if verbosity_thesis > 0:
-        plot_graph(graph_effect_sizes, most_optimistic_graph, measured_labels, 'most optimistic')
+        # most optimistic graph
+        most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
 
-    intervention_value = get_intervention_value(best_intervention_var_name, intervention_coeff, ts_measured_actual)
+        # plot most optimistic graph
+        if verbosity_thesis > 0:
+            plot_graph(graph_effect_sizes, most_optimistic_graph, measured_labels, 'most optimistic')
+
+        intervention_value = get_intervention_value(best_intervention_var_name, intervention_coeff, ts_measured_actual)
+    else:
+        intervention_value = None
     return best_intervention_var_name, intervention_value
 
 
@@ -398,9 +403,6 @@ def main():
                                                                      df=ts_measured_actual.copy(),
                                                                      was_intervened=was_intervened.copy(),
                                                                      measured_label_to_idx=measured_label_to_idx)
-
-
-
     # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
     """ loop: causal discovery, planning, intervention """
@@ -408,8 +410,6 @@ def main():
         is_intervention = is_intervention_list[is_intervention_idx]
         # get interventions of actual PAG and true SCM.
         # output: None if observational or find via optimal control.
-        if is_intervention_idx == 8:
-            print('intervention') # todo remove
         if is_intervention:
             # actual intervention
             intervention_variable, intervention_value = find_optimistic_intervention(pag_edgemarks.copy(), pag_effect_sizes.copy(),

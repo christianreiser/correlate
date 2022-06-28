@@ -55,7 +55,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         # non_zero_inices = non_zero_inices[non_zero_inices != 0]
         # # detete all rows with nans in non_zero_inices
         # non_zero_inices = non_zero_inices.dropna().index
-        # TODO: automatic non_zero_inices doesn't work yet below is hardcoded
+        # TODO: automatic non_zero_indices don't work yet below is hardcoded
         # non_zero_inices = ['Mood', 'HumidInMax()', 'NoiseMax()', 'HeartPoints', 'Steps']
 
         # select columns

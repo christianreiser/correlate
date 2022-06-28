@@ -71,15 +71,11 @@ def find_most_optimistic_intervention(target_eqs):
 
                 most_optimistic_graph_idx = equation_idx
 
+
     if verbosity_thesis >0:
         print('largest_abs_coeff: ' + str(largest_abs_coeff))
         print('best_intervention: ' + str(best_intervention_var_name))
         print('most_optimistic_graph_idx: ' + str(most_optimistic_graph_idx))
-
-
-
-
-
     return largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff
 
 # # load target_ans_per_graph_dict from file via pickle

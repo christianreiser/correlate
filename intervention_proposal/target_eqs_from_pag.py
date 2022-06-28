@@ -272,7 +272,7 @@ def write_one_graph_combination_to_file(ambiguous_locations, links_permutations,
         old_link = graph_combinations[graph_idx][i, j, k]
 
         if i == j and new_link == '<--':
-            print()  # todo check that there is no going back in time or instantan cycle
+            ValueError('i == j and new_link == <--')
 
         # replace graph_combinations[graph_idx][i, j, k] with new_link string
         graph_combinations[graph_idx][i, j, k] = old_link.replace(original_link, new_link)
@@ -348,8 +348,6 @@ def get_direct_influence_coeffs(
                 direct_influence_coeffs[cause][time_lag] = False
             else:
                 raise ValueError("unknown link type:" + str(graph_target[cause][time_lag]))
-
-    print()
     return direct_influence_coeffs
 
 
@@ -448,6 +446,11 @@ def chr_test(target_ans_per_graph_dict):
 def fill_target_ans_per_graph_dict(input_multiprocessing):
     # unpack input_multiprocessing
     graph_unambiguous, var_names, val_min, graph_combination_idx = input_multiprocessing
+
+    # plot_graph(val_min, graph_unambiguous, var_names, 'unambiguous graph no' +str(graph_combination_idx))
+
+
+
     print('graph_combination_idx:', graph_combination_idx)
 
     # ini symbolic vars dict
@@ -528,8 +531,7 @@ def compute_target_equations(val_min, graph, var_names):
     # multiprocessing
     with Pool() as pool:
         target_ans_per_graph_list = pool.map(fill_target_ans_per_graph_dict, input_multiprocessing)
-
-    # target_ans_per_graph_list = [] # for debugging todo remove
+    # target_ans_per_graph_list = []
     # for input_multiprocessing_i in input_multiprocessing:
     #     target_ans_per_graph_list.append(fill_target_ans_per_graph_dict(input_multiprocessing_i))
 
