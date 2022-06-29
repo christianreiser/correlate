@@ -2,6 +2,7 @@ import pickle
 
 import numpy as np
 
+from causal_discovery.LPCMCI.observational_discovery import get_measured_labels
 from config import target_label, verbosity_thesis
 
 
@@ -12,7 +13,12 @@ def drop_unintervenable_variables(target_eq):
 
 
     # names of unintervenable vars
+    # targetlabel
     unintervenable_vars = ['u_'+str(target_label)]
+    # measured vars
+    measured_labels, measured_label_to_idx = get_measured_labels()
+    for measured_label_idx in range(len(measured_labels)):
+        measured_labels[measured_label_idx] = 'u_' + measured_labels[measured_label_idx]
 
     # loop through equations
     for eq_idx in range(len(target_eq)):
@@ -28,7 +34,10 @@ def drop_unintervenable_variables(target_eq):
         for var_name_in_eq in var_names_in_eq:
 
             # check if var_name_in_eq is unintervenable
-            if var_name_in_eq in unintervenable_vars:
+            if var_name_in_eq not in measured_labels: # todo remove after check
+                print('todo check')
+
+            if var_name_in_eq in unintervenable_vars or var_name_in_eq not in measured_labels:
                 # if unintervenable, drop var name from eq
                 target_eq[eq_idx] = eq.subs(var_name_in_eq, 0)
     return target_eq

@@ -1,3 +1,5 @@
+from matplotlib import pyplot as plt
+
 from data_generation import data_generator, generate_stationary_scm, measure
 
 print('import...')
@@ -6,12 +8,12 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery, get_measured_labels
+from causal_discovery.LPCMCI.observational_discovery import get_measured_labels, observational_causal_discovery
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
 from config import target_label, verbosity_thesis, n_vars_measured, coeff, \
     min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, random_seed, tau_max
 from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
-from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target_equations
+from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target_equations, load_results
 
 """
 
@@ -141,11 +143,11 @@ def obs_or_intervene(
     return is_mixed
 
 
-def get_last_outcome(ts_measured_actual):
+def get_last_outcome(ts_measured_actual, n_samples):
     """
-    in the last sample of ts_measured_actual get value of the target_label
+    in the last n_samples of ts_measured_actual get value of the target_label
     """
-    outcome_last = ts_measured_actual[-1][target_label]  # todo check if it works
+    outcome_last = np.array(ts_measured_actual.loc[:, target_label])[-n_samples:]
     return outcome_last
 
 
@@ -205,14 +207,15 @@ def store_intervention(was_intervened, intervention_variable, n_samples):
 def main():
     # generate stationary scm
     scm, original_graph = generate_stationary_scm(coeff, min_coeff)
-    # get ground truth. Causal discovery on scm
 
     # ini ts
     ts_generated_actual = np.zeros((0, n_vars_all))
     ts_generated_optimal = np.zeros((0, n_vars_all))
 
+    # ini regret
     regret_list = []
 
+    # schedule when to intervene
     is_intervention_list = obs_or_intervene(
         n_mixed=n_mixed,
         nth=nth)  # 500 obs + 500 with every 4th intervention
@@ -231,13 +234,14 @@ def main():
         n_samples=n_ini_obs[0],
     )
 
-    # measure new data
+
+    # measure new data (hide latents)
     ts_measured_actual = measure(ts_df, obs_vars=measured_labels)
 
     # ini keep track of where the intervention is
     was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
 
-    # get ground truth. Causal discovery on scm
+    # extract true edgemarks, effect sizes from scm
     edgemarks_true, effect_sizes_true = get_edgemarks_and_effect_sizes(scm)
 
     """ loop: causal discovery, planning, intervention """
@@ -262,7 +266,7 @@ def main():
             )
             # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
-            # get interventions
+            # propose interventions
             # actual intervention
             intervention_variable, intervention_value = find_optimistic_intervention(
                 pag_edgemarks.copy(),
@@ -274,7 +278,7 @@ def main():
             intervention_var_optimal, intervention_value_optimal = find_optimistic_intervention(
                 edgemarks_true.copy(),
                 effect_sizes_true.copy(),
-                labels=n_vars_all,
+                labels=[str(var_name) for var_name in range(n_vars_all)],
                 ts=ts_df
             )
 
@@ -309,12 +313,10 @@ def main():
             n_samples=n_samples,
         )
 
-
-
         # append new (measured) data
         # actual
-        ts_generated_actual = np.r_[ts_generated_actual, ts_new_actual] # append new data
-        new_measurements = measure(ts_new_actual, obs_vars=measured_labels) # measure new data
+        ts_generated_actual = np.r_[ts_generated_actual, ts_new_actual]  # append new data
+        new_measurements = measure(ts_new_actual, obs_vars=measured_labels)  # measure new data
         ts_measured_actual = pd.DataFrame(np.r_[ts_measured_actual, new_measurements], columns=measured_labels)
         # optimal
         ts_generated_optimal = pd.DataFrame(np.r_[ts_generated_optimal, ts_new_optimal], columns=measured_labels)
@@ -322,9 +324,11 @@ def main():
         # regret
         # only if it was an intervention
         if is_intervention:
-            regret_list = np.append(regret_list,
-                                    abs(get_last_outcome(ts_generated_optimal) - get_last_outcome(ts_measured_actual)))
-
+            outcome_actual = get_last_outcome(ts_measured_actual, n_samples)
+            outcome_optimal = get_last_outcome(ts_generated_optimal, n_samples)
+            new_regret = sum(outcome_optimal - outcome_actual)
+            print('new_regret: ', new_regret)
+            regret_list = np.append(regret_list, new_regret)
 
     regret_sum = sum(regret_list)
     print('regret_sum:', regret_sum)
