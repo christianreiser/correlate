@@ -10,20 +10,25 @@ my_weather_headers = ['Daytime', 'TempOutMean()', 'TempOutMin()', 'TempOutMax()'
                       'WindOutMin()', 'WindOutMax()', 'CloudOutMean()', 'CloudOutMin()', 'CloudOutMax()', 'RainSnow'
                       ]
 
-api_weather_headers = ['maxtemp_c', 'mintemp_c', 'avgtemp_c', 'maxwind_kph', 'totalprecip_mm', 'avgvis_km', 'avghumidity']
+api_weather_headers = ['maxtemp_c', 'mintemp_c', 'avgtemp_c', 'maxwind_kph', 'totalprecip_mm', 'avgvis_km',
+                       'avghumidity']
 
 key = '36d299b06fa44c769f9174159222906'
+key_open_weather = 'a05b3d565a7f3b4a9c4f08df4c6df9f0'
 long = "48.74309462845568"
 lat = "9.101391671042892"
 date = "2022-06-28"
 
 daily_summaries_file_dir = "/home/chrei/code/quantifiedSelfData/daily_summaries_test_weather_api.csv"
 
-contents = urllib.request.urlopen(
-    "https://api.weatherapi.com/v1/history.json?key=" + key + "&q=" + long + "," + lat + "&dt=" + date).read()
+# contents = urllib.request.urlopen(
+#     "https://api.weatherapi.com/v1/history.json?key=" + key + "&q=" + long + "," + lat + "&dt=" + date).read()
 
-# contents as json
-contents = json.loads(contents)
+open_weather_map_request_url = 'https://api.openweathermap.org/data/2.5/weather?lat=' + long + '&lon=' + lat + '&appid=' + key_open_weather
+
+contents = json.loads(urllib.request.urlopen(open_weather_map_request_url).read())
+
+
 
 # make sure it's the correct date
 if contents['forecast']['forecastday'][0]['date'] != date:

@@ -392,7 +392,7 @@ def fill_causes_of_one_affected_var(affected_var_label,
                                     symbolic_u_vars_dict,
                                     plain_var_names):
     """
-    fill direct causes of a effect variable into symbolic_vars_dict
+    fill direct causes of an effect variable into symbolic_vars_dict
     input: symbolic_vars_dict to modify, effect var, causes in form of val_min and graph
     """
     row_idx = -1  # row indicates which causing var
