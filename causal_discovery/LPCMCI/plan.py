@@ -1,6 +1,5 @@
-from matplotlib import pyplot as plt
-
 from data_generation import data_generator, generate_stationary_scm, measure
+from intervention_proposal.simulate import get_optimistic_intervention_var_via_simulation
 
 print('import...')
 import pickle
@@ -12,8 +11,7 @@ from causal_discovery.LPCMCI.observational_discovery import get_measured_labels,
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
 from config import target_label, verbosity_thesis, n_vars_measured, coeff, \
     min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, random_seed, tau_max
-from intervention_proposal.propose_from_eq import drop_unintervenable_variables, find_most_optimistic_intervention
-from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target_equations, load_results
+from intervention_proposal.target_eqs_from_pag import plot_graph
 
 """
 
@@ -21,22 +19,9 @@ from intervention_proposal.target_eqs_from_pag import plot_graph, compute_target
 
 """
 """
-main challenges to get algo running:
-1. 1 -> 1   Modify data generator to start from last sample 10. june
-1. 1 -> 2   intervene in datagenerator                      14->15. june
-2. 5 -> 7   Find optimistic intervention in lpcmci graph    9. june
-5. 3 -> 1   Lpcmci doesn't use data of a variable if it was intervened upon when calculating its causes 
-3. 5 -> 2   Orient edges with interventional data           22 june -> 21. june
-                ini complete graph
-                    mby similar as 'link_list = ' 
-                for each intervened var do CI tests and remove edges
-4. 3 -> 2   Initialize lpcmci with above result at all inis 28. june -> 21. june
-                (mby replace 'link_list = ' occurrences)            
+1. if same intervention var should lead to same outcome
+2. intervenional discovery doesn;'t work
 
-further TODOs
-0. 1->0.3   get negative link colors in lpcmci -> 28.june
-1. 2        compute optimal intervention from SCM (for ground truth)6. july
-2. 2        calculate regret 11. july
 3. 5        set up simulation study 19. july
 4. 5        interpret results 27. july
 4.5 opt     stochastic intervention? / multiple interventions?
@@ -61,7 +46,12 @@ x prune weak links
 def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
     ts_measured_actual = pd.DataFrame(ts_measured_actual)
     intervention_value = 0  # ini
-    intervention_idx = var_name[2:]  # 'u_0' -> '0'
+    # if len >2 then there is the u_ prefix
+    if len(var_name) > 2:
+        intervention_idx = var_name[2:]  # 'u_0' -> '0'
+    else:
+        intervention_idx = var_name
+
     intervention_var_measured_values = ts_measured_actual[intervention_idx]
 
     # get 90th percentile of intervention_var_measured_values
@@ -90,33 +80,37 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts
     """
     Optimal control to find the most optimistic intervention.
     """
-    # get target equations from graph
-    target_eq, graph_combinations = compute_target_equations(
-        val_min=graph_effect_sizes,
-        graph=graph_edgemarks,
-        var_names=labels)
+    largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, most_optimistic_graph = get_optimistic_intervention_var_via_simulation(
+        graph_effect_sizes, graph_edgemarks, labels, ts
+    )
 
-    # load eq instead of calculating them
-    # target_eq, graph_combinations = load_eq()
-
-    # remove unintervenable variables
-    target_eqs_intervenable = drop_unintervenable_variables(target_eq)
-
-    # get optimal intervention
-    largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
-        target_eqs_intervenable)
-
-    # if intervention was found
+    # # get target equations from graph
+    # target_eq, graph_combinations = compute_target_equations(
+    #     val_min=graph_effect_sizes,
+    #     graph=graph_edgemarks,
+    #     var_names=labels)
+    #
+    # # load eq instead of calculating them
+    # # target_eq, graph_combinations = load_eq()
+    #
+    # # remove unintervenable variables
+    # target_eqs_intervenable = drop_unintervenable_variables(target_eq)
+    #
+    # # get optimal intervention
+    # largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
+    #     target_eqs_intervenable)
+    #
+    # # if intervention was found
     if best_intervention_var_name is not None:
-
-        # most optimistic graph
-        most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
+    #
+    #     # most optimistic graph
+    #     most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
 
         # plot most optimistic graph
         if verbosity_thesis > 0:
             plot_graph(graph_effect_sizes, most_optimistic_graph, labels, 'most optimistic')
 
-        intervention_value = get_intervention_value(best_intervention_var_name, intervention_coeff, ts)
+        intervention_value = get_intervention_value(best_intervention_var_name, largest_coeff, ts)
     # if intervention was not found
     else:
         intervention_value = None
@@ -189,7 +183,11 @@ def store_intervention(was_intervened, intervention_variable, n_samples):
     # if intervened
     if intervention_variable is not None:
         # get ind
-        intervention_idx = intervention_variable[2:]
+        if len(intervention_variable) >2:
+            intervention_idx = intervention_variable[2:]
+        else:
+            intervention_idx = intervention_variable
+
         # mark intervened var
         new_series[intervention_idx] = True
 
@@ -234,7 +232,6 @@ def main():
         n_samples=n_ini_obs[0],
     )
 
-
     # measure new data (hide latents)
     ts_measured_actual = measure(ts_df, obs_vars=measured_labels)
 
@@ -274,6 +271,8 @@ def main():
                 measured_labels,
                 ts_measured_actual
             )
+            print("intervention_variable: ", intervention_variable, "intervention_value: ", intervention_value)
+
             # optimistic intervention on true scm # todo don't need to compute var, sign of value (and value) again
             intervention_var_optimal, intervention_value_optimal = find_optimistic_intervention(
                 edgemarks_true.copy(),
@@ -281,6 +280,7 @@ def main():
                 labels=[str(var_name) for var_name in range(n_vars_all)],
                 ts=ts_df
             )
+            print("intervention_variable_optimal: ", intervention_var_optimal, "intervention_value_optimal: ", intervention_value_optimal)
 
             # keep track of where the intervention is
             was_intervened = store_intervention(was_intervened, intervention_variable, n_samples)

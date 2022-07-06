@@ -4,7 +4,7 @@ from itertools import product
 import numpy as np
 import tigramite.data_processing as pp
 
-from svarfci import SVARFCI
+from causal_discovery.LPCMCI.svarfci import SVARFCI
 
 
 class OracleCI:

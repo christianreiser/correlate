@@ -16,10 +16,10 @@ from tigramite import plotting as tp
 from tigramite.independence_tests import ParCorr
 
 # Imports from code inside directory
-import generate_data_mod as mod
-import utilities as utilities
+from causal_discovery.LPCMCI import generate_data_mod as mod
+from causal_discovery.LPCMCI import utilities as utilities
 from causal_discovery.LPCMCI import metrics_mod
-from lpcmci import LPCMCI
+from causal_discovery.LPCMCI.lpcmci import LPCMCI
 
 # Directory to save results
 folder_name = "results/"
@@ -37,7 +37,7 @@ else:
     plot_data = False
 
 
-def modify_dict_get_graph_and_link_vals(original_dict):
+def scm_to_graph(scm):
     """
     outputs:
     1. new dict with link
@@ -46,7 +46,7 @@ def modify_dict_get_graph_and_link_vals(original_dict):
 
     input:
     dict with format s.th. like
-    my_dict = {0: [((0, -1), 0.85, 'remove'),
+    scm = {0: [((0, -1), 0.85, 'remove'),
                    ((1, 0), -0.5, 'remove'),
                    ((2, -1), 0.7, 'remove')],
                1: [((1, -1), 0.8, 'remove'),
@@ -55,12 +55,12 @@ def modify_dict_get_graph_and_link_vals(original_dict):
                3: [((3, -2), 0.8, 'remove'),
                    ((0, -3), 0.4, 'remove')]}
     """
-    my_dict = original_dict.copy() # otherwise it changes scm_dict in main
-    len_dict = len(my_dict)
+    scm_copy = scm.copy() # otherwise it changes scm_dict in main
+    len_dict = len(scm_copy)
     max_time_lag = 0
 
-    for key in my_dict:
-        my_list = my_dict[key]
+    for key in scm_copy:
+        my_list = scm_copy[key]
         len_my_list = len(my_list)
         modified_list = []
         for list_index in range(len_my_list):
@@ -72,16 +72,16 @@ def modify_dict_get_graph_and_link_vals(original_dict):
             if max_time_lag > modified_tuple[0][1]:
                 max_time_lag = modified_tuple[0][1]
 
-        my_dict.update({key: modified_list})
+        scm_copy.update({key: modified_list})
 
-    # print('links:', my_dict)
+    # print('links:', scm_copy)
 
     max_time_lag = - max_time_lag
 
     graph = np.ndarray(shape=(len_dict, len_dict, max_time_lag + 1), dtype='U3')
     val = np.zeros(shape=(len_dict, len_dict, max_time_lag + 1), dtype=float)
-    for key in my_dict:
-        my_list = my_dict[key]
+    for key in scm_copy:
+        my_list = scm_copy[key]
         len_my_list = len(my_list)
         for list_index in range(len_my_list):
             my_tuple = my_list[list_index]
@@ -95,6 +95,8 @@ def modify_dict_get_graph_and_link_vals(original_dict):
             val[effected_index][cause_index][lag] = link_strength
             val[cause_index][effected_index][lag] = link_strength
     return graph, val
+
+
 
 
 
@@ -232,7 +234,7 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
             data_all = data_all_check[:T]
             dataframe_all = pp.DataFrame(data_all)
             data = data_all[:, observed_vars]
-            original_graph, original_vals = modify_dict_get_graph_and_link_vals(links)
+            original_graph, original_vals = scm_to_graph(links)
             dataframe = pp.DataFrame(data)
 
             # save data to file

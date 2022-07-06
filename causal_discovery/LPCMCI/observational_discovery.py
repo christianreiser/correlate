@@ -144,11 +144,13 @@ import pandas as pd
 
 
 def get_measured_labels():
-    measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
+    measured_labels = np.sort(random_state.choice(range(1,n_vars_all),  # e.g. [1,4,5,...]
                                                   size=math.ceil(
                                                       (1. - frac_latents) *
                                                       n_vars_all),
                                                   replace=False)).tolist()
+    # range from 1 to n_vars_all
+    one_to_n_vars_all = list(range(1, n_vars_all + 1))
     # measured_labels to strings
     measured_labels = [str(x) for x in measured_labels]
 

@@ -487,7 +487,7 @@ def fill_target_ans_per_graph_dict(input_multiprocessing):
     for i in range(len(list(ans.items()))):
         if str(list(ans.items())[i][0]) == target_label:
             target_ans_per_graph = list(ans.items())[i][1]
-    # test if target key was found by calling where it sould be stored
+    # test if target key was found by calling where it should be stored
     try:
         test = target_ans_per_graph
     except KeyError:

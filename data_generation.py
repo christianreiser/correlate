@@ -7,7 +7,7 @@ from tigramite import plotting as tp
 
 import causal_discovery.LPCMCI.generate_data_mod as mod
 # Imports from code inside directory
-from causal_discovery.LPCMCI.compute_experiments import modify_dict_get_graph_and_link_vals
+from causal_discovery.LPCMCI.compute_experiments import scm_to_graph
 from config import noise_sigma, labels_strs, n_vars_all, random_seed, n_measured_links, n_vars_measured, \
     tau_max, contemp_fraction, random_state, verbosity_thesis
 
@@ -25,6 +25,8 @@ def nonstationary_check(scm):
     """
     check if scm is stationary
     """
+    print('data_generator ...')
+
     ts_check = data_generator(scm, intervention_variable=None,
                               intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000)
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
@@ -71,7 +73,7 @@ def generate_stationary_scm(coeff, min_coeff):
 def plot_scm(scm):
     if verbosity_thesis > 0:
         # ts_df = pp.DataFrame(ts)
-        original_graph, original_vals = modify_dict_get_graph_and_link_vals(scm)
+        original_graph, original_vals = scm_to_graph(scm)
 
         # save data to file
         # filename = os.path.abspath("./../../../test.dat")
@@ -135,7 +137,6 @@ def data_generator(scm,
     output: time series data (might be non-stationary)
     """
 
-    print('data_generator ...')
     random_state = np.random.RandomState(random_seed)
 
     class NoiseModel:
@@ -154,7 +155,11 @@ def data_generator(scm,
 
     # get intervention_var as int. E.g. 'u_0' -> int(0)
     if intervention_variable is not None:
-        intervention_variable = int(intervention_variable[2:])
+        # if len >2 then there is the u_ prefix
+        if len(intervention_variable)>2:
+            intervention_variable = int(intervention_variable[2:])
+        else:
+            intervention_variable = int(intervention_variable)
 
     ts = mod.generate_nonlinear_contemp_timeseries(links=scm,
                                                    T=n_samples,
