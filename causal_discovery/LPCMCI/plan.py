@@ -230,6 +230,7 @@ def main():
         ts_old=ts_generated_actual,
         random_seed=random_seed,
         n_samples=n_ini_obs[0],
+        labels_strs=measured_labels
     )
 
     # measure new data (hide latents)
@@ -302,6 +303,7 @@ def main():
             ts_old=ts_generated_actual,
             random_seed=random_seed,
             n_samples=n_samples,
+            labels=measured_labels
         )
         # optimal
         ts_new_optimal = data_generator(
@@ -311,6 +313,7 @@ def main():
             ts_old=ts_generated_actual,
             random_seed=random_seed,
             n_samples=n_samples,
+            labels=ts_generated_actual.columns
         )
 
         # append new (measured) data

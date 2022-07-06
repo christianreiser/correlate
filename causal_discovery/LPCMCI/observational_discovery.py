@@ -143,12 +143,26 @@ import math
 import pandas as pd
 
 
+def ensure_0_in_measured_labels(measured_labels):
+    if 0 not in measured_labels:
+        # remove last element of measured_labels
+        measured_labels = measured_labels[:-1]
+        # add 0 to measured_labels
+        measured_labels.append(0)
+        measured_labels = np.sort(measured_labels).tolist()
+    return measured_labels
+
+
 def get_measured_labels():
-    measured_labels = np.sort(random_state.choice(range(1,n_vars_all),  # e.g. [1,4,5,...]
+    measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
                                                   size=math.ceil(
                                                       (1. - frac_latents) *
                                                       n_vars_all),
                                                   replace=False)).tolist()
+
+    measured_labels = ensure_0_in_measured_labels(measured_labels)
+
+
     # range from 1 to n_vars_all
     one_to_n_vars_all = list(range(1, n_vars_all + 1))
     # measured_labels to strings

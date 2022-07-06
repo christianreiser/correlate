@@ -88,6 +88,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     ts_old=ts_old,
                     random_seed=random_seed,
                     n_samples=n_half_samples,
+                    labels_strs=ts_old.columns
                 )
                 samples[n_half_samples:100] = data_generator(
                     scm=model,
@@ -96,6 +97,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     ts_old=ts_old,
                     random_seed=random_seed,
                     n_samples=n_half_samples,
+                    labels_strs=ts_old.columns
                 )
 
                 # for all tau

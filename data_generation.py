@@ -28,7 +28,7 @@ def nonstationary_check(scm):
     print('data_generator ...')
 
     ts_check = data_generator(scm, intervention_variable=None,
-                              intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000)
+                              intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000, labels_strs=labels_strs)
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
     return nonstationary
 
@@ -129,7 +129,8 @@ def data_generator(scm,
                    intervention_value,
                    ts_old,
                    random_seed,
-                   n_samples):
+                   n_samples,
+                   labels):
     """
     initialize from last samples of ts
     generate new sample
@@ -170,6 +171,6 @@ def data_generator(scm,
                                                    intervention_value=intervention_value)
 
     # ts to pandas dataframe and set labels_strs as headers
-    ts_df = pd.DataFrame(ts, columns=labels_strs)
+    ts_df = pd.DataFrame(ts, columns=labels)
 
     return ts_df
