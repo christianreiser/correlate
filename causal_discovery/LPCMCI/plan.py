@@ -174,8 +174,8 @@ def main():
                 measured_labels,
                 ts_measured_actual
             )
-
             print("intervention_variable: ", intervention_variable, "intervention_value: ", intervention_value)
+
             # optimistic intervention on true scm # todo don't need to compute var, sign of value (and value) again
             intervention_var_optimal, intervention_value_optimal = find_optimistic_intervention(
                 edgemarks_true.copy(),

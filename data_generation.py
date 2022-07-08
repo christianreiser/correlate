@@ -197,6 +197,10 @@ def data_generator(scm,
                                                    intervention_variable=intervention_variable,
                                                    intervention_value=intervention_value)
 
+    # if none, then cyclic contemporaneous scm. then skipp this graph
+    if ts is None:
+        return None
+
     # ts to pandas dataframe and set labels_strs as headers
     ts_df = pd.DataFrame(ts, columns=labels)
 

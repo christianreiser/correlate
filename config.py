@@ -76,9 +76,9 @@ n_mixed = 500,
 nth = 4
 
 # action simulation
-n_samples = 400
-low_percentile =10
-high_percentile = 90
+n_samples = 1000
+low_percentile =20
+high_percentile = 80
 
 # test
 correct390_0 = 2.5380406379699707

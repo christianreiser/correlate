@@ -77,7 +77,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                 intervention_value_low = np.percentile(a=ts_old[intervention_var], q=low_percentile)
                 intervention_value_high = np.percentile(a=ts_old[intervention_var], q=high_percentile)
                 # intervene on intervention_var with low and high values
-                samples[0:n_half_samples] = data_generator(
+                data_result = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_low,
@@ -86,6 +86,13 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     n_samples=n_half_samples,
                     labels=ts_old.columns
                 )
+
+                # if none then cyclic contemporaneous graph and skipp this graph
+                if data_result is not None:
+                    samples[0:n_half_samples] = data_result
+                else:
+                    pass
+
                 samples[n_half_samples:n_samples] = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,

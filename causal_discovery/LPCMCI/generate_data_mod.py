@@ -181,7 +181,8 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
                 # causal_order[b], causal_order[a] = causal_order[a], causal_order[b]
 
     if contemp_dag.isCyclic() == 1:
-        raise ValueError("Contemporaneous links must not contain cycle.")
+        return None # chrei
+        # raise ValueError("Contemporaneous links must not contain cycle.")
 
     causal_order = contemp_dag.topologicalSort()
 
