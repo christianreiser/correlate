@@ -7,7 +7,6 @@ from tigramite import plotting as tp
 
 import causal_discovery.LPCMCI.generate_data_mod as mod
 # Imports from code inside directory
-from causal_discovery.LPCMCI.compute_experiments import scm_to_graph
 from config import noise_sigma, labels_strs, n_vars_all, random_seed, n_measured_links, n_vars_measured, \
     tau_max, contemp_fraction, random_state, verbosity_thesis
 
@@ -28,9 +27,36 @@ def nonstationary_check(scm):
     print('data_generator ...')
 
     ts_check = data_generator(scm, intervention_variable=None,
-                              intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000, labels_strs=labels_strs)
+                              intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000, labels=labels_strs)
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
     return nonstationary
+
+
+def get_edgemarks_and_effect_sizes(scm):
+    # ini edgemarks ndarray of size (n_vars, n_vars, tau_max)
+    edgemarks = np.full([n_vars_all, n_vars_all, tau_max + 1], '', dtype="U3")
+
+    # ini effect sizes ndarray of size (n_vars, n_vars, tau_max)
+    effect_sizes = np.zeros((n_vars_all, n_vars_all, tau_max + 1))
+
+    # iterate over all links in scm
+    for affected_var in range(len(scm)):
+        # get incoming links on affected var
+        affected_var_incoming_links = scm[affected_var]
+        # for each incoming links on affected var
+        for incoming_link in affected_var_incoming_links:
+            # int of causing var
+            causal_var = incoming_link[0][0]
+            # int of tau with minus
+            tau = incoming_link[0][1]
+            # effect size
+            effect_size = incoming_link[1]
+
+            edgemarks[affected_var, causal_var, -tau] = '<--'
+            edgemarks[causal_var, affected_var, -tau] = '-->'
+            effect_sizes[affected_var, causal_var, -tau] = effect_size
+            effect_sizes[causal_var, affected_var, -tau] = effect_size
+    return edgemarks, effect_sizes
 
 
 def generate_stationary_scm(coeff, min_coeff):
@@ -65,15 +91,19 @@ def generate_stationary_scm(coeff, min_coeff):
         print("nonstationary:", nonstationary, "counter:", counter)
         counter += 1
 
+
+    # extract true edgemarks, effect sizes from scm
+    # original_graph, original_vals = scm_to_graph(scm) # todo remove if it works without
+    edgemarks_true, effect_sizes_true = get_edgemarks_and_effect_sizes(scm)
+
     # plot scm
-    original_graph = plot_scm(scm)  #
-    return scm, original_graph
+    original_graph = plot_scm(edgemarks_true, effect_sizes_true)  #
+    return scm, edgemarks_true, effect_sizes_true
 
 
-def plot_scm(scm):
+def plot_scm(original_graph, original_vals):
     if verbosity_thesis > 0:
         # ts_df = pp.DataFrame(ts)
-        original_graph, original_vals = scm_to_graph(scm)
 
         # save data to file
         # filename = os.path.abspath("./../../../test.dat")
@@ -106,9 +136,6 @@ def plot_scm(scm):
         #     link_colorbar_label='MCI',
         # )
         # plt.show()
-
-        return original_graph
-
 
 def measure(ts, obs_vars):
     """

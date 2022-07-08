@@ -88,7 +88,7 @@ def find_most_optimistic_intervention(target_eqs):
     return largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff
 
 # # load target_ans_per_graph_dict from file via pickle
-# with open('target_eq_chr.pkl', 'rb') as f:
+# with open(checkpoint_path+'target_eq_chr.pkl', 'rb') as f:
 #     target_eq = pickle.load(f)
 #
 # target_eq = drop_unintervenable_variables(target_eq)

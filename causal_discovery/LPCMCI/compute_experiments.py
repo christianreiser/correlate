@@ -36,65 +36,65 @@ if verbosity > 0:
 else:
     plot_data = False
 
-
-def scm_to_graph(scm):
-    """
-    outputs:
-    1. new dict with link
-    2. link graph
-    3. val graph
-
-    input:
-    dict with format s.th. like
-    scm = {0: [((0, -1), 0.85, 'remove'),
-                   ((1, 0), -0.5, 'remove'),
-                   ((2, -1), 0.7, 'remove')],
-               1: [((1, -1), 0.8, 'remove'),
-                   ((2, 0), 0.7, 'remove')],
-               2: [((2, -1), 0.9, 'remove')],
-               3: [((3, -2), 0.8, 'remove'),
-                   ((0, -3), 0.4, 'remove')]}
-    """
-    scm_copy = scm.copy() # otherwise it changes scm_dict in main
-    len_dict = len(scm_copy)
-    max_time_lag = 0
-
-    for key in scm_copy:
-        my_list = scm_copy[key]
-        len_my_list = len(my_list)
-        modified_list = []
-        for list_index in range(len_my_list):
-            my_tuple = my_list[list_index]
-            modified_tuple = my_tuple[:-1]
-            modified_list.append(modified_tuple)
-
-            # get max time lag
-            if max_time_lag > modified_tuple[0][1]:
-                max_time_lag = modified_tuple[0][1]
-
-        scm_copy.update({key: modified_list})
-
-    # print('links:', scm_copy)
-
-    max_time_lag = - max_time_lag
-
-    graph = np.ndarray(shape=(len_dict, len_dict, max_time_lag + 1), dtype='U3')
-    val = np.zeros(shape=(len_dict, len_dict, max_time_lag + 1), dtype=float)
-    for key in scm_copy:
-        my_list = scm_copy[key]
-        len_my_list = len(my_list)
-        for list_index in range(len_my_list):
-            my_tuple = my_list[list_index]
-            effected_index = key
-            cause_index = my_tuple[0][0]
-            lag = -my_tuple[0][1]
-            link_strength = my_tuple[1]
-            graph[cause_index][effected_index][lag] = '-->'
-            if lag == 0:
-                graph[effected_index][cause_index][lag] = '<--'
-            val[effected_index][cause_index][lag] = link_strength
-            val[cause_index][effected_index][lag] = link_strength
-    return graph, val
+# todo check f not needed vs get_edgemarks_and_effect_sizes
+# def scm_to_graph(scm):
+#     """
+#     outputs:
+#     1. new dict with link
+#     2. link graph
+#     3. val graph
+#
+#     input:
+#     dict with format s.th. like
+#     scm = {0: [((0, -1), 0.85, 'remove'),
+#                    ((1, 0), -0.5, 'remove'),
+#                    ((2, -1), 0.7, 'remove')],
+#                1: [((1, -1), 0.8, 'remove'),
+#                    ((2, 0), 0.7, 'remove')],
+#                2: [((2, -1), 0.9, 'remove')],
+#                3: [((3, -2), 0.8, 'remove'),
+#                    ((0, -3), 0.4, 'remove')]}
+#     """
+#     scm_copy = scm.copy() # otherwise it changes scm_dict in main
+#     len_dict = len(scm_copy)
+#     max_time_lag = 0
+#
+#     for key in scm_copy:
+#         my_list = scm_copy[key]
+#         len_my_list = len(my_list)
+#         modified_list = []
+#         for list_index in range(len_my_list):
+#             my_tuple = my_list[list_index]
+#             modified_tuple = my_tuple[:-1]
+#             modified_list.append(modified_tuple)
+#
+#             # get max time lag
+#             if max_time_lag > modified_tuple[0][1]:
+#                 max_time_lag = modified_tuple[0][1]
+#
+#         scm_copy.update({key: modified_list})
+#
+#     # print('links:', scm_copy)
+#
+#     max_time_lag = - max_time_lag
+#
+#     graph = np.ndarray(shape=(len_dict, len_dict, max_time_lag + 1), dtype='U3')
+#     val = np.zeros(shape=(len_dict, len_dict, max_time_lag + 1), dtype=float)
+#     for key in scm_copy:
+#         my_list = scm_copy[key]
+#         len_my_list = len(my_list)
+#         for list_index in range(len_my_list):
+#             my_tuple = my_list[list_index]
+#             effected_index = key
+#             cause_index = my_tuple[0][0]
+#             lag = -my_tuple[0][1]
+#             link_strength = my_tuple[1]
+#             graph[cause_index][effected_index][lag] = '-->'
+#             if lag == 0:
+#                 graph[effected_index][cause_index][lag] = '<--'
+#             val[effected_index][cause_index][lag] = link_strength
+#             val[cause_index][effected_index][lag] = link_strength
+#     return graph, val
 
 
 
@@ -234,7 +234,7 @@ def generate_dataframe(model, coeff, min_coeff, auto, sam, N, frac_unobserved, n
             data_all = data_all_check[:T]
             dataframe_all = pp.DataFrame(data_all)
             data = data_all[:, observed_vars]
-            original_graph, original_vals = scm_to_graph(links)
+            original_graph, original_vals = get_edgemarks_and_effect_sizes(links)
             dataframe = pp.DataFrame(data)
 
             # save data to file

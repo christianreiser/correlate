@@ -1,15 +1,12 @@
-import pickle
-from multiprocessing import Pool
-
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
-from tqdm import tqdm
 
-from config import verbosity_thesis, random_seed, checkpoint_path, target_label, tau_max, unintervenable_vars
+from config import verbosity_thesis, random_seed, target_label, tau_max, unintervenable_vars, \
+    n_samples, low_percentile, high_percentile
 from data_generation import data_generator
-from intervention_proposal.target_eqs_from_pag import load_results, plot_graph, \
-    drop_redundant_information_due_to_symmetry, get_ambiguous_graph_locations, create_all_graph_combinations
+from intervention_proposal.target_eqs_from_pag import plot_graph, drop_redundant_information_due_to_symmetry, \
+    get_ambiguous_graph_locations, create_all_graph_combinations
 
 
 def lin_f(x):
@@ -61,7 +58,6 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
     # create a list of all unique graph combinations
     graph_combinations = create_all_graph_combinations(my_graph, ambiguous_locations)
 
-    n_samples = 100
     n_half_samples = int(n_samples/2)
 
     largest_abs_coeff = 0
@@ -78,8 +74,8 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
             # skip unintervenable intervention_vars like target label
             if intervention_var not in unintervenable_vars:
                 samples = np.zeros(shape=(n_samples,len(var_names)))
-                intervention_value_low = np.percentile(a=ts_old[intervention_var], q=50)
-                intervention_value_high = np.percentile(a=ts_old[intervention_var], q=90)
+                intervention_value_low = np.percentile(a=ts_old[intervention_var], q=low_percentile)
+                intervention_value_high = np.percentile(a=ts_old[intervention_var], q=high_percentile)
                 # intervene on intervention_var with low and high values
                 samples[0:n_half_samples] = data_generator(
                     scm=model,
@@ -88,16 +84,16 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     ts_old=ts_old,
                     random_seed=random_seed,
                     n_samples=n_half_samples,
-                    labels_strs=ts_old.columns
+                    labels=ts_old.columns
                 )
-                samples[n_half_samples:100] = data_generator(
+                samples[n_half_samples:n_samples] = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_high,
                     ts_old=ts_old,
                     random_seed=random_seed,
                     n_samples=n_half_samples,
-                    labels_strs=ts_old.columns
+                    labels=ts_old.columns
                 )
 
                 # for all tau
@@ -107,8 +103,6 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     # intervention_var and target series as columns in df
                     samples = pd.DataFrame(samples, columns=var_names)
                     var_and_target = pd.DataFrame(dict(intervention_var=samples[intervention_var], target=samples[target_label]))
-
-
 
                     # tau shift
                     if tau > 0:

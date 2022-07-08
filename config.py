@@ -50,15 +50,14 @@ pca_on = False
 # causal discovery
 causal_discovery_on = True
 LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
-tau_max = 1
 pc_alpha = 0.6  # todo 0.95 or so
 interv_alpha = pc_alpha
-remove_link_threshold = 0.1
+remove_link_threshold = 0.01
 
 # scm_config
 n_vars_measured = 8
 random_seed = 0  # todo should not be constant for simulation studies
-frac_latents = 0.3  # todo 0.3
+frac_latents = 0.3
 contemp_fraction = 0.6
 n_measured_links = n_vars_measured
 coeff = 0.5
@@ -75,6 +74,11 @@ labels_strs = [str(i) for i in range(n_vars_all)]
 n_ini_obs = 500,
 n_mixed = 500,
 nth = 4
+
+# action simulation
+n_samples = 400
+low_percentile =10
+high_percentile = 90
 
 # test
 correct390_0 = 2.5380406379699707
