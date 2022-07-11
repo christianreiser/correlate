@@ -2,6 +2,9 @@ from collections import defaultdict
 
 import numpy as np
 
+from intervention_proposal.simulate import graph_to_scm
+from intervention_proposal.target_eqs_from_pag import plot_graph
+
 
 def check_stationarity(links):
     """Returns stationarity according to a unit root test
@@ -131,6 +134,27 @@ class Graph():
         return stack
 
 
+def check_contemporaneous_cycle(val_min, graph, var_names, label):
+    links = graph_to_scm(graph, val_min)
+    N = len(links.keys())
+
+    # Check parameters
+    max_lag = 0
+    contemp_dag = Graph(N)
+    for j in range(N):
+        for link_props in links[j]:
+            var, lag = link_props[0]
+
+            max_lag = max(max_lag, abs(lag))
+
+            # Create contemp DAG
+            if var != j and lag == 0:
+                contemp_dag.addEdge(var, j)
+    if contemp_dag.isCyclic() == 1:
+        plot_graph(graph, links, val_min, label)
+        raise ValueError("Contemporaneous links must not contain cycle.") # todo check if this always illegitimate
+
+
 def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, ts_old=None,
                                           intervention_variable=None,
                                           intervention_value=None):
@@ -181,8 +205,8 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
                 # causal_order[b], causal_order[a] = causal_order[a], causal_order[b]
 
     if contemp_dag.isCyclic() == 1:
-        return None # chrei
-        # raise ValueError("Contemporaneous links must not contain cycle.")
+        # raise ValueError("Contemporaneous links must not contain cycle.") # todo check if this always illegitimate
+        return None  # chrei
 
     causal_order = contemp_dag.topologicalSort()
 

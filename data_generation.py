@@ -7,8 +7,8 @@ from tigramite import plotting as tp
 
 import causal_discovery.LPCMCI.generate_data_mod as mod
 # Imports from code inside directory
-from config import noise_sigma, labels_strs, n_vars_all, random_seed, n_measured_links, n_vars_measured, \
-    tau_max, contemp_fraction, random_state, verbosity_thesis
+from config import noise_sigma, labels_strs, n_vars_all, n_measured_links, n_vars_measured, \
+    tau_max, contemp_fraction, verbosity_thesis
 
 
 def sample_nonzero_cross_dependencies(coeff, min_coeff):
@@ -20,7 +20,7 @@ def sample_nonzero_cross_dependencies(coeff, min_coeff):
     return couplings
 
 
-def nonstationary_check(scm):
+def nonstationary_check(scm, random_seed):
     """
     check if scm is stationary
     """
@@ -59,7 +59,7 @@ def get_edgemarks_and_effect_sizes(scm):
     return edgemarks, effect_sizes
 
 
-def generate_stationary_scm(coeff, min_coeff):
+def generate_stationary_scm(coeff, min_coeff, random_seed, random_state):
     """
     generate scms until a stationary one is found
     """
@@ -87,7 +87,7 @@ def generate_stationary_scm(coeff, min_coeff):
             contemp_fraction=contemp_fraction,
             random_state=random_state)  # MT19937(random_state)
 
-        nonstationary = nonstationary_check(scm)
+        nonstationary = nonstationary_check(scm, random_seed)
         print("nonstationary:", nonstationary, "counter:", counter)
         counter += 1
 
@@ -96,7 +96,7 @@ def generate_stationary_scm(coeff, min_coeff):
     edgemarks_true, effect_sizes_true = get_edgemarks_and_effect_sizes(scm)
 
     # plot scm
-    original_graph = plot_scm(edgemarks_true, effect_sizes_true)  #
+    plot_scm(edgemarks_true, effect_sizes_true)
     return scm, edgemarks_true, effect_sizes_true
 
 

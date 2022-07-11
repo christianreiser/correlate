@@ -3,9 +3,6 @@ config parameters
 """
 import math
 
-import numpy as np
-
-from config_helper import get_measured_labels
 
 verbosity = 0
 verbosity_thesis = 9
@@ -57,7 +54,7 @@ remove_link_threshold = 0.01
 
 # scm_config
 n_vars_measured = 8
-random_seed = 0  # todo should not be constant for simulation studies
+# random_seed = 0  # todo should not be constant for simulation studies
 frac_latents = 0.3
 contemp_fraction = 0.6
 n_measured_links = n_vars_measured
@@ -67,11 +64,10 @@ noise_sigma = (0.5, 2)
 tau_max = 1
 # auto_coeffs = list(np.arange(0.3, 0.6, 0.05)), # somehow error when in config file  # auto-correlations ∼ U(0.3, 0.6) with 0.05 steps  [0.3, 0.35, 0.4, 0.45, 0.45, 0.55]
 
-random_state = np.random.RandomState(random_seed)  # MT19937
+# random_state = np.random.RandomState(random_seed)  # MT19937
 n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
 labels_strs = [str(i) for i in range(n_vars_all)]
-measured_labels, measured_label_as_idx, unmeasured_labels_strs = get_measured_labels(n_vars_all, random_state, frac_latents)
-unintervenable_vars = [target_label]+unmeasured_labels_strs
+
 
 # sampling config dict n_ini_obs=500, n_mixed=500, nth=4
 n_ini_obs = 500,

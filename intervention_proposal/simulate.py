@@ -5,7 +5,7 @@ from time import time
 
 from tqdm import tqdm
 
-from config import verbosity_thesis, random_seed, target_label, tau_max, unintervenable_vars, \
+from config import verbosity_thesis, target_label, tau_max, \
     n_samples, low_percentile, high_percentile
 from data_generation import data_generator
 from intervention_proposal.target_eqs_from_pag import plot_graph, drop_redundant_information_due_to_symmetry, \
@@ -38,7 +38,22 @@ def graph_to_scm(my_graph, val):
     return scm
 
 
-def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_old):
+def drop_edges_for_cycle_detection(my_graph):
+    """ set lagged edgemarks to "".
+    and set contemporaneous edgemarks to "" """
+    my_graph_without_lagged_variables = my_graph.copy()
+    for cause in range(len(my_graph_without_lagged_variables)):
+        for effect in range(len(my_graph_without_lagged_variables[cause])):
+            for tau in range(len(my_graph_without_lagged_variables[cause][effect])):
+                if tau > 0:
+                    my_graph_without_lagged_variables[cause][effect][tau] = ""
+                if tau == 0:
+                    if my_graph_without_lagged_variables[cause][effect][tau] == '<->':
+                        my_graph_without_lagged_variables[cause][effect][tau] = ''
+    return my_graph_without_lagged_variables
+
+
+def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_old, unintervenable_vars, random_seed):
     """
     compute target equations of all graph combinations
     input: val_min, graph, var_names (loads from file)
@@ -95,45 +110,61 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                 # if none then cyclic contemporaneous graph and skipp this graph
                 if simulated_data is not None:
                     samples[0:n_half_samples] = simulated_data
-                else:
-                    pass
+                    samples[n_half_samples:n_samples] = data_generator(
+                        scm=model,
+                        intervention_variable=intervention_var,
+                        intervention_value=intervention_value_high,
+                        ts_old=ts_old,
+                        random_seed=random_seed,
+                        n_samples=n_half_samples,
+                        labels=ts_old.columns
+                    )
 
-                samples[n_half_samples:n_samples] = data_generator(
-                    scm=model,
-                    intervention_variable=intervention_var,
-                    intervention_value=intervention_value_high,
-                    ts_old=ts_old,
-                    random_seed=random_seed,
-                    n_samples=n_half_samples,
-                    labels=ts_old.columns
-                )
+                    # for all tau
+                    coeffs_across_taus = np.zeros(shape=(tau_max + 1))
+                    for tau in range(tau_max + 1):
 
-                # for all tau
-                coeffs_across_taus = np.zeros(shape=(tau_max+1))
-                for tau in range(tau_max + 1):
+                        # intervention_var and target series as columns in df
+                        samples = pd.DataFrame(samples, columns=var_names)
+                        var_and_target = pd.DataFrame(
+                            dict(intervention_var=samples[intervention_var], target=samples[target_label]))
 
-                    # intervention_var and target series as columns in df
-                    samples = pd.DataFrame(samples, columns=var_names)
-                    var_and_target = pd.DataFrame(dict(intervention_var=samples[intervention_var], target=samples[target_label]))
+                        # tau shift
+                        if tau > 0:
+                            var_and_target['target'] = var_and_target['target'].shift(periods=tau)
+                            var_and_target = var_and_target.dropna()
 
-                    # tau shift
-                    if tau > 0:
-                        var_and_target['target'] = var_and_target['target'].shift(periods=tau)
-                        var_and_target = var_and_target.dropna()
+                        # check var_and_target for NaNs and infs
+                        if np.any(np.isnan(var_and_target)):
+                            print('NaN in var_and_target')
+                            print(var_and_target[var_and_target.isnull()])
+                            raise ValueError('NaN in var_and_target')
+                        if np.any(np.isinf(var_and_target)):
+                            print('inf in var_and_target')
+                            print(var_and_target[var_and_target.isinf()])
+                            raise ValueError('inf in var_and_target')
 
-                    # statistical test
-                    r, probability_independent = pearsonr(var_and_target['intervention_var'],
-                                                          var_and_target['target'])
-                    coeffs_across_taus[tau] = r
-                mean_coeff_across_taus = np.mean(coeffs_across_taus)
-                if abs(mean_coeff_across_taus) > largest_abs_coeff:
-                    largest_abs_coeff = abs(mean_coeff_across_taus)
-                    largest_coeff = mean_coeff_across_taus
-                    best_intervention_var_name = intervention_var
-                    most_optimistic_graph_idx = unique_graph_idx
+                        # statistical test
+                        r, probability_independent = pearsonr(var_and_target['intervention_var'],
+                                                              var_and_target['target'])
+                        coeffs_across_taus[tau] = r
+                    mean_coeff_across_taus = np.mean(coeffs_across_taus)
+                    if abs(mean_coeff_across_taus) > largest_abs_coeff:
+                        largest_abs_coeff = abs(mean_coeff_across_taus)
+                        largest_coeff = mean_coeff_across_taus
+                        best_intervention_var_name = intervention_var
+                        most_optimistic_graph_idx = unique_graph_idx
+
+
+
     # measure how long
     end_time = time()
     print('get optimistic_intervention_var_via_simulation took: ', end_time - start_time)
+    if most_optimistic_graph_idx is None:
+        mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
+        plot_graph(val, mygraph_without_lagged, var_names, 'contemp graph for cycle detection')
+        print('WARNING: hack: no most optimistic graph found')
+
     return largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, graph_combinations[most_optimistic_graph_idx]
 
 
@@ -152,5 +183,5 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
 #     ts_old = pickle.load(f)
 # print('WARNING: loaded ts from pickle')
 #
-# largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff = get_optimistic_intervention_var_via_simulation(val_min, graph, var_names, ts_old)
+# largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff = get_optimistic_intervention_var_via_simulation(val_min, graph, var_names, ts_old, unintervenable_vars, random_seed)
 #

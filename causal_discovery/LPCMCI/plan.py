@@ -1,8 +1,5 @@
-from data_generation import data_generator, generate_stationary_scm, measure
-from intervention_proposal.get_intervention import find_optimistic_intervention
-from intervention_proposal.target_eqs_from_pag import load_results
-
 print('import...')
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -10,16 +7,14 @@ import pandas as pd
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
 from config import target_label, n_vars_measured, coeff, \
-    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, random_seed, labels_strs, measured_labels, measured_label_as_idx, \
-    n_samples_per_generation
+    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, labels_strs, \
+    n_samples_per_generation, frac_latents, checkpoint_path
+from config_helper import get_measured_labels
+from data_generation import data_generator, generate_stationary_scm, measure
+from intervention_proposal.get_intervention import find_optimistic_intervention
+
 
 """
-
-
-
-"""
-"""
-
 3. 5        set up simulation study 19. july
 4. 5        interpret results 27. july
 4.5 opt     stochastic intervention? / multiple interventions?
@@ -99,9 +94,36 @@ def store_intervention(was_intervened, intervention_variable, n_samples):
     return was_intervened
 
 
-def main():
+def save_checkpoint(ts_measured_actual, was_intervened, ts_generated_actual, ts_generated_optimal, regret_list,
+                    random_seed, random_state, coeff, min_coeff):
+    # save input data to file via pickle at checkpoint_path
+    # import os
+    # filename = os.path.abspath(checkpoint_path)
+    with open(checkpoint_path + 'run.pkl', 'wb') as f:
+        pickle.dump(
+            [ts_measured_actual, was_intervened, ts_generated_actual, ts_generated_optimal, regret_list, random_seed,
+             random_state, coeff, min_coeff], f)
+
+
+def load_checkpoint():
+    # load input data from file via pickle at checkpoint_path
+    # import os
+    # filename = os.path.abspath(checkpoint_path)
+    with open(checkpoint_path + 'run.pkl', 'rb') as f:
+        ts_measured_actual, was_intervened, ts_generated_actual, ts_generated_optimal, regret_list, random_seed, random_state, coeff, min_coeff = pickle.load(
+            f)
+
+    scm, edgemarks_true, effect_sizes_true = generate_stationary_scm(coeff, min_coeff, random_seed, random_state)
+    return ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list
+
+
+def simulation_study_with_one_scm(setting, random_seed, random_state):
+    measured_labels, measured_label_as_idx, unmeasured_labels_strs = get_measured_labels(n_vars_all, random_state,
+                                                                                         frac_latents)
+    unintervenable_vars = [target_label] + unmeasured_labels_strs
+
     # generate stationary scm
-    scm, edgemarks_true, effect_sizes_true = generate_stationary_scm(coeff, min_coeff)
+    scm, edgemarks_true, effect_sizes_true = generate_stationary_scm(coeff, min_coeff, random_seed, random_state)
 
     # ini ts
     ts_generated_actual = np.zeros((0, n_vars_all))
@@ -136,7 +158,9 @@ def main():
         edgemarks_true.copy(),
         effect_sizes_true.copy(),
         labels=[str(var_name) for var_name in range(n_vars_all)],
-        ts=ts_generated_actual
+        ts=ts_generated_actual,
+        unintervenable_vars=unintervenable_vars,
+        random_seed=random_seed,
     )
     print("intervention_variable_optimal: ", intervention_var_optimal_backup, "intervention_value_optimal: ",
           intervention_value_optimal_backup)
@@ -146,6 +170,10 @@ def main():
 
     """ loop: causal discovery, planning, intervention """
     for is_intervention_idx in range(len(is_intervention_list)):
+
+        # load data from last checkpoint
+        ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list = load_checkpoint()
+
         is_intervention = is_intervention_list[is_intervention_idx]
 
         # if intervention is scheduled
@@ -177,7 +205,9 @@ def main():
                 pag_edgemarks.copy(),
                 pag_effect_sizes.copy(),
                 measured_labels,
-                ts_measured_actual[:n_ini_obs[0]]  # only first n_ini_obs samples, to have the same ts as optimal
+                ts_measured_actual[:n_ini_obs[0]],  # only first n_ini_obs samples, to have the same ts as optimal
+                unintervenable_vars,
+                random_seed,
             )
             print("intervention_variable: ", intervention_variable, "intervention_value: ", intervention_value)
 
@@ -241,10 +271,23 @@ def main():
             print('new_regret: ', new_regret)
             regret_list = np.append(regret_list, new_regret)
 
+        # save data to checkpoint
+        save_checkpoint(ts_measured_actual, was_intervened, ts_generated_actual, ts_generated_optimal, regret_list,
+                        random_seed, random_state, coeff, min_coeff)
+
     regret_sum = sum(regret_list)
     print('regret_sum:', regret_sum)
 
     print('done')
+
+
+def main():
+    settings = range(0, 1)
+    for setting_idx in range(len(settings)):
+        setting = settings[setting_idx]
+        random_seed = setting_idx
+        random_state = np.random.RandomState(random_seed)
+        simulation_study_with_one_scm(setting, random_seed, random_state)
 
 
 main()

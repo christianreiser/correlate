@@ -21,30 +21,37 @@ def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
 
     # get 90th percentile of intervention_var_measured_values
     if intervention_coeff > 0:
-        intervention_value = np.percentile(intervention_var_measured_values, intervention_value_percentile) #np.random.uniform(75, 95, size=1)
+        intervention_value = np.percentile(intervention_var_measured_values,
+                                           intervention_value_percentile)  # np.random.uniform(75, 95, size=1)
     elif intervention_coeff < 0:
-        intervention_value = np.percentile(intervention_var_measured_values, 100-intervention_value_percentile) #np.random.uniform(5, 25, size=1)
+        intervention_value = np.percentile(intervention_var_measured_values,
+                                           100 - intervention_value_percentile)  # np.random.uniform(5, 25, size=1)
     else:
         ValueError("intervention_coeff must be positive or negative")
     return intervention_value
 
+
 def load_eq():
     # load target_ans_per_graph_dict and graph_combinations from file via pickle
-    with open(checkpoint_path+'target_eq_simulated.pkl', 'rb') as f:
+    with open(checkpoint_path + 'target_eq_simulated.pkl', 'rb') as f:
         target_eq = pickle.load(f)
-    with open(checkpoint_path+'graph_combinations_simulated.pkl',
+    with open(checkpoint_path + 'graph_combinations_simulated.pkl',
               'rb') as f:
         graph_combinations = pickle.load(f)
     print("attention: target_eq and graph_combinations loaded from file")
     return target_eq, graph_combinations
 
 
-def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts):
+def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts, unintervenable_vars, random_seed):
     """
     Optimal control to find the most optimistic intervention.
     """
-    largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, most_optimistic_graph = get_optimistic_intervention_var_via_simulation(
-        graph_effect_sizes, graph_edgemarks, labels, ts
+    largest_abs_coeff, \
+    best_intervention_var_name, \
+    most_optimistic_graph_idx, \
+    largest_coeff, \
+    most_optimistic_graph = get_optimistic_intervention_var_via_simulation(
+        graph_effect_sizes, graph_edgemarks, labels, ts, unintervenable_vars, random_seed
     )
 
     # # get target equations from graph
@@ -57,7 +64,7 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts
     # # target_eq, graph_combinations = load_eq()
     #
     # # remove unintervenable variables
-    # target_eqs_intervenable = drop_unintervenable_variables(target_eq)
+    # target_eqs_intervenable = drop_unintervenable_variables(target_eq, random_state)
     #
     # # get optimal intervention
     # largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
@@ -65,9 +72,9 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts
     #
     # # if intervention was found
     if best_intervention_var_name is not None:
-    #
-    #     # most optimistic graph
-    #     most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
+        #
+        #     # most optimistic graph
+        #     most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
 
         # plot most optimistic graph
         if verbosity_thesis > 0:

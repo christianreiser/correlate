@@ -5,12 +5,15 @@ from tigramite import data_processing as pp
 from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
 
+from causal_discovery.LPCMCI.generate_data_mod import check_contemporaneous_cycle
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
 from config import causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
     remove_link_threshold, verbosity
 
 
 # function that saves val_min, graph, and var_names to a file
+
+
 def save_results(val_min, graph, var_names, name_extension):
     np.save(str(private_folder_path) + 'val_min_' + str(name_extension), val_min)
     np.save(str(private_folder_path) + 'graph_' + str(name_extension), graph)
@@ -121,6 +124,9 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
             graph = results['graph']
             val_min = results['val_matrix']
 
+        # ensure no contemporaneous cycles
+        check_contemporaneous_cycle(val_min, graph, var_names, 'cycle check')
+
         # remove links if are below threshold
         graph[abs(val_min) < remove_link_threshold] = ""
 
@@ -144,15 +150,6 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         return val_min, graph
 
 # load ts dataframe from file
-import os
-from config import random_state, n_vars_all, frac_latents
-import math
-import pandas as pd
-
-
-
-
-
 
 
 #
