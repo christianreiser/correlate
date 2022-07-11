@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from intervention_proposal.simulate import graph_to_scm
+from intervention_proposal.simulate import graph_to_scm, drop_edges_for_cycle_detection
 from intervention_proposal.target_eqs_from_pag import plot_graph
 
 
@@ -151,7 +151,8 @@ def check_contemporaneous_cycle(val_min, graph, var_names, label):
             if var != j and lag == 0:
                 contemp_dag.addEdge(var, j)
     if contemp_dag.isCyclic() == 1:
-        plot_graph(graph, links, val_min, label)
+        cont_graph = drop_edges_for_cycle_detection(graph)
+        plot_graph(val_min, cont_graph, var_names, 'contemp cycle detected')
         raise ValueError("Contemporaneous links must not contain cycle.") # todo check if this always illegitimate
 
 
