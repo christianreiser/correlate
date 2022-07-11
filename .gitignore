@@ -13,3 +13,5 @@ __pycache__/
 *.pth
 *.pkl
 *.egg-info/
+*apis/gtp3.py
+keys.py

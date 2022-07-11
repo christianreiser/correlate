@@ -1,3 +1,5 @@
+from time import time
+
 import numpy as np
 from tigramite import data_processing as pp
 from tigramite.independence_tests import ParCorr
@@ -68,7 +70,8 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         """
 
         print('observational_causal_discovery ...')
-
+        # measure how long observational_causal_discovery takes
+        start_time = time()
 
         # handle interventions: in df set value to NaN if it was intervened
         # during CI tests nans are then excluded
@@ -134,6 +137,10 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 
         # save results
         save_results(val_min, graph, var_names, 'simulated')
+
+        # measure how long observational_causal_discovery takes
+        end_time = time()
+        print('observational_causal_discovery took: ', end_time - start_time)
         return val_min, graph
 
 # load ts dataframe from file
@@ -143,35 +150,10 @@ import math
 import pandas as pd
 
 
-def ensure_0_in_measured_labels(measured_labels):
-    if 0 not in measured_labels:
-        # remove last element of measured_labels
-        measured_labels = measured_labels[:-1]
-        # add 0 to measured_labels
-        measured_labels.append(0)
-        measured_labels = np.sort(measured_labels).tolist()
-    return measured_labels
 
 
-def get_measured_labels():
-    measured_labels = np.sort(random_state.choice(range(n_vars_all),  # e.g. [1,4,5,...]
-                                                  size=math.ceil(
-                                                      (1. - frac_latents) *
-                                                      n_vars_all),
-                                                  replace=False)).tolist()
-
-    measured_labels = ensure_0_in_measured_labels(measured_labels)
 
 
-    # range from 1 to n_vars_all
-    one_to_n_vars_all = list(range(1, n_vars_all + 1))
-    # measured_labels to strings
-    measured_labels = [str(x) for x in measured_labels]
-
-    """ key value map of label to index """
-    measured_label_to_idx = {label: idx for idx, label in enumerate(measured_labels)}
-
-    return measured_labels, measured_label_to_idx
 
 #
 # filename = os.path.abspath("./tmp_test.dat")
@@ -183,7 +165,7 @@ def get_measured_labels():
 # ## load was_intervened dataframe from file
 # filename = os.path.abspath("./tmp_was_intervened.dat")
 # was_intervened = pd.read_csv(filename, index_col=0)
-# measured_labels, measured_label_to_idx = get_measured_labels()
+# measured_labels, measured_label_to_idx, unmeasured_labels_strs = get_measured_labels(n_vars_all, random_state, frac_latents)
 # external_independencies = [('2', '0', 0), ('2', '1', 0), ('2', '6', 0)]
 #
 # pag_effect_sizes, pag_edgemarks = observational_causal_discovery(

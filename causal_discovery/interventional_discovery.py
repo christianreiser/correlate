@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
-from config import verbosity_thesis, tau_max, interv_alpha
+from config import verbosity_thesis, tau_max, interv_alpha, n_ini_obs
 
 
 def interventional_pass_filter(ts, was_intervened):
@@ -53,6 +53,21 @@ def get_interventional_data_per_var(df, was_intervened):
     return interventional_dict_of_dfs
 
 
+def add_median_non_interventional_data(cause_and_effect_tau_shifted, df, cause, effect):
+    """add median non-interventional data to interventional data which will allow to see if there is a difference"""
+
+    # get median of un-intervened data of the first n_ini_obs samples
+    median_unintervened_data = df.iloc[:n_ini_obs[0]].median()
+
+    interventional_samples = len(cause_and_effect_tau_shifted)
+    median_non_intervened_cause_effect = np.array(
+        [[median_unintervened_data[cause], median_unintervened_data[effect]] for i in range(interventional_samples)])
+    # v-stack cause_and_effect_tau_shifted with median_non_intervened_cause_effect then to df with headers
+    cause_and_effect_tau_shifted = pd.DataFrame(
+        np.vstack((cause_and_effect_tau_shifted, median_non_intervened_cause_effect)), columns=['cause', 'effect'])
+    return cause_and_effect_tau_shifted
+
+
 def get_independencies_from_interv_data(df, was_intervened):
     """
     orient links with interventional data.
@@ -61,6 +76,7 @@ def get_independencies_from_interv_data(df, was_intervened):
     """
 
     print('get_independencies_from_interv_data ...')
+
     # get interventional data per variable
     interventional_dict = get_interventional_data_per_var(df, was_intervened)
 
@@ -90,6 +106,11 @@ def get_independencies_from_interv_data(df, was_intervened):
 
                 # ini tau shifted var
                 cause_and_effect_tau_shifted = cause_and_effect.copy()
+
+                # add median non-interventional data to interventional data which will allow to see if there is a difference
+                cause_and_effect_tau_shifted = add_median_non_interventional_data(cause_and_effect_tau_shifted, df,
+                                                                                  cause, effect)
+
                 # iterate over all taus
                 for tau in range(tau_max + 1):
 
@@ -101,7 +122,7 @@ def get_independencies_from_interv_data(df, was_intervened):
 
                             # tau shift
                             if tau > 0:
-                                cause_and_effect_tau_shifted['effect'] = cause_and_effect['effect'].shift(periods=tau)
+                                cause_and_effect_tau_shifted['effect'] = cause_and_effect_tau_shifted['effect'].copy().shift(periods=tau)
                                 cause_and_effect_tau_shifted = cause_and_effect_tau_shifted.dropna()
 
                             # statistical test
@@ -118,10 +139,6 @@ def get_independencies_from_interv_data(df, was_intervened):
                                           probability_independent)
     return independencies_from_interv_data
 
-
-
-
-#
 # # load ts dataframe from file
 # import os
 #

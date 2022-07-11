@@ -5,6 +5,8 @@ import math
 
 import numpy as np
 
+from config_helper import get_measured_labels
+
 verbosity = 0
 verbosity_thesis = 9
 
@@ -14,7 +16,6 @@ checkpoint_path = '/home/chrei/PycharmProjects/correlate/checkpoints/'
 
 # target
 target_label = '0'  # 'Mood'  # label of interest # must be a string
-unintervenable_vars = [target_label]
 
 # plots
 show_plots = False  # corr matrix
@@ -69,16 +70,20 @@ tau_max = 1
 random_state = np.random.RandomState(random_seed)  # MT19937
 n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
 labels_strs = [str(i) for i in range(n_vars_all)]
+measured_labels, measured_label_as_idx, unmeasured_labels_strs = get_measured_labels(n_vars_all, random_state, frac_latents)
+unintervenable_vars = [target_label]+unmeasured_labels_strs
 
 # sampling config dict n_ini_obs=500, n_mixed=500, nth=4
 n_ini_obs = 500,
 n_mixed = 500,
 nth = 4
+n_samples_per_generation = 10 # todo 1
 
 # action simulation
 n_samples = 1000
 low_percentile =20
 high_percentile = 80
+intervention_value_percentile = 95
 
 # test
 correct390_0 = 2.5380406379699707
@@ -97,3 +102,5 @@ if not isinstance(target_label, str):
 if n_vars_measured > 99:
     raise ValueError(
         'Config error. n_vars_measured must have <3 digits. or change len(intervention_variable)>2: in data_generator')
+
+

@@ -93,7 +93,6 @@ def generate_stationary_scm(coeff, min_coeff):
 
 
     # extract true edgemarks, effect sizes from scm
-    # original_graph, original_vals = scm_to_graph(scm) # todo remove if it works without
     edgemarks_true, effect_sizes_true = get_edgemarks_and_effect_sizes(scm)
 
     # plot scm
@@ -200,6 +199,10 @@ def data_generator(scm,
     # if none, then cyclic contemporaneous scm. then skipp this graph
     if ts is None:
         return None
+
+    # if ts contains NaNs, value error
+    if np.isnan(ts).any():
+        raise ValueError("NaN in ts")
 
     # ts to pandas dataframe and set labels_strs as headers
     ts_df = pd.DataFrame(ts, columns=labels)

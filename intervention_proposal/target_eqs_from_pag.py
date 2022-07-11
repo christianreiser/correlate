@@ -29,16 +29,16 @@ from tigramite import plotting as tp
 # """
 #
 #
-# # function that loads val_min, graph, and var_names from a file and allow_pickle=True
-# def load_results(name_extension):
-#     val_min = np.load(str(private_folder_path) + 'val_min_' + str(name_extension) + '.npy', allow_pickle=True)
-#     graph = np.load(str(private_folder_path) + 'graph_' + str(name_extension) + '.npy', allow_pickle=True)
-#     var_names = np.load(str(private_folder_path) + 'var_names_' + str(name_extension) + '.npy', allow_pickle=True)
-#     print('Attention: val_min, graph, var_names loaded from file')
-#     return val_min, graph, var_names
-#
-#
-from config import checkpoint_path
+# function that loads val_min, graph, and var_names from a file and allow_pickle=True
+def load_results(name_extension):
+    val_min = np.load(str(private_folder_path) + 'val_min_' + str(name_extension) + '.npy', allow_pickle=True)
+    graph = np.load(str(private_folder_path) + 'graph_' + str(name_extension) + '.npy', allow_pickle=True)
+    var_names = np.load(str(private_folder_path) + 'var_names_' + str(name_extension) + '.npy', allow_pickle=True)
+    print('Attention: val_min, graph, var_names loaded from file')
+    return val_min, graph, var_names
+
+
+from config import checkpoint_path, private_folder_path
 
 
 def plot_graph(val_min, pag, var_names, label):
@@ -155,6 +155,7 @@ def get_ambiguous_graph_locations(graph):
 
                     # append ambiguous location
                     ambiguous_locations.append([i, j, k, original_link, new_links_combinations[index]])
+    print('len(ambiguous_locations)', len(ambiguous_locations))
     return ambiguous_locations
 
 

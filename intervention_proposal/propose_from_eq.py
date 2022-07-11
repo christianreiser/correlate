@@ -2,8 +2,8 @@ import pickle
 
 import numpy as np
 
-from causal_discovery.LPCMCI.observational_discovery import get_measured_labels
-from config import target_label, verbosity_thesis
+from config import target_label, verbosity_thesis, n_vars_all, random_state, frac_latents
+from config_helper import get_measured_labels
 
 
 def drop_unintervenable_variables(target_eq):
@@ -16,7 +16,7 @@ def drop_unintervenable_variables(target_eq):
     # targetlabel
     unintervenable_vars = ['u_'+str(target_label)]
     # measured vars
-    measured_labels, measured_label_to_idx = get_measured_labels()
+    measured_labels, measured_label_to_idx, unmeasured_labels_strs = get_measured_labels(n_vars_all, random_state, frac_latents)
     for measured_label_idx in range(len(measured_labels)):
         measured_labels[measured_label_idx] = 'u_' + measured_labels[measured_label_idx]
 

@@ -1,15 +1,17 @@
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
+from intervention_proposal.target_eqs_from_pag import load_results
 
 print('import...')
 
 import numpy as np
 import pandas as pd
 
-from causal_discovery.LPCMCI.observational_discovery import get_measured_labels, observational_causal_discovery
+from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
 from config import target_label, n_vars_measured, coeff, \
-    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, random_seed, labels_strs
+    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, random_seed, labels_strs, measured_labels, measured_label_as_idx, \
+    n_samples_per_generation
 
 """
 
@@ -17,8 +19,6 @@ from config import target_label, n_vars_measured, coeff, \
 
 """
 """
-1. if same intervention var should lead to same outcome
-2. intervenional discovery doesn;'t work
 
 3. 5        set up simulation study 19. july
 4. 5        interpret results 27. july
@@ -69,9 +69,6 @@ def get_last_outcome(ts_measured_actual, n_samples):
     return outcome_last
 
 
-
-
-
 def store_intervention(was_intervened, intervention_variable, n_samples):
     """
     add data to boolean array of measured variables indicating if they were intervened upon
@@ -110,6 +107,9 @@ def main():
     ts_generated_actual = np.zeros((0, n_vars_all))
     ts_generated_optimal = np.zeros((0, n_vars_all))
 
+    # ini keep track of where the intervention is
+    was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
+
     # ini regret
     regret_list = []
 
@@ -117,13 +117,11 @@ def main():
     is_intervention_list = obs_or_intervene(
         n_mixed=n_mixed,
         nth=nth)  # 500 obs + 500 with every 4th intervention
-    n_samples = 10  # len(is_intervention_list) # todo 1
-
-    measured_labels, measured_label_to_idx = get_measured_labels()
+    n_samples = n_samples_per_generation
 
     """ generate first 500 samples without intervention"""
     # generate observational data
-    ts_df = data_generator(
+    ts_generated_actual = data_generator(
         scm=scm,
         intervention_variable=None,
         intervention_value=None,
@@ -133,11 +131,18 @@ def main():
         labels=labels_strs,
     )
 
-    # measure new data (hide latents)
-    ts_measured_actual = measure(ts_df, obs_vars=measured_labels)
+    # optimistic intervention on true scm
+    intervention_var_optimal_backup, intervention_value_optimal_backup = find_optimistic_intervention(
+        edgemarks_true.copy(),
+        effect_sizes_true.copy(),
+        labels=[str(var_name) for var_name in range(n_vars_all)],
+        ts=ts_generated_actual
+    )
+    print("intervention_variable_optimal: ", intervention_var_optimal_backup, "intervention_value_optimal: ",
+          intervention_value_optimal_backup)
 
-    # ini keep track of where the intervention is
-    was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
+    # measure new data (hide latents)
+    ts_measured_actual = measure(ts_generated_actual, obs_vars=measured_labels)
 
     """ loop: causal discovery, planning, intervention """
     for is_intervention_idx in range(len(is_intervention_list)):
@@ -160,7 +165,7 @@ def main():
                 df=ts_measured_actual.copy(),
                 was_intervened=was_intervened.copy(),
                 external_independencies=independencies_from_interv_data,
-                measured_label_to_idx=measured_label_to_idx
+                measured_label_to_idx=measured_label_as_idx
             )
             # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
@@ -172,19 +177,13 @@ def main():
                 pag_edgemarks.copy(),
                 pag_effect_sizes.copy(),
                 measured_labels,
-                ts_measured_actual
+                ts_measured_actual[:n_ini_obs[0]]  # only first n_ini_obs samples, to have the same ts as optimal
             )
             print("intervention_variable: ", intervention_variable, "intervention_value: ", intervention_value)
 
-            # optimistic intervention on true scm # todo don't need to compute var, sign of value (and value) again
-            intervention_var_optimal, intervention_value_optimal = find_optimistic_intervention(
-                edgemarks_true.copy(),
-                effect_sizes_true.copy(),
-                labels=[str(var_name) for var_name in range(n_vars_all)],
-                ts=ts_df
-            )
-            print("intervention_variable_optimal: ", intervention_var_optimal, "intervention_value_optimal: ",
-                  intervention_value_optimal)
+            # get intervention_var_optimal from backup backup
+            intervention_var_optimal = intervention_var_optimal_backup
+            intervention_value_optimal = intervention_value_optimal_backup
 
             # keep track of where the intervention is
             was_intervened = store_intervention(was_intervened, intervention_variable, n_samples)
@@ -224,7 +223,7 @@ def main():
         # append new (measured) data
         # actual
         ts_generated_actual = np.r_[ts_generated_actual, ts_new_actual]  # append new data
-        new_measurements = measure(ts_new_actual, obs_vars=measured_labels)  # measure new data
+        new_measurements = measure(ts_new_actual, obs_vars=measured_labels)  # measure new data (drop latent data)
         ts_measured_actual = pd.DataFrame(np.r_[ts_measured_actual, new_measurements], columns=measured_labels)
         # optimal
         ts_generated_optimal = pd.DataFrame(np.r_[ts_generated_optimal, ts_new_optimal], columns=labels_strs)
@@ -237,6 +236,8 @@ def main():
             outcome_actual = get_last_outcome(ts_measured_actual, n_samples)
             outcome_optimal = get_last_outcome(ts_generated_optimal, n_samples)
             new_regret = sum(outcome_optimal - outcome_actual)
+            if new_regret != 0:
+                continue
             print('new_regret: ', new_regret)
             regret_list = np.append(regret_list, new_regret)
 

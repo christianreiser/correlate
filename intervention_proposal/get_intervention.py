@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from config import checkpoint_path, verbosity_thesis
+from config import checkpoint_path, verbosity_thesis, intervention_value_percentile
 from intervention_proposal.simulate import get_optimistic_intervention_var_via_simulation
 from intervention_proposal.target_eqs_from_pag import plot_graph
 
@@ -21,10 +21,9 @@ def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
 
     # get 90th percentile of intervention_var_measured_values
     if intervention_coeff > 0:
-        intervention_value = np.percentile(intervention_var_measured_values, np.random.uniform(75, 95,
-                                                                                               size=1))  # todo is a bit exploration vs exploitation
+        intervention_value = np.percentile(intervention_var_measured_values, intervention_value_percentile) #np.random.uniform(75, 95, size=1)
     elif intervention_coeff < 0:
-        intervention_value = np.percentile(intervention_var_measured_values, np.random.uniform(5, 25, size=1)) # todo possible to use observational data as 50th percentile data?
+        intervention_value = np.percentile(intervention_var_measured_values, 100-intervention_value_percentile) #np.random.uniform(5, 25, size=1)
     else:
         ValueError("intervention_coeff must be positive or negative")
     return intervention_value

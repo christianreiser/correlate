@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
+from time import time
+
+from tqdm import tqdm
 
 from config import verbosity_thesis, random_seed, target_label, tau_max, unintervenable_vars, \
     n_samples, low_percentile, high_percentile
@@ -41,7 +44,8 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
     input: val_min, graph, var_names (loads from file)
     output: target_equations_per_graph_dict
     """
-
+    # measure how long get_optimistic_intervention_var_via_simulation takes
+    start_time = time()
     if verbosity_thesis > 0:
         print('get optimistic_intervention_var_via_simulation ...')
 
@@ -57,6 +61,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
 
     # create a list of all unique graph combinations
     graph_combinations = create_all_graph_combinations(my_graph, ambiguous_locations)
+    print('len(graph_combinations): ', len(graph_combinations))
 
     n_half_samples = int(n_samples/2)
 
@@ -66,7 +71,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
     most_optimistic_graph_idx = None
 
 
-    for unique_graph_idx in range(len(graph_combinations)):
+    for unique_graph_idx in tqdm(range(len(graph_combinations))):
         unique_graph = graph_combinations[unique_graph_idx]
         model = graph_to_scm(unique_graph, val)
 
@@ -77,7 +82,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                 intervention_value_low = np.percentile(a=ts_old[intervention_var], q=low_percentile)
                 intervention_value_high = np.percentile(a=ts_old[intervention_var], q=high_percentile)
                 # intervene on intervention_var with low and high values
-                data_result = data_generator(
+                simulated_data = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_low,
@@ -88,8 +93,8 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                 )
 
                 # if none then cyclic contemporaneous graph and skipp this graph
-                if data_result is not None:
-                    samples[0:n_half_samples] = data_result
+                if simulated_data is not None:
+                    samples[0:n_half_samples] = simulated_data
                 else:
                     pass
 
@@ -126,6 +131,9 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     largest_coeff = mean_coeff_across_taus
                     best_intervention_var_name = intervention_var
                     most_optimistic_graph_idx = unique_graph_idx
+    # measure how long
+    end_time = time()
+    print('get optimistic_intervention_var_via_simulation took: ', end_time - start_time)
     return largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, graph_combinations[most_optimistic_graph_idx]
 
 
