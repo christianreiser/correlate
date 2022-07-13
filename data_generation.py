@@ -7,8 +7,7 @@ from tigramite import plotting as tp
 
 import causal_discovery.LPCMCI.generate_data_mod as mod
 # Imports from code inside directory
-from config import noise_sigma, labels_strs, n_vars_all, n_measured_links, n_vars_measured, \
-    tau_max, contemp_fraction, verbosity_thesis
+from config import noise_sigma, tau_max, contemp_fraction, verbosity_thesis
 
 
 def sample_nonzero_cross_dependencies(coeff, min_coeff):
@@ -20,7 +19,7 @@ def sample_nonzero_cross_dependencies(coeff, min_coeff):
     return couplings
 
 
-def nonstationary_check(scm, random_seed):
+def nonstationary_check(scm, random_seed, labels_strs):
     """
     check if scm is stationary
     """
@@ -35,6 +34,8 @@ def nonstationary_check(scm, random_seed):
 
 
 def get_edgemarks_and_effect_sizes(scm):
+    n_vars_all = len(scm)
+
     # ini edgemarks ndarray of size (n_vars, n_vars, tau_max)
     edgemarks = np.full([n_vars_all, n_vars_all, tau_max + 1], '', dtype="U3")
 
@@ -73,7 +74,7 @@ def is_cross_dependent_on_target_var(scm):
         return False
 
 
-def generate_stationary_scm(coeff, min_coeff, random_seed, random_state):
+def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measured_links, n_vars_measured, n_vars_all, labels_strs):
     """
     generate scms until a stationary one is found
     """
@@ -103,7 +104,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state):
             contemp_fraction=contemp_fraction,
             random_state=random_state)  # MT19937(random_state)
         cross_dependency_on_target_var = is_cross_dependent_on_target_var(scm)
-        nonstationary = nonstationary_check(scm, random_seed)
+        nonstationary = nonstationary_check(scm, random_seed, labels_strs)
         if verbosity_thesis > 1:
             print("nonstationary / cross_dependency_on_target_var:", nonstationary, '/', cross_dependency_on_target_var,
                   "counter:", counter)
@@ -118,6 +119,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state):
 
 
 def plot_scm(original_graph, original_vals):
+    n_vars_all = len(original_graph)
     if verbosity_thesis > 0:
         # ts_df = pp.DataFrame(ts)
 

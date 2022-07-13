@@ -5,8 +5,7 @@ import pandas as pd
 from scipy.stats import pearsonr
 
 from causal_discovery.LPCMCI.generate_data_mod import Graph
-from config import verbosity_thesis, target_label, tau_max, \
-    n_samples, low_percentile, high_percentile
+from config import verbosity_thesis, target_label, tau_max, low_percentile, high_percentile, n_samples_simulation
 from data_generation import data_generator
 from intervention_proposal.target_eqs_from_pag import plot_graph, drop_redundant_information_due_to_symmetry, \
     get_ambiguous_graph_locations, create_all_graph_combinations
@@ -85,7 +84,7 @@ def check_contemporaneous_cycle(val_min, graph, var_names, label):
         raise ValueError("Contemporaneous links must not contain cycle.")  # todo check if this always illegitimate
 
 
-def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_old, unintervenable_vars, random_seed):
+def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_old, unintervenable_vars, random_seed, label):
     """
     compute target equations of all graph combinations
     input: val_min, graph, var_names (loads from file)
@@ -97,7 +96,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
         print('get optimistic_intervention_var_via_simulation ...')
 
     # plot graph
-    if verbosity_thesis > 1:
+    if verbosity_thesis > 1 and label != 'true_scm':
         plot_graph(val, my_graph, var_names, 'current graph estimate')
 
     # drop redundant info in graph
@@ -108,10 +107,10 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
 
     # create a list of all unique graph combinations
     graph_combinations = create_all_graph_combinations(my_graph, ambiguous_locations)
-    if verbosity_thesis > 1:
+    if verbosity_thesis > 3:
         print('len(graph_combinations): ', len(graph_combinations))
 
-    n_half_samples = int(n_samples / 2)
+    n_half_samples = int(n_samples_simulation / 2)
 
     largest_abs_coeff = 0
     largest_coeff = 0
@@ -131,7 +130,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
         for intervention_var in var_names:
             # skip unintervenable intervention_vars like target label
             if intervention_var not in unintervenable_vars:
-                samples = np.zeros(shape=(n_samples, len(var_names)))
+                samples = np.zeros(shape=(n_samples_simulation, len(var_names)))
                 intervention_value_low = np.percentile(a=ts_old[intervention_var], q=low_percentile)
                 intervention_value_high = np.percentile(a=ts_old[intervention_var], q=high_percentile)
                 # intervene on intervention_var with low and high values
@@ -148,7 +147,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                 # if none then cyclic contemporaneous graph and skipp this graph
                 if simulated_data is not None:
                     samples[0:n_half_samples] = simulated_data
-                    samples[n_half_samples:n_samples] = data_generator(
+                    samples[n_half_samples:n_samples_simulation] = data_generator(
                         scm=model,
                         intervention_variable=intervention_var,
                         intervention_value=intervention_value_high,

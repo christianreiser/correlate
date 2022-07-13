@@ -1,15 +1,15 @@
 import math
+import pickle
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
+from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
 from checkpoints import load_checkpoint, save_checkpoint
-from config import target_label, n_vars_measured, coeff, \
-    min_coeff, n_vars_all, n_ini_obs, n_mixed, nth, labels_strs, \
-    n_samples_per_generation, frac_latents, load_checkpoint_on, verbosity_thesis
+from config import target_label, coeff, min_coeff, n_mixed, nth, load_checkpoint_on, verbosity_thesis
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
 from regret import compute_regret
@@ -122,7 +122,7 @@ def obs_or_intervene():
     return is_mixed
 
 
-def store_interv(was_intervened, intervention_variable, n_samples):
+def store_interv(was_intervened, intervention_variable, n_samples_per_generation, n_vars_measured):
     """
     add data to boolean array of measured variables indicating if they were intervened upon
     input: requires that intervention_variable is a string of the form 'char char int' e.g. 'u_0'
@@ -142,7 +142,7 @@ def store_interv(was_intervened, intervention_variable, n_samples):
         new_series[intervention_idx] = True
 
     # append new_series to was_intervened
-    for i in range(n_samples):
+    for i in range(n_samples_per_generation):
         was_intervened = was_intervened.append(new_series, ignore_index=True)
 
     # # save was_intervened dataframe to file
@@ -152,11 +152,24 @@ def store_interv(was_intervened, intervention_variable, n_samples):
     return was_intervened
 
 
+def calculate_parameters(n_vars_measured, frac_latents):
+    n_measured_links = n_vars_measured
+    n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
+    labels_strs = [str(i) for i in range(n_vars_all)]
+    return n_measured_links, n_vars_all, labels_strs
+
+
 def simulation_study_with_one_scm(sim_study_input):
-    setting, random_seed, random_state = sim_study_input
+    n_ini_obs, n_vars_measured, frac_latents, pc_alpha, n_samples_per_generation = sim_study_input[0]
+    random_seed = sim_study_input[1]
+    n_measured_links, n_vars_all, labels_strs = calculate_parameters(n_vars_measured, frac_latents)
+
+    random_state = np.random.RandomState(random_seed)
 
     # generate stationary scm
-    scm, edgemarks_true, effect_sizes_true = generate_stationary_scm(coeff, min_coeff, random_seed, random_state)
+    scm, edgemarks_true, effect_sizes_true = generate_stationary_scm(coeff, min_coeff, random_seed, random_state,
+                                                                     n_measured_links, n_vars_measured, n_vars_all,
+                                                                     labels_strs)
 
     # variable randomly decide which variables are measured vs latent
     measured_labels, measured_label_as_idx, unmeasured_labels_strs, unintervenable_vars = get_measured_labels(
@@ -166,7 +179,7 @@ def simulation_study_with_one_scm(sim_study_input):
     ts_generated_actual, ts_generated_optimal = np.zeros((0, n_vars_all)), np.zeros((0, n_vars_all))
 
     # ini var that keeps track of where the intervention is
-    was_intervened = pd.DataFrame(np.zeros((n_ini_obs[0], n_vars_measured), dtype=bool), columns=measured_labels)
+    was_intervened = pd.DataFrame(np.zeros((n_ini_obs, n_vars_measured), dtype=bool), columns=measured_labels)
 
     # ini regret
     regret_list = []
@@ -177,7 +190,7 @@ def simulation_study_with_one_scm(sim_study_input):
 
     # schedule when to intervene
     is_intervention_list = obs_or_intervene()  # 500 obs + 500 with every 4th intervention
-    n_samples = n_samples_per_generation
+    # n_samples = n_samples_per_generation
 
     """ generate first 500 samples without intervention"""
     # generate observational data
@@ -187,7 +200,7 @@ def simulation_study_with_one_scm(sim_study_input):
         intervention_value=None,
         ts_old=ts_generated_actual,
         random_seed=random_seed,
-        n_samples=n_ini_obs[0],
+        n_samples=n_ini_obs,
         labels=labels_strs,
     )
 
@@ -200,6 +213,7 @@ def simulation_study_with_one_scm(sim_study_input):
         unintervenable_vars=unintervenable_vars,
         random_seed=random_seed,
         old_intervention=[None, None],
+        label='true_scm'
     )
     if verbosity_thesis > 1:
         print("intervention_variable_optimal: ", intervention_var_optimal_backup, "interv_val_opti: ",
@@ -210,7 +224,8 @@ def simulation_study_with_one_scm(sim_study_input):
 
     if load_checkpoint_on:
         # load data from last checkpoint
-        ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list, setting, random_seed, random_state = load_checkpoint()
+        ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list, setting, random_seed, random_state = load_checkpoint(
+            n_measured_links, n_vars_measured, n_vars_all, labels_strs)
 
     """ loop: causal discovery, planning, intervention """
     # intervene, observe, observe, observe, ...
@@ -231,7 +246,9 @@ def simulation_study_with_one_scm(sim_study_input):
                 # interventional discovery
                 independencies_from_interv_data = get_independencies_from_interv_data(
                     ts_measured_actual.copy(),
-                    was_intervened
+                    was_intervened,
+                    pc_alpha,
+                    n_ini_obs,
                 )
 
                 # observational discovery
@@ -239,7 +256,8 @@ def simulation_study_with_one_scm(sim_study_input):
                     df=ts_measured_actual.copy(),
                     was_intervened=was_intervened.copy(),
                     external_independencies=independencies_from_interv_data,
-                    measured_label_to_idx=measured_label_as_idx
+                    measured_label_to_idx=measured_label_as_idx,
+                    pc_alpha=pc_alpha,
                 )
                 # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
@@ -251,10 +269,11 @@ def simulation_study_with_one_scm(sim_study_input):
                     pag_edgemarks.copy(),
                     pag_effect_sizes.copy(),
                     measured_labels,
-                    ts_measured_actual[:n_ini_obs[0]],  # only first n_ini_obs samples, to have the same ts as optimal
+                    ts_measured_actual[:n_ini_obs],  # only first n_ini_obs samples, to have the same ts as optimal
                     unintervenable_vars,
                     random_seed,
                     old_intervention=[interv_var, interv_val],
+                    label='actual_data'
                 )
 
                 if verbosity_thesis > 1:
@@ -264,13 +283,13 @@ def simulation_study_with_one_scm(sim_study_input):
                 interv_var_opti = intervention_var_optimal_backup
                 interv_val_opti = intervention_value_optimal_backup
 
-                # keep track of where the intervention is
-                was_intervened = store_interv(was_intervened, interv_var, n_samples)
 
             # if no intervention is scheduled
             else:
                 interv_var, interv_val, interv_var_opti, interv_val_opti = None, None, None, None
-                was_intervened = store_interv(was_intervened, interv_var, n_samples)
+
+            # keep track of if and where in the ts the intervention is
+            was_intervened = store_interv(was_intervened, interv_var, n_samples_per_generation, n_vars_measured)
 
             """
             intervene as proposed and generate new data.
@@ -283,7 +302,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 intervention_value=interv_val,
                 ts_old=ts_generated_actual,
                 random_seed=random_seed,
-                n_samples=n_samples,
+                n_samples=n_samples_per_generation,
                 labels=labels_strs,
             )
             # optimal
@@ -293,7 +312,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 intervention_value=interv_val_opti,
                 ts_old=ts_generated_actual,
                 random_seed=random_seed,
-                n_samples=n_samples,
+                n_samples=n_samples_per_generation,
                 labels=labels_strs,
             )
 
@@ -310,7 +329,7 @@ def simulation_study_with_one_scm(sim_study_input):
             # only if it was an intervention
             if is_intervention:
                 regret_list, converged_on_optimal = compute_regret(ts_measured_actual, ts_generated_optimal,
-                                                                   regret_list)
+                                                                   regret_list, n_samples_per_generation)
 
             """checkpoint"""
             # save data to checkpoint
@@ -322,16 +341,33 @@ def simulation_study_with_one_scm(sim_study_input):
     return regret_sum
 
 
-def main():
-    settings = range(43, 100)  # define_settings()
-    regret_per_scm_list = np.zeros(len(settings))
-    for run in tqdm(range(100)):
-        setting = settings[run]
-        random_seed = run
-        random_state = np.random.RandomState(random_seed)
-        regret_per_scm_list[run] = simulation_study_with_one_scm((setting, random_seed, random_state))
-    mean_regret = np.mean(regret_per_scm_list)
-    var_regret = np.var(regret_per_scm_list)
+def run_all_experiments():
+    # get settings
+    all_param_study_settings = define_settings()
+
+    # run parameter studies
+    for simulation_study in all_param_study_settings:
+        regret_list_over_simulation_study = []
+
+        # run one parameter setting
+        for one_param_setting in simulation_study:
+            regret_list_over_scms = []
+
+            # repeat each parameter setting for 100 randomly sampled scms
+            for i_th_scm in tqdm(range(100)):
+                print('setting:', one_param_setting, 'random_seed:', i_th_scm)
+
+                ### run experiment ###
+                regret_list_over_scms.append(simulation_study_with_one_scm((one_param_setting, i_th_scm)))
+                #######################
+
+            print('mean regret', np.mean(regret_list_over_scms))
+            print('variance regret', np.var(regret_list_over_scms))
+            regret_list_over_simulation_study.append(regret_list_over_scms)
+
+        # save results of one parameter setting
+        with open('regret_list_over_simulation_study.pickle', 'wb') as f:
+            pickle.dump([regret_list_over_simulation_study, simulation_study], f)
 
 
-main()
+run_all_experiments()

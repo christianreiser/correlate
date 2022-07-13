@@ -6,7 +6,7 @@ from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
 
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
-from config import causal_discovery_on, tau_max, pc_alpha, private_folder_path, LPCMCI_or_PCMCI, \
+from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, \
     remove_link_threshold, verbosity, verbosity_thesis
 
 
@@ -38,7 +38,7 @@ def external_independencies_var_names_to_int(external_independencies, measured_l
     return external_independencies
 
 
-def observational_causal_discovery(df, was_intervened, external_independencies, measured_label_to_idx):
+def observational_causal_discovery(df, was_intervened, external_independencies, measured_label_to_idx, pc_alpha):
     """
     1. get observational ts
     2. ini graph with previous pag_edgemarks and pag_effect_sizes
@@ -116,8 +116,8 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                 verbosity=verbosity)
 
             results = pcmci.run_pcmciplus(tau_min=0, tau_max=tau_max, pc_alpha=pc_alpha)
-            q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], fdr_method='fdr_bh',
-                                                   exclude_contemporaneous=False)
+            # q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], fdr_method='fdr_bh',
+            #                                        exclude_contemporaneous=False)
 
             graph = results['graph']
             val_min = results['val_matrix']

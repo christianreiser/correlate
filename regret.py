@@ -1,13 +1,13 @@
 import numpy as np
 
-from config import target_label, n_samples, n_0_regret
+from config import target_label, regret_convergence_thresh, n_below_regret_thresh
 
 
-def get_last_outcome(ts_measured_actual):
+def get_last_outcome(ts_measured_actual, n_samples_per_generation):
     """
-    in the last n_samples of ts_measured_actual get value of the target_label
+    in the last n_samples_per_generation of ts_measured_actual get value of the target_label
     """
-    outcome_last = np.array(ts_measured_actual.loc[:, target_label])[-n_samples:]
+    outcome_last = np.array(ts_measured_actual.loc[:, target_label])[-n_samples_per_generation:]
     return outcome_last
 
 
@@ -15,18 +15,18 @@ def check_converged_on_optimal(regret_list):
     """
     check if the optimal solution has been reached n_0_regret times in a row
     """
-    if len(regret_list) < n_0_regret:
+    if len(regret_list) < n_below_regret_thresh:
         return False
     else:
-        # regret_list = regret_list[-3:] # todo activate
-        if np.all(regret_list[-n_0_regret:] == [0] * n_0_regret):
+        regret_list = regret_list[-n_below_regret_thresh:]
+        if np.all(regret_list[-n_below_regret_thresh:] <= [regret_convergence_thresh] * n_below_regret_thresh):
             return True
         else:
             return False
 
-def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list):
-    outcome_actual = get_last_outcome(ts_measured_actual)
-    outcome_optimal = get_last_outcome(ts_generated_optimal)
+def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samples_per_generation):
+    outcome_actual = get_last_outcome(ts_measured_actual, n_samples_per_generation)
+    outcome_optimal = get_last_outcome(ts_generated_optimal, n_samples_per_generation)
     new_regret = sum(outcome_optimal - outcome_actual)
     # if new_regret < 0:
     #     print('outcome_optimal:', outcome_optimal,

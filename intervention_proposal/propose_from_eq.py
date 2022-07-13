@@ -1,6 +1,6 @@
 import numpy as np
 
-from config import target_label, verbosity_thesis, n_vars_all, frac_latents
+from config import target_label, verbosity_thesis
 
 
 def drop_unintervenable_variables(target_eq, measured_labels):

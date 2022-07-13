@@ -155,7 +155,7 @@ def get_ambiguous_graph_locations(graph):
 
                     # append ambiguous location
                     ambiguous_locations.append([i, j, k, original_link, new_links_combinations[index]])
-    if verbosity_thesis > 2:
+    if verbosity_thesis > 3:
         print('len(ambiguous_locations)', len(ambiguous_locations))
     return ambiguous_locations
 
