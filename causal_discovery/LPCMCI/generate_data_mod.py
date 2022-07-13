@@ -2,9 +2,6 @@ from collections import defaultdict
 
 import numpy as np
 
-from intervention_proposal.simulate import graph_to_scm, drop_edges_for_cycle_detection
-from intervention_proposal.target_eqs_from_pag import plot_graph
-
 
 def check_stationarity(links):
     """Returns stationarity according to a unit root test
@@ -82,10 +79,10 @@ class Graph():
         # if any neighbour is visited and in  
         # recStack then graph is cyclic 
         for neighbour in self.graph[v]:
-            if visited[neighbour] == False:
-                if self.isCyclicUtil(neighbour, visited, recStack) == True:
+            if not visited[neighbour]:
+                if self.isCyclicUtil(neighbour, visited, recStack):
                     return True
-            elif recStack[neighbour] == True:
+            elif recStack[neighbour]:
                 return True
 
         # The node needs to be poped from  
@@ -102,6 +99,17 @@ class Graph():
                 if self.isCyclicUtil(node, visited, recStack) == True:
                     return True
         return False
+
+    # Returns true if graph is cyclic else false
+    def get_cycle_nodes(self):
+        cycle_nodes = []
+        visited = [False] * self.V
+        recStack = [False] * self.V
+        for node in range(self.V):
+            if not visited[node]:
+                if self.isCyclicUtil(node, visited, recStack):
+                    cycle_nodes.append(node)
+        return cycle_nodes
 
     # A recursive function used by topologicalSort 
     def topologicalSortUtil(self, v, visited, stack):
@@ -134,26 +142,6 @@ class Graph():
         return stack
 
 
-def check_contemporaneous_cycle(val_min, graph, var_names, label):
-    links = graph_to_scm(graph, val_min)
-    N = len(links.keys())
-
-    # Check parameters
-    max_lag = 0
-    contemp_dag = Graph(N)
-    for j in range(N):
-        for link_props in links[j]:
-            var, lag = link_props[0]
-
-            max_lag = max(max_lag, abs(lag))
-
-            # Create contemp DAG
-            if var != j and lag == 0:
-                contemp_dag.addEdge(var, j)
-    if contemp_dag.isCyclic() == 1:
-        cont_graph = drop_edges_for_cycle_detection(graph)
-        plot_graph(val_min, cont_graph, var_names, 'contemp cycle detected')
-        raise ValueError("Contemporaneous links must not contain cycle.") # todo check if this always illegitimate
 
 
 def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=None, ts_old=None,
@@ -206,7 +194,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
                 # causal_order[b], causal_order[a] = causal_order[a], causal_order[b]
 
     if contemp_dag.isCyclic() == 1:
-        # raise ValueError("Contemporaneous links must not contain cycle.") # todo check if this always illegitimate
+        # raise ValueError("Contemporaneous links must not contain cycle.")
         return None  # chrei
 
     causal_order = contemp_dag.topologicalSort()

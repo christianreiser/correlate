@@ -38,7 +38,7 @@ def load_results(name_extension):
     return val_min, graph, var_names
 
 
-from config import checkpoint_path, private_folder_path
+from config import checkpoint_path, private_folder_path, verbosity_thesis
 
 
 def plot_graph(val_min, pag, var_names, label):
@@ -155,7 +155,8 @@ def get_ambiguous_graph_locations(graph):
 
                     # append ambiguous location
                     ambiguous_locations.append([i, j, k, original_link, new_links_combinations[index]])
-    print('len(ambiguous_locations)', len(ambiguous_locations))
+    if verbosity_thesis > 2:
+        print('len(ambiguous_locations)', len(ambiguous_locations))
     return ambiguous_locations
 
 

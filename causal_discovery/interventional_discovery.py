@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
-from config import verbosity_thesis, tau_max, interv_alpha, n_ini_obs
+from config import verbosity_thesis, tau_max, interv_alpha, n_ini_obs, target_label
 
 
 def interventional_pass_filter(ts, was_intervened):
@@ -75,7 +75,8 @@ def get_independencies_from_interv_data(df, was_intervened):
     output: (causeing intervened var, intependent var, tau)
     """
 
-    print('get_independencies_from_interv_data ...')
+    if verbosity_thesis > 2:
+        print('get_independencies_from_interv_data ...')
 
     # get interventional data per variable
     interventional_dict = get_interventional_data_per_var(df, was_intervened)
@@ -133,10 +134,16 @@ def get_independencies_from_interv_data(df, was_intervened):
 
                                 # save independency information
                                 independencies_from_interv_data.append((cause, effect, tau))
-                                if verbosity_thesis > 0:
+                                if verbosity_thesis > 2:
                                     print("independency in interventional data: intervened var ", cause,
                                           " is independent of var", effect, "with lag=", tau, ", p-value=",
                                           probability_independent)
+                                elif verbosity_thesis > 1:
+                                    if effect == target_label:
+                                        print("independency in interventional data: intervened var ", cause,
+                                              " is independent of var", effect, "with lag=", tau, ", p-value=",
+                                              probability_independent)
+
     return independencies_from_interv_data
 
 # # load ts dataframe from file

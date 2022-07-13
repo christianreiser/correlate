@@ -24,10 +24,12 @@ def nonstationary_check(scm, random_seed):
     """
     check if scm is stationary
     """
-    print('data_generator ...')
+    if verbosity_thesis > 2:
+        print('data_generator ...')
 
     ts_check = data_generator(scm, intervention_variable=None,
-                              intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000, labels=labels_strs)
+                              intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000,
+                              labels=labels_strs)
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
     return nonstationary
 
@@ -59,15 +61,29 @@ def get_edgemarks_and_effect_sizes(scm):
     return edgemarks, effect_sizes
 
 
+def is_cross_dependent_on_target_var(scm):
+    """
+    check if a different var has an effect on the target var.
+    """
+    # len = one is the auto dependency
+    # > 1 are cross dependencies
+    if len(scm[0]) > 1:
+        return True
+    else:
+        return False
+
+
 def generate_stationary_scm(coeff, min_coeff, random_seed, random_state):
     """
     generate scms until a stationary one is found
     """
-    print('generate_stationary_scm...')
+    if verbosity_thesis > 2:
+        print('generate_stationary_scm...')
     nonstationary = True
+    cross_dependency_on_target_var = False
     scm = []  # stupid ini
     counter = 0
-    while nonstationary:
+    while nonstationary or not cross_dependency_on_target_var:
         n_links_all = math.ceil(n_measured_links / n_vars_measured * n_vars_all)  # 11
 
         def lin_f(x):
@@ -86,11 +102,12 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state):
             tau_max=tau_max,
             contemp_fraction=contemp_fraction,
             random_state=random_state)  # MT19937(random_state)
-
+        cross_dependency_on_target_var = is_cross_dependent_on_target_var(scm)
         nonstationary = nonstationary_check(scm, random_seed)
-        print("nonstationary:", nonstationary, "counter:", counter)
+        if verbosity_thesis > 1:
+            print("nonstationary / cross_dependency_on_target_var:", nonstationary, '/', cross_dependency_on_target_var,
+                  "counter:", counter)
         counter += 1
-
 
     # extract true edgemarks, effect sizes from scm
     edgemarks_true, effect_sizes_true = get_edgemarks_and_effect_sizes(scm)
@@ -135,6 +152,7 @@ def plot_scm(original_graph, original_vals):
         #     link_colorbar_label='MCI',
         # )
         # plt.show()
+
 
 def measure(ts, obs_vars):
     """
@@ -183,7 +201,7 @@ def data_generator(scm,
     # get intervention_var as int. E.g. 'u_0' -> int(0)
     if intervention_variable is not None:
         # if len >2 then there is the u_ prefix
-        if len(intervention_variable)>2:
+        if len(intervention_variable) > 2:
             intervention_variable = int(intervention_variable[2:])
         else:
             intervention_variable = int(intervention_variable)

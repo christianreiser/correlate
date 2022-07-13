@@ -42,17 +42,14 @@ def load_eq():
     return target_eq, graph_combinations
 
 
-def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts, unintervenable_vars, random_seed):
+def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts, unintervenable_vars, random_seed, old_intervention):
     """
     Optimal control to find the most optimistic intervention.
     """
-    largest_abs_coeff, \
-    best_intervention_var_name, \
-    most_optimistic_graph_idx, \
-    largest_coeff, \
-    most_optimistic_graph = get_optimistic_intervention_var_via_simulation(
+    res = get_optimistic_intervention_var_via_simulation(
         graph_effect_sizes, graph_edgemarks, labels, ts, unintervenable_vars, random_seed
     )
+    largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, most_optimistic_graph = res
 
     # # get target equations from graph
     # target_eq, graph_combinations = compute_target_equations(
@@ -64,7 +61,7 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts
     # # target_eq, graph_combinations = load_eq()
     #
     # # remove unintervenable variables
-    # target_eqs_intervenable = drop_unintervenable_variables(target_eq, random_state)
+    # target_eqs_intervenable = drop_unintervenable_variables(target_eq, measured_labels)
     #
     # # get optimal intervention
     # largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, intervention_coeff = find_most_optimistic_intervention(
@@ -77,11 +74,14 @@ def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts
         #     most_optimistic_graph = graph_combinations[most_optimistic_graph_idx]
 
         # plot most optimistic graph
-        if verbosity_thesis > 0:
+        if verbosity_thesis > 1:
             plot_graph(graph_effect_sizes, most_optimistic_graph, labels, 'most optimistic')
 
         intervention_value = get_intervention_value(best_intervention_var_name, largest_coeff, ts)
     # if intervention was not found
     else:
-        intervention_value = None
+        print('WARNING: no intervention found. probably cyclic graph')
+        best_intervention_var_name = old_intervention[0]
+        intervention_value = old_intervention[1]
+
     return best_intervention_var_name, intervention_value

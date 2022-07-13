@@ -5,7 +5,7 @@ import math
 
 
 verbosity = 0
-verbosity_thesis = 9
+verbosity_thesis = 1
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
@@ -46,6 +46,7 @@ fully_connected_nn_prediction_on = False
 pca_on = False
 
 # causal discovery
+load_checkpoint_on = True
 causal_discovery_on = True
 LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
 pc_alpha = 0.6  # todo 0.95 or so
@@ -53,7 +54,7 @@ interv_alpha = pc_alpha
 remove_link_threshold = 0.01
 
 # scm_config
-n_vars_measured = 8
+n_vars_measured = 6
 # random_seed = 0  # todo should not be constant for simulation studies
 frac_latents = 0.3
 contemp_fraction = 0.6
@@ -70,16 +71,19 @@ labels_strs = [str(i) for i in range(n_vars_all)]
 
 
 # sampling config dict n_ini_obs=500, n_mixed=500, nth=4
-n_ini_obs = 500,
-n_mixed = 500,
+n_ini_obs = 500, # todo var
+n_mixed = 100,
 nth = 4
-n_samples_per_generation = 10 # todo 1
+n_samples_per_generation = 4 # todo 1
 
 # action simulation
 n_samples = 1000
 low_percentile =20
 high_percentile = 80
 intervention_value_percentile = 95
+
+# evaluation
+n_0_regret = 3 # todo 10
 
 # test
 correct390_0 = 2.5380406379699707

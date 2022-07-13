@@ -1,10 +1,9 @@
 import numpy as np
 
 from config import target_label, verbosity_thesis, n_vars_all, frac_latents
-from config_helper import get_measured_labels
 
 
-def drop_unintervenable_variables(target_eq, random_state):
+def drop_unintervenable_variables(target_eq, measured_labels):
     """
     drop variables from equations which can't be intervened upon
     """
@@ -14,7 +13,6 @@ def drop_unintervenable_variables(target_eq, random_state):
     # targetlabel
     unintervenable_vars = ['u_'+str(target_label)]
     # measured vars
-    measured_labels, measured_label_to_idx, unmeasured_labels_strs = get_measured_labels(n_vars_all, random_state, frac_latents)
     for measured_label_idx in range(len(measured_labels)):
         measured_labels[measured_label_idx] = 'u_' + measured_labels[measured_label_idx]
 
@@ -89,7 +87,7 @@ def find_most_optimistic_intervention(target_eqs):
 # with open(checkpoint_path+'target_eq_chr.pkl', 'rb') as f:
 #     target_eq = pickle.load(f)
 #
-# target_eq = drop_unintervenable_variables(target_eq, random_state)
+# target_eq = drop_unintervenable_variables(target_eq, measured_labels)
 #
 # largest_abs_coeff, best_intervention, most_optimistic_graph_idx = find_most_optimistic_intervention(target_eq)
 # print()
