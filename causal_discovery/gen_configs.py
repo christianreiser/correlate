@@ -7,7 +7,7 @@ def define_settings():
     """
     settings_default_and_list = {
         # n obs before first intervention
-        'n_ini_obs': [500, [50, 500, 5000, 50000]],
+        'n_ini_obs': [500, [50, 500, 5000]],
 
         # n measured vars
         'n_vars_measured': [5, np.arange(3, 11, 2)],
@@ -55,4 +55,4 @@ def define_settings():
     return all_param_study_settings
 
 
-# define_settings()
+define_settings()
