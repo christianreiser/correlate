@@ -36,7 +36,6 @@ def histograms(df, save_path):
 
             plt.savefig(save_path + str(attribute))
             plt.close('all')
-            print('')
 
 
 def plot_prediction_w_ci_interval(df, ci, target_mean, target_std):

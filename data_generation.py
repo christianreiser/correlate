@@ -105,7 +105,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measu
             random_state=random_state)  # MT19937(random_state)
         cross_dependency_on_target_var = is_cross_dependent_on_target_var(scm)
         nonstationary = nonstationary_check(scm, random_seed, labels_strs)
-        if verbosity_thesis > 1:
+        if verbosity_thesis > 1 and counter >4:
             print("nonstationary / cross_dependency_on_target_var:", nonstationary, '/', cross_dependency_on_target_var,
                   "counter:", counter)
         counter += 1
@@ -170,6 +170,13 @@ def measure(ts, obs_vars):
     return ts
 
 
+def labels_to_ints(labels, label):
+    # get index of label in measured_labels
+    # needs tp get the corresponding labels. importnat if latents are included or not
+    res = np.where(np.array(labels)==label)[0][0]
+    return res
+
+
 def data_generator(scm,
                    intervention_variable,
                    intervention_value,
@@ -202,11 +209,7 @@ def data_generator(scm,
 
     # get intervention_var as int. E.g. 'u_0' -> int(0)
     if intervention_variable is not None:
-        # if len >2 then there is the u_ prefix
-        if len(intervention_variable) > 2:
-            intervention_variable = int(intervention_variable[2:])
-        else:
-            intervention_variable = int(intervention_variable)
+        intervention_variable = labels_to_ints(labels, intervention_variable)
 
     ts = mod.generate_nonlinear_contemp_timeseries(links=scm,
                                                    T=n_samples,

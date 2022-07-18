@@ -1,4 +1,5 @@
 import pickle
+import random
 
 import numpy as np
 import pandas as pd
@@ -22,10 +23,10 @@ def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
     # get 90th percentile of intervention_var_measured_values
     if intervention_coeff > 0:
         intervention_value = np.percentile(intervention_var_measured_values,
-                                           intervention_value_percentile)  # np.random.uniform(75, 95, size=1)
+                                           random.choice([50, 95]))  # np.random.uniform(50, 95, size=1)
     elif intervention_coeff < 0:
         intervention_value = np.percentile(intervention_var_measured_values,
-                                           100 - intervention_value_percentile)  # np.random.uniform(5, 25, size=1)
+                                           100 - random.choice([5, 50]))  # np.random.uniform(5, 50, size=1)
     else:
         ValueError("intervention_coeff must be positive or negative")
     return intervention_value
@@ -42,12 +43,14 @@ def load_eq():
     return target_eq, graph_combinations
 
 
-def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts, unintervenable_vars, random_seed, old_intervention, label):
+def find_optimistic_intervention(graph_edgemarks, graph_effect_sizes, labels, ts, unintervenable_vars, random_seed,
+                                 old_intervention, label, external_independencies,
+                                 ):
     """
     Optimal control to find the most optimistic intervention.
     """
     res = get_optimistic_intervention_var_via_simulation(
-        graph_effect_sizes, graph_edgemarks, labels, ts, unintervenable_vars, random_seed, label
+        graph_effect_sizes, graph_edgemarks, labels, ts, unintervenable_vars, random_seed, label, external_independencies
     )
     largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, most_optimistic_graph = res
 

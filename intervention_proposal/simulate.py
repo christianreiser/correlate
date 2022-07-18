@@ -84,7 +84,37 @@ def check_contemporaneous_cycle(val_min, graph, var_names, label):
         raise ValueError("Contemporaneous links must not contain cycle.")  # todo check if this always illegitimate
 
 
-def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_old, unintervenable_vars, random_seed, label):
+def get_all_tau_external_independencies_wrt_target(external_independencies, var_names):
+    """
+    if a var is in external dependencies for all tau w.r.t. target_label, then add it to is unintervenable
+    """
+    # external_independencies to list without lag
+    external_independencies_str = []
+    for external_independency in external_independencies:
+        external_independencies_str.append(list(external_independency[0:-1]))
+
+    # external_independencies to string labels
+    for external_independency_idx in range(len(external_independencies_str)):
+        external_independency = external_independencies_str[external_independency_idx]
+        for var_idx in range(len(external_independency)):
+            var = external_independency[var_idx]
+            external_independencies_str[external_independency_idx][var_idx] = var_names[var]
+
+    #
+    all_tau_external_independencies_wrt_target = []
+    for external_independency in external_independencies_str:
+        # count how often the external independency in external_independencies_str
+        if external_independency[1] == target_label:
+            if external_independencies_str.count(external_independency) > tau_max:
+                all_tau_external_independencies_wrt_target.append(external_independency[0])
+
+    # remove duplicates
+    all_tau_external_independencies_wrt_target = list(set(all_tau_external_independencies_wrt_target))
+    return all_tau_external_independencies_wrt_target
+
+
+def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_old, unintervenable_vars, random_seed,
+                                                   label, external_independencies):
     """
     compute target equations of all graph combinations
     input: val_min, graph, var_names (loads from file)
@@ -95,9 +125,17 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
     if verbosity_thesis > 2:
         print('get optimistic_intervention_var_via_simulation ...')
 
+    # also skipp all all_tau_external_independencies_wrt_target
+    if external_independencies is not None and len(external_independencies) > 0:
+        to_add = get_all_tau_external_independencies_wrt_target(external_independencies,var_names)
+        if to_add is not None and len(to_add) > 0:
+            unintervenable_vars = unintervenable_vars + to_add
+
+
+
     # plot graph
-    if verbosity_thesis > 1 and label != 'true_scm':
-        plot_graph(val, my_graph, var_names, 'current graph estimate')
+    # if verbosity_thesis > 1 and label != 'true_scm':
+    #     plot_graph(val, my_graph, var_names, 'current graph estimate')
 
     # drop redundant info in graph
     my_graph = drop_redundant_information_due_to_symmetry(my_graph)
@@ -127,14 +165,17 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
         # # ensure no contemporaneous cycles
         # check_contemporaneous_cycle(val, unique_graph, var_names, 'cycle check')
 
+        # for all measured vars
         for intervention_var in var_names:
+
             # skip unintervenable intervention_vars like target label
             if intervention_var not in unintervenable_vars:
-                samples = np.zeros(shape=(n_samples_simulation, len(var_names)))
+
+                # get low intervention value from low percentile
                 intervention_value_low = np.percentile(a=ts_old[intervention_var], q=low_percentile)
-                intervention_value_high = np.percentile(a=ts_old[intervention_var], q=high_percentile)
+
                 # intervene on intervention_var with low and high values
-                simulated_data = data_generator(
+                simulated_res = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_low,
@@ -145,9 +186,13 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                 )
 
                 # if none then cyclic contemporaneous graph and skipp this graph
-                if simulated_data is not None:
-                    samples[0:n_half_samples] = simulated_data
-                    samples[n_half_samples:n_samples_simulation] = data_generator(
+                if simulated_res is not None:
+
+                    # same for high intervention value
+                    intervention_value_high = np.percentile(a=ts_old[intervention_var], q=high_percentile)
+                    simulated_samples = np.zeros(shape=(n_samples_simulation, len(var_names)))
+                    simulated_samples[0:n_half_samples] = simulated_res
+                    simulated_samples[n_half_samples:n_samples_simulation] = data_generator(
                         scm=model,
                         intervention_variable=intervention_var,
                         intervention_value=intervention_value_high,
@@ -162,9 +207,9 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
                     for tau in range(tau_max + 1):
 
                         # intervention_var and target series as columns in df
-                        samples = pd.DataFrame(samples, columns=var_names)
+                        simulated_samples = pd.DataFrame(simulated_samples, columns=var_names)
                         var_and_target = pd.DataFrame(
-                            dict(intervention_var=samples[intervention_var], target=samples[target_label]))
+                            dict(intervention_var=simulated_samples[intervention_var], target=simulated_samples[target_label]))
 
                         # tau shift
                         if tau > 0:
@@ -204,7 +249,7 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
 
     return largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff, most_optimistic_graph
 
-#
+
 # val_min, graph, var_names = load_results('chr')
 # var_names = [str(x) for x in var_names]
 #
@@ -217,10 +262,17 @@ def get_optimistic_intervention_var_via_simulation(val, my_graph, var_names, ts_
 #     ts_old = pickle.load(f)
 # print('WARNING: loaded ts from pickle')
 #
-# largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff = get_optimistic_intervention_var_via_simulation(val_min, graph, var_names, ts_old, unintervenable_vars, random_seed)
+# largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff = get_optimistic_intervention_var_via_simulation(
+#     val_min, graph, var_names, ts_old, unintervenable_vars, random_seed, external_independencies=external_independencies)
 #
-
 # # load val_min, graph, var_names, label from file via pickle
 # with open(checkpoint_path + 'tmp.pkl', 'rb') as f:
 #     val_min, graph, var_names, label = pickle.load(f)
 # check_contemporaneous_cycle(val_min, graph, var_names, 'cycle check')
+
+#
+#
+# unintervenable_vars = ['0', '1', '6']
+# var_names = ['0', '2', '3', '4', '5']
+# external_independencies = [(1, 0, 0), (1, 0, 1), (1, 4, 0)]
+# get_all_tau_external_independencies_wrt_target(external_independencies, var_names)

@@ -109,8 +109,8 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                 cause_and_effect_tau_shifted = cause_and_effect.copy()
 
                 # add median non-interventional data to interventional data which will allow to see if there is a difference
-                cause_and_effect_tau_shifted = add_median_non_interventional_data(cause_and_effect_tau_shifted, df,
-                                                                                  cause, effect, n_ini_obs)
+                # cause_and_effect_tau_shifted = add_median_non_interventional_data(cause_and_effect_tau_shifted, df, # todo probably not correct
+                #                                                                   cause, effect, n_ini_obs)
 
                 # iterate over all taus
                 for tau in range(tau_max + 1):

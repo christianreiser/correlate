@@ -1,6 +1,7 @@
 import math
 import pickle
 
+import dill as dill
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -9,9 +10,10 @@ from causal_discovery.LPCMCI.observational_discovery import observational_causal
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
 from checkpoints import load_checkpoint, save_checkpoint
-from config import target_label, coeff, min_coeff, n_mixed, nth, load_checkpoint_on, verbosity_thesis
+from config import target_label, coeff, min_coeff, n_mixed, nth, load_checkpoint_on, verbosity_thesis, checkpoint_path
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
+from intervention_proposal.target_eqs_from_pag import load_results
 from regret import compute_regret
 
 """
@@ -63,6 +65,7 @@ def has_measured_cross_dependencies_on_target_var(scm, unmeasured_labels_ints):
         return False
     else:
         return True
+
 
 
 def get_measured_labels(n_vars_all, random_state, frac_latents, scm):
@@ -152,17 +155,18 @@ def store_interv(was_intervened, intervention_variable, n_samples_per_generation
     return was_intervened
 
 
-def calculate_parameters(n_vars_measured, frac_latents):
+def calculate_parameters(n_vars_measured, frac_latents, pc_alpha):
     n_measured_links = n_vars_measured
     n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
     labels_strs = [str(i) for i in range(n_vars_all)]
-    return n_measured_links, n_vars_all, labels_strs
+    interv_alpha = pc_alpha/3
+    return n_measured_links, n_vars_all, labels_strs, interv_alpha
 
 
 def simulation_study_with_one_scm(sim_study_input):
     n_ini_obs, n_vars_measured, frac_latents, pc_alpha, n_samples_per_generation = sim_study_input[0]
     random_seed = sim_study_input[1]
-    n_measured_links, n_vars_all, labels_strs = calculate_parameters(n_vars_measured, frac_latents)
+    n_measured_links, n_vars_all, labels_strs, interv_alpha = calculate_parameters(n_vars_measured, frac_latents, pc_alpha)
 
     random_state = np.random.RandomState(random_seed)
 
@@ -192,7 +196,7 @@ def simulation_study_with_one_scm(sim_study_input):
     is_intervention_list = obs_or_intervene()  # 500 obs + 500 with every 4th intervention
     # n_samples = n_samples_per_generation
 
-    """ generate first 500 samples without intervention"""
+    """ generate first n_ini_obs samples without intervention"""
     # generate observational data
     ts_generated_actual = data_generator(
         scm=scm,
@@ -213,7 +217,8 @@ def simulation_study_with_one_scm(sim_study_input):
         unintervenable_vars=unintervenable_vars,
         random_seed=random_seed,
         old_intervention=[None, None],
-        label='true_scm'
+        label='true_scm',
+        external_independencies=None,
     )
     if verbosity_thesis > 1:
         print("intervention_variable_optimal: ", intervention_var_optimal_backup, "interv_val_opti: ",
@@ -222,10 +227,10 @@ def simulation_study_with_one_scm(sim_study_input):
     # measure new data (hide latents)
     ts_measured_actual = measure(ts_generated_actual, obs_vars=measured_labels)
 
-    if load_checkpoint_on:
+    # if load_checkpoint_on:
         # load data from last checkpoint
-        ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list, setting, random_seed, random_state = load_checkpoint(
-            n_measured_links, n_vars_measured, n_vars_all, labels_strs)
+        # ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list, setting, random_seed, random_state = load_checkpoint(
+        #     n_measured_links, n_vars_measured, n_vars_all, labels_strs)
 
     """ loop: causal discovery, planning, intervention """
     # intervene, observe, observe, observe, ...
@@ -247,7 +252,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 independencies_from_interv_data = get_independencies_from_interv_data(
                     ts_measured_actual.copy(),
                     was_intervened,
-                    pc_alpha,
+                    interv_alpha,
                     n_ini_obs,
                 )
 
@@ -266,14 +271,15 @@ def simulation_study_with_one_scm(sim_study_input):
                 """
                 # from measured data
                 interv_var, interv_val = find_optimistic_intervention(
-                    pag_edgemarks.copy(),
-                    pag_effect_sizes.copy(),
-                    measured_labels,
-                    ts_measured_actual[:n_ini_obs],  # only first n_ini_obs samples, to have the same ts as optimal
-                    unintervenable_vars,
-                    random_seed,
+                    graph_edgemarks=pag_edgemarks.copy(),
+                    graph_effect_sizes=pag_effect_sizes.copy(),
+                    labels=measured_labels,
+                    ts=ts_measured_actual[:n_ini_obs],  # only first n_ini_obs samples, to have the same ts as optimal
+                    unintervenable_vars=unintervenable_vars,
+                    random_seed=random_seed,
                     old_intervention=[interv_var, interv_val],
-                    label='actual_data'
+                    label='actual_data',
+                    external_independencies=independencies_from_interv_data,
                 )
 
                 if verbosity_thesis > 1:
@@ -330,11 +336,13 @@ def simulation_study_with_one_scm(sim_study_input):
             if is_intervention:
                 regret_list, converged_on_optimal = compute_regret(ts_measured_actual, ts_generated_optimal,
                                                                    regret_list, n_samples_per_generation)
+                if regret_list[-1] !=0 and interv_var == interv_var_opti and interv_val == interv_val_opti:
+                    raise ValueError("regret is not 0 but optimal intervention = actual intervention")
 
-            """checkpoint"""
-            # save data to checkpoint
-            save_checkpoint(ts_measured_actual, was_intervened, ts_generated_actual, ts_generated_optimal, regret_list,
-                            random_seed, random_state, coeff, min_coeff, sim_study_input)
+            # """checkpoint"""
+            # # save data to checkpoint
+            # filename = checkpoint_path+'global_save.pkl'
+            # dill.dump_session(filename)
 
     regret_sum = sum(regret_list)
     print('converged on optimal intervention. regret_sum:', regret_sum, '\n\n')
@@ -354,7 +362,7 @@ def run_all_experiments():
             regret_list_over_scms = []
 
             # repeat each parameter setting for 100 randomly sampled scms
-            for i_th_scm in tqdm(range(100)):
+            for i_th_scm in tqdm(range(1,100)):
                 print('setting:', one_param_setting, 'random_seed:', i_th_scm)
 
                 ### run experiment ###

@@ -4,7 +4,8 @@ import numpy as np
 from tigramite import data_processing as pp
 from tigramite.independence_tests import ParCorr
 from tigramite.pcmci import PCMCI
-
+from tigramite import plotting as tp
+import matplotlib.pyplot as plt
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
 from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, \
     remove_link_threshold, verbosity, verbosity_thesis
@@ -124,17 +125,19 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 
         # remove links if are below threshold
         graph[abs(val_min) < remove_link_threshold] = ""
+        val_min[graph == ""] = 0
 
-        # # plot predicted PAG
-        # tp.plot_graph(
-        #     val_matrix=val_min,
-        #     link_matrix=graph,
-        #     var_names=var_names,
-        #     link_colorbar_label='cross-MCI',
-        #     node_colorbar_label='auto-MCI',
-        #     figsize=(10, 6),
-        # )
-        # plt.show()
+        # plot predicted PAG
+        if verbosity_thesis > 1:
+            tp.plot_graph(
+                val_matrix=val_min,
+                link_matrix=graph,
+                var_names=var_names,
+                link_colorbar_label='current LPCMCI estimate',
+                node_colorbar_label='auto-MCI',
+                figsize=(10, 6),
+            )
+            plt.show()
 
         # save results
         save_results(val_min, graph, var_names, 'simulated')

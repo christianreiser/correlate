@@ -208,9 +208,9 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     for j in range(N):
         X[:, j] = noises[j](T + max_lag + len_ts_old)
 
-    # chrei: replace values of X for starting from len_ts_old for max_lag elements with starting_values
+    # chrei: in X[from len_ts_old for tau_max+1 elements], replace these values with the last (max_lag+1) elements of ts_old
     if len_ts_old > 0:
-        X[len_ts_old:max_lag + len_ts_old] = ts_old[-max_lag:]
+        X[len_ts_old:max_lag +1+ len_ts_old] = ts_old[-(max_lag+1):]
 
     for t in range(max_lag + len_ts_old, T + max_lag + len_ts_old):  # for all time steps
         for j in causal_order:  # for all affected variables j ( in causal order)

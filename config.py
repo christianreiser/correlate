@@ -73,13 +73,14 @@ n_samples_per_generation = 4 # todo 1
 # action simulation
 n_samples_total = 1000
 n_samples_simulation = 1000
-low_percentile =20
-high_percentile = 80
+
 intervention_value_percentile = 95
+high_percentile = intervention_value_percentile
+low_percentile =100-intervention_value_percentile
 
 # evaluation
 n_below_regret_thresh = 3 # todo 10
-regret_convergence_thresh = 0.1
+regret_convergence_thresh = 0.0
 
 # test
 correct390_0 = 2.5380406379699707

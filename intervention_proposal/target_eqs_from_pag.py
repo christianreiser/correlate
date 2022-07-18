@@ -77,7 +77,35 @@ def drop_redundant_information_due_to_symmetry(graph):
         for i in range(graph.shape[0]):
             for j in range(graph.shape[1]):
                 if i < j:
-                    graph[i, j, tau] = ''
+                    edge = graph[i, j, tau]
+                    correspoding_edge = graph[j, i, tau]
+                    if edge == '' and correspoding_edge == '':
+                        pass
+                    elif edge == '-->' and correspoding_edge == '<--':
+                        graph[i, j, tau] = ''
+                    elif edge == '<--' and correspoding_edge == '-->':
+                        graph[i, j, tau] = ''
+                    elif edge == 'o->' and correspoding_edge == '<-o':
+                        graph[i, j, tau] = ''
+                    elif edge == '<-o' and correspoding_edge == 'o->':
+                        graph[i, j, tau] = ''
+                    elif edge == '<->' and correspoding_edge == '<->':
+                        graph[i, j, tau] = ''
+                    elif edge == 'x->' and correspoding_edge == '<-x':
+                        graph[i, j, tau] = ''
+                    elif edge == '<-x' and correspoding_edge == 'x->':
+                        graph[i, j, tau] = ''
+                    elif edge == 'o-o' and correspoding_edge == 'o-o':
+                        graph[i, j, tau] = ''
+                    elif edge == 'x-x' and correspoding_edge == 'x-x':
+                        graph[i, j, tau] = ''
+                    elif edge == 'x-o' and correspoding_edge == 'o-x':
+                        graph[i, j, tau] = ''
+                    elif edge == 'o-x' and correspoding_edge == 'x-o':
+                        graph[i, j, tau] = ''
+                    else:
+                        pass
+
     return graph
 
 
@@ -92,23 +120,26 @@ def make_redundant_information_with_symmetry(graph):
         for i in range(graph.shape[0]):
             for j in range(graph.shape[1]):
                 if i != j:
-                    if graph[i, j, tau] == '':
-                        pass
-                    elif graph[i, j, tau] == '-->':
-                        graph[j, i, tau] = '<--'
-                    elif graph[i, j, tau] == '<--':
-                        graph[j, i, tau] = '-->'
-                    elif graph[i, j, tau] == 'x-x':
-                        graph[j, i, tau] = 'x-x'
-                    elif graph[i, j, tau] == '<->':
-                        graph[j, i, tau] = '<->'
-                    elif graph[i, j, tau] == 'o->':
-                        graph[j, i, tau] = '<-o'
-                    elif graph[i, j, tau] == '<-o':
-                        graph[j, i, tau] = 'o->'
+                    # only modify if empty
+                    if graph[j, i, tau] == '':
 
-                    else:  # if arrow is not forward pointing, error
-                        ValueError('Error: graph[i, j, tau] is not an arrow')
+                        if graph[i, j, tau] == '':
+                            pass
+                        elif graph[i, j, tau] == '-->':
+                            graph[j, i, tau] = '<--'
+                        elif graph[i, j, tau] == '<--':
+                            graph[j, i, tau] = '-->'
+                        elif graph[i, j, tau] == 'x-x':
+                            graph[j, i, tau] = 'x-x'
+                        elif graph[i, j, tau] == '<->':
+                            graph[j, i, tau] = '<->'
+                        elif graph[i, j, tau] == 'o->':
+                            graph[j, i, tau] = '<-o'
+                        elif graph[i, j, tau] == '<-o':
+                            graph[j, i, tau] = 'o->'
+
+                        else:  # if arrow is not forward pointing, error
+                            ValueError('Error: graph[i, j, tau] is not an arrow')
     return graph
 
 
