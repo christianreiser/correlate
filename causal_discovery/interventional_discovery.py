@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+import pingouin as pg
 from scipy.stats import pearsonr
 
 from config import verbosity_thesis, tau_max, target_label
+from data_generation import labels_to_ints
 
 
 def interventional_pass_filter(ts, was_intervened):
@@ -68,11 +70,46 @@ def add_median_non_interventional_data(cause_and_effect_tau_shifted, df, cause, 
     return cause_and_effect_tau_shifted
 
 
-def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_obs):
+def get_conditioning_set(effect, df, pag_edgemarks, measured_labels):
+    """
+    first get probable edgemarks of effect variable with format [probable parent, tau] given effect label.
+    then get their data and shift by tau
+
+    return tau-shifted conditioning_set
+    """
+    probable_parents = []
+    effect_int = labels_to_ints(measured_labels, effect)
+    # iterate over tau
+    for tau in range(0, tau_max + 1):
+        # search for causes is column of effect var
+        effect_col = pag_edgemarks[:, effect_int, tau]
+        for item_idx in range(len(effect_col)):
+            item = effect_col[item_idx]
+            if item in ['-->', 'o->', 'x->']:
+                probable_parents.append([item_idx, tau])
+        # search for causes is row of effect var
+        effect_row = pag_edgemarks[effect_int, :, tau]
+        for item_idx in range(len(effect_row)):
+            item = effect_row[item_idx]
+            if item in ['<--', '<-o', '<-x']:
+                probable_parents.append([item_idx, tau])
+
+    # get conditioning set
+    conditioning_set = []
+    for probable_parent in probable_parents:
+        to_add = df.loc[:, measured_labels[probable_parent[0]]].copy().shift(periods=probable_parent[1])
+        conditioning_set.append(to_add)  # todo tau shift
+
+    # convert to dataframe
+    conditioning_set = pd.DataFrame(np.array(conditioning_set).T)
+    return conditioning_set
+
+
+def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_obs, pag_edgemarks, measured_labels):
     """
     orient links with interventional data.
-    test each var to each other var for all taus.
-    output: (causeing intervened var, intependent var, tau)
+    test conditional independence for each var to each other var for all taus.
+    output: (causing intervened var, independent var, tau)
     """
 
     if verbosity_thesis > 2:
@@ -96,36 +133,47 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
             # get values of cause var
             cause_values = df_with_intervention_on_one_cause[cause]
 
-            # iterate over all other (potentially effect) variables
-            for effect in df_with_intervention_on_one_cause:
+            # skip if cause var is const, as corr is not defined
+            if len(np.unique(cause_values)) > 1:
 
-                # get values of effect var
-                effect_values = df_with_intervention_on_one_cause[effect]
+                # iterate over all other (potentially effect) variables
+                for effect in df_with_intervention_on_one_cause:
 
-                # cause and effect series as columns in df
-                cause_and_effect = pd.DataFrame(dict(cause=cause_values, effect=effect_values))
+                    # todo get known parents of effect
+                    # returns probable edgemarks of effect variable with format [probable parent, tau]
+                    conditioning_set = get_conditioning_set(effect, df_with_intervention_on_one_cause, pag_edgemarks,
+                                                            measured_labels)
 
-                # ini tau shifted var
-                cause_and_effect_tau_shifted = cause_and_effect.copy()
+                    # get values of effect var
+                    effect_values = df_with_intervention_on_one_cause[effect]
 
-                # add median non-interventional data to interventional data which will allow to see if there is a difference
-                # cause_and_effect_tau_shifted = add_median_non_interventional_data(cause_and_effect_tau_shifted, df, # todo probably not correct
-                #                                                                   cause, effect, n_ini_obs)
+                    # cause and effect series as columns in df
+                    cause_and_effect = pd.DataFrame(dict(cause=cause_values, effect=effect_values))
 
-                # iterate over all taus
-                for tau in range(tau_max + 1):
+                    # add median non-interventional data to interventional data which will allow to see if there is a difference
+                    # cause_and_effect_non_interv_added = add_median_non_interventional_data(cause_and_effect.copy(), df, # todo probably not correct
+                    #                                                                   cause, effect, n_ini_obs)
 
-                    # ignore contemporaneous auto-dependencies
-                    if (cause != effect) or (tau != 0):
+                    # iterate over all taus
+                    for tau in range(tau_max + 1):
 
-                        # data needs to be at least 3 (due to corr) + tau (shift drop nan) long
-                        if len(cause_and_effect) > 2 + tau:
+                        # ignore contemporaneous auto-dependencies and data needs to be at least 3 (due to corr) + tau (shift drop nan) long
+                        if ((cause != effect) or (tau != 0)) and (len(cause_and_effect) > 2 + tau):
+
+                            # ini tau shifted var
+                            cause_and_effect_tau_shifted = cause_and_effect.copy()
 
                             # tau shift
                             if tau > 0:
                                 cause_and_effect_tau_shifted['effect'] = cause_and_effect_tau_shifted[
                                     'effect'].copy().shift(periods=tau)
-                                cause_and_effect_tau_shifted = cause_and_effect_tau_shifted.dropna()
+
+                            # add conditioning_set to cause_and_effect_tau_shifted as columns
+                            cause_and_effect_tau_shifted = pd.concat(
+                                [cause_and_effect_tau_shifted, conditioning_set], axis=1)
+                            cause_and_effect_tau_shifted = cause_and_effect_tau_shifted.dropna()
+                            ans = pg.partial_corr(data=cause_and_effect_tau_shifted, x='cause', y='effect',
+                                                  covar=[range(conditioning_set.columns.size)]).round(3)
 
                             # statistical test
                             r, probability_independent = pearsonr(cause_and_effect_tau_shifted['cause'],
@@ -174,8 +222,17 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
 # was_intervened.iloc[-5, 0] = True
 # was_intervened.iloc[-6, 0] = True
 #
+# pag_edgemarks = np.array([[['', '-->'], ['-->', '-->'], ['', '-->'], ['', '<->'], ['', '']],
+#                           [['<--', '-->'], ['', '-->'], ['-->', '-->'], ['<->', ''], ['-->', '']],
+#                           [['', '-->'], ['<--', '-->'], ['', '-->'], ['', ''], ['<->', '-->']],
+#                           [['', 'o->'], ['<->', ''], ['', '<->'], ['', '<->'], ['', '']],
+#                           [['', '<->'], ['<--', '<->'], ['<->', '-->'], ['', ''], ['', '-->']]])
+# measured_labels=['0', '2', '3', '4', '5']
 # independencies_from_interv_data = get_independencies_from_interv_data(
 #     df=ts,
-#     was_intervened=was_intervened)
-#
+#     was_intervened=was_intervened,
+#     interv_alpha=0.1,
+#     n_ini_obs=500,
+#     pag_edgemarks=pag_edgemarks,
+#     measured_labels=measured_labels)
 # print()

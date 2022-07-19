@@ -45,7 +45,7 @@ class SVARFCI():
 
     A note on middle marks:
         In order to distinguish edges that are in the PAG for sure from edges that may not be in the PAG, we use the notion of middle marks that we introduced for LPCMCI. This becomes useful for the precaution discussed in the explanation of the parameter 'fix_all_edges_before_final_orientation', see above. In particular, we use the middle marks '?' and '' (empty). For convenience (to have strings of the same lengths) we here internally denote the empty middle mark by '-'. For post-processing purposes all middle marks are nevertheless set to the empty middle mark (here '-') in line 99, but if verbosity >= 1 a graph with the middle marks will be printed out before.
-    
+
     A note on wildcards:
         The middle mark wildcard \ast and the edge mark wildcard are here represented as *, the edge mark wildcard \star as +
     """
@@ -67,8 +67,8 @@ class SVARFCI():
         self.T, self.N = self.dataframe.values.shape
 
 
-    def run_svarfci(self, 
-                tau_max = 1, 
+    def run_svarfci(self,
+                tau_max = 1,
                 pc_alpha = 0.05,
                 max_cond_px = 0,
                 max_p_global = np.inf,
@@ -92,7 +92,7 @@ class SVARFCI():
         if self.fix_all_edges_before_final_orientation:
             self._fix_all_edges()
 
-        self._run_fci_orientation_phase()   
+        self._run_fci_orientation_phase()
 
         # Post processing
         if self.verbosity >= 1:
@@ -133,7 +133,7 @@ class SVARFCI():
         self.max_pds_set = max_pds_set
         self.fix_all_edges_before_final_orientation = fix_all_edges_before_final_orientation
         self.verbosity = verbosity
-        
+
         # Initialize the nested dictionary for storing the current graph.
         # Syntax: self.graph_dict[j][(i, -tau)] gives the string representing the link from X^i_{t-tau} to X^j_t
         self.graph_dict = {}
@@ -159,7 +159,7 @@ class SVARFCI():
                                 range(self.tau_max + 1) if (tau > 0 or i < j)} for j in range(self.N)}
         self.max_cardinality = {j: {(i, -tau): 0 for i in range(self.N) for tau in
                                 range(self.tau_max + 1) if (tau > 0 or i < j)} for j in range(self.N)}
-                                                  
+
         # Initialize a nested dictionary for caching pds-sets
         # Syntax: As for self.sepsets
         self._pds_t = {(j, -tau_j): {} for j in range(self.N) for tau_j in range(self.tau_max + 1)}
@@ -233,7 +233,7 @@ class SVARFCI():
                 # ... X and Y are not adjacent anymore
                 if link == "":
                     continue
-                
+
                 ######################################################################################################
                 ### Preparation of PC search sets ####################################################################
 
@@ -259,7 +259,7 @@ class SVARFCI():
 
                 # This link does need testing. Therfore, the algorithm has not converged yet
                 has_converged = False
-            
+
                 ######################################################################################################
                 ### Tests for conditional independence ###############################################################
 
@@ -278,7 +278,7 @@ class SVARFCI():
                     if q_count > self.max_q_global:
                         break
 
-                    # Test conditional independence of X and Y given Z. Correspondingly updateself.val_min, self.pval_max, and self.cardinality 
+                    # Test conditional independence of X and Y given Z. Correspondingly updateself.val_min, self.pval_max, and self.cardinality
                     val, pval = self.cond_ind_test.run_test(X = [X], Y = [Y], Z = list(Z), tau_max = self.tau_max)
 
                     if self.verbosity >= 2:
@@ -295,14 +295,14 @@ class SVARFCI():
                         # Mark the edge from X to Y for removal, save Z as separating set
                         to_remove[Y[0]][X] = True
                         self._save_sepset(X, Y, (frozenset(Z), ""))
-    
+
                         # Verbose output
                         if self.verbosity >= 1:
                             print("({},{:2}) {:11} {} given {}".format(X[0], X[1], "independent", Y, Z))
 
                         # Break the for loop
                         break
-            
+
                 # Run through all cardinality p_pc subsets of S_search_XY
                 if test_X:
 
@@ -330,7 +330,7 @@ class SVARFCI():
 
                             to_remove[Y[0]][X] = True
                             self._save_sepset(X, Y, (frozenset(Z), ""))
-        
+
                             if self.verbosity >= 1:
                                 print("({},{:2}) {:11} {} given {}".format(X[0], X[1], "independent", Y, Z))
 
@@ -353,7 +353,7 @@ class SVARFCI():
 
             ##########################################################################################################
             ### Check for convergence ################################################################################
-        
+
             if has_converged:
                 # If no link needed testing, this algorithm has converged. Therfore, break the while loop
                 break
@@ -480,7 +480,7 @@ class SVARFCI():
                 # Verbose output
                 if self.verbosity >= 1:
                     print("for S_pc in combinations(S_search_YX, p_pc)")
-            
+
                 # If self.max_q_global is finite, the below for loop may be broken earlier. To still guarantee order independence, the set from which the potential separating sets are created is ordered in an order independent way. Here, the elements of S_search_YX are ordered according to their minimal test statistic with Y
                 if not np.isinf(self.max_q_global):
                     S_search_YX = self._sort_search_set(S_search_YX, Y)
@@ -497,7 +497,7 @@ class SVARFCI():
                         self._cannot_fix.add((X, Y))
                         break
 
-                    # Test conditional independence of X and Y given Z. Correspondingly updateself.val_min, self.pval_max, and self.cardinality 
+                    # Test conditional independence of X and Y given Z. Correspondingly updateself.val_min, self.pval_max, and self.cardinality
                     val, pval = self.cond_ind_test.run_test(X = [X], Y = [Y], Z = list(Z), tau_max = self.tau_max)
 
                     if self.verbosity >= 2:
@@ -514,7 +514,7 @@ class SVARFCI():
                         # Mark the edge from X to Y for removal and save sepset
                         to_remove[Y[0]][X] = True
                         self._save_sepset(X, Y, (frozenset(Z), ""))
-    
+
                         # Verbose output
                         if self.verbosity >= 1:
                             print("({},{:2}) {:11} {} given {}".format(X[0], X[1], "independent", Y, Z))
@@ -553,7 +553,7 @@ class SVARFCI():
 
                             to_remove[Y[0]][X] = True
                             self._save_sepset(X, Y, (frozenset(Z), ""))
-        
+
                             if self.verbosity >= 1:
                                 print("({},{:2}) {:11} {} given {}".format(X[0], X[1], "independent", Y, Z))
 
@@ -576,7 +576,7 @@ class SVARFCI():
 
             ##########################################################################################################
             ### Check for convergence ################################################################################
-        
+
             if has_converged:
                 # If no link needed testing, this algorithm has converged. Therfore, break the while loop
                 break
@@ -698,7 +698,7 @@ class SVARFCI():
                     new_ancs[j].add((i, lag_i))
                 elif new_link[0] == "<" and old_link[0] != "<":
                     new_non_ancs[j].add((i, lag_i))
-                
+
                 # New ancestral relation of (j, 0) to (i, lag_i == 0)
                 if lag_i == 0:
                     if new_link[2] == "-" and old_link[2] != "-":
@@ -735,7 +735,7 @@ class SVARFCI():
         assert lag_A == 0 or lag_B == 0
 
         # If pds_t(A, B) is in memory, return from memory
-        memo = self._pds_t[A].get(B) 
+        memo = self._pds_t[A].get(B)
         if memo is not None:
             return memo
 
@@ -801,7 +801,7 @@ class SVARFCI():
                         new_link = link[0] + "-" + link[2]
                         self.graph_dict[j][(i, lag_i)] = new_link
 
-    
+
     def _apply_new_ancestral_information(self, new_non_ancs, new_ancs):
         """Apply the new ancestorships and non-ancestorships specified by new_non_ancs and new_ancs to the current graph. Conflicts are resolved by marking. Returns True if any circle mark was turned into a head or tail, else False."""
 
@@ -859,7 +859,7 @@ class SVARFCI():
                 else:
                     # There is no conflict
                     add_to_def_non_ancs[j].add((i, lag_i))
-                    
+
         # Iterate through new_ancs
         for j in range(self.N):
             for (i, lag_i) in new_ancs[j]:
@@ -948,7 +948,7 @@ class SVARFCI():
                     put_head_or_tail = True
 
                 if self.verbosity >= 1 and (i, lag_i) not in self.def_non_ancs[j]:
-                    print("{:10} Marking ({}, {:2}) as non-anc of {}".format("Update:", i, lag_i, (j, 0)))  
+                    print("{:10} Marking ({}, {:2}) as non-anc of {}".format("Update:", i, lag_i, (j, 0)))
 
                 self.def_non_ancs[j].add((i, lag_i))
 
@@ -1250,7 +1250,7 @@ class SVARFCI():
         else:
             triples_1 = self._find_triples(pattern_ij='*-o', pattern_jk='o-*', pattern_ik='')
             triples_2 = self._find_triples(pattern_ij='*->', pattern_jk='o-*', pattern_ik='')
-            all_appropriate_triples = set(triples_1).union(set(triples_2))            
+            all_appropriate_triples = set(triples_1).union(set(triples_2))
 
         # Run through all appropriate graphical structures
         for (A, B, C) in all_appropriate_triples:
@@ -1339,7 +1339,7 @@ class SVARFCI():
         out = []
 
         # Find all graphical structures that the rule applies to
-        all_appropriate_quadruples = self._find_quadruples(pattern_ij='*->', pattern_jk='<-*', pattern_ik='', 
+        all_appropriate_quadruples = self._find_quadruples(pattern_ij='*->', pattern_jk='<-*', pattern_ik='',
                                                            pattern_il='+-o', pattern_jl='o-+', pattern_kl='+-o')
 
         # Run through all appropriate graphical structures
@@ -1427,7 +1427,7 @@ class SVARFCI():
         # Build the output list
         out = []
 
-        # Find unshielded triples B_1 o--*--o A o--*--> C or B_1 <--*--o A o--*--> C or B_1 <--*-- A o--*--> C 
+        # Find unshielded triples B_1 o--*--o A o--*--> C or B_1 <--*--o A o--*--> C or B_1 <--*-- A o--*--> C
         all_appropriate_triples = set(self._find_triples(pattern_ij='o-o', pattern_jk='o->', pattern_ik=''))
         all_appropriate_triples = all_appropriate_triples.union(set(self._find_triples(pattern_ij='<-o', pattern_jk='o->', pattern_ik='')))
         all_appropriate_triples = all_appropriate_triples.union(set(self._find_triples(pattern_ij='<--', pattern_jk='o->', pattern_ik='')))
@@ -1672,7 +1672,7 @@ class SVARFCI():
 
 
     def _sort_search_set(self, search_set, reference_node):
-        """Sort the nodes in search_set by their val_min value with respect to the reference_node. Nodes with higher values appear earlier""" 
+        """Sort the nodes in search_set by their val_min value with respect to the reference_node. Nodes with higher values appear earlier"""
 
         sort_by = [self._get_val_min(reference_node, node) for node in search_set]
         return [x for _, x in sorted(zip(sort_by, search_set), reverse = True)]
@@ -1780,7 +1780,7 @@ class SVARFCI():
                     # Add non-future adjacencies
                     self.graph_full_dict[j][(var, lag)] = link
 
-                    # Add the future adjacencies 
+                    # Add the future adjacencies
                     if lag < 0:
                         self.graph_full_dict[var][(j, -lag)] = self._reverse_link(link)
 
@@ -1802,7 +1802,7 @@ class SVARFCI():
 
     def _match_link(self, pattern, link):
         """Matches pattern including wildcards with link."""
-        
+
         if pattern == '' or link == '':
             return True if pattern == link else False
         else:
@@ -1817,10 +1817,10 @@ class SVARFCI():
                 if right_mark == '+':
                     if link[2] not in ['>', 'o']: return False
                 else:
-                    if link[2] != right_mark: return False    
-            
-            if middle_mark != '*' and link[1] != middle_mark: return False    
-                       
+                    if link[2] != right_mark: return False
+
+            if middle_mark != '*' and link[1] != middle_mark: return False
+
             return True
 
 
@@ -1838,7 +1838,7 @@ class SVARFCI():
 
     def _find_adj(self, graph, node, patterns, exclude=None, ignore_time_bounds=True):
         """Find adjacencies of node matching patterns."""
-        
+
         # Setup
         i, lag_i = node
         if exclude is None: exclude = []
@@ -1848,23 +1848,23 @@ class SVARFCI():
         # Init
         adj = []
         # Find adjacencies going forward/contemp
-        for k, lag_ik in zip(*np.where(graph[i,:,:])):  
+        for k, lag_ik in zip(*np.where(graph[i,:,:])):
             matches = [self._match_link(patt, graph[i, k, lag_ik]) for patt in patterns]
             if np.any(matches):
                 match = (k, lag_i + lag_ik)
                 if match not in adj and (k, lag_i + lag_ik) not in exclude and (-self.tau_max <= lag_i + lag_ik <= 0 or ignore_time_bounds):
                     adj.append(match)
-        
+
         # Find adjacencies going backward/contemp
-        for k, lag_ki in zip(*np.where(graph[:,i,:])):  
+        for k, lag_ki in zip(*np.where(graph[:,i,:])):
             matches = [self._match_link(self._reverse_link(patt), graph[k, i, lag_ki]) for patt in patterns]
             if np.any(matches):
                 match = (k, lag_i - lag_ki)
                 if match not in adj and (k, lag_i - lag_ki) not in exclude and (-self.tau_max <= lag_i - lag_ki <= 0 or ignore_time_bounds):
                     adj.append(match)
-     
+
         return adj
-        
+
 
     def _is_match(self, graph, X, Y, pattern_ij):
         """Check whether the link between X and Y agrees with pattern_ij"""
@@ -1880,7 +1880,7 @@ class SVARFCI():
 
     def _find_triples(self, pattern_ij, pattern_jk, pattern_ik):
         """Find triples (i, lag_i), (j, lag_j), (k, lag_k) that match patterns."""
-  
+
         # Graph as array makes it easier to search forward AND backward in time
         graph = self._dict2graph()
 
@@ -1889,7 +1889,7 @@ class SVARFCI():
         # print("matching ", pattern_ij, pattern_jk, pattern_ik)
 
         matched_triples = []
-                
+
         for i in range(self.N):
             # Set lag_i = 0 without loss of generality, will be adjusted at end
             lag_i = 0
@@ -1901,25 +1901,25 @@ class SVARFCI():
                                           exclude=[(i, lag_i)])
                 # print(j, adjacencies_j)
                 for (k, lag_k) in adjacencies_j:
-                    if self._is_match(graph, (i, lag_i), (k, lag_k), pattern_ik):                            
+                    if self._is_match(graph, (i, lag_i), (k, lag_k), pattern_ik):
                         # Now use stationarity and shift triple such that the right-most
                         # node (on a line t=..., -2, -1, 0, 1, 2, ...) is at lag 0
                         righmost_lag = max(lag_i, lag_j, lag_k)
-                        match = ((i, lag_i - righmost_lag), 
+                        match = ((i, lag_i - righmost_lag),
                                  (j, lag_j - righmost_lag),
                                  (k, lag_k - righmost_lag))
                         largest_lag = min(lag_i - righmost_lag, lag_j - righmost_lag, lag_k - righmost_lag)
                         if match not in matched_triples and \
                             -self.tau_max <= largest_lag <= 0:
-                            matched_triples.append(match)                       
-                
-        return matched_triples  
+                            matched_triples.append(match)
+
+        return matched_triples
 
 
-    def _find_quadruples(self, pattern_ij, pattern_jk, pattern_ik, 
+    def _find_quadruples(self, pattern_ij, pattern_jk, pattern_ik,
                                pattern_il, pattern_jl, pattern_kl):
         """Find quadruples (i, lag_i), (j, lag_j), (k, lag_k), (l, lag_l) that match patterns."""
-  
+
         # We assume this later
         assert pattern_il != ''
 
@@ -1927,7 +1927,7 @@ class SVARFCI():
         graph = self._dict2graph()
 
         matched_quadruples = []
-                
+
         # First get triple ijk
         ijk_triples = self._find_triples(pattern_ij, pattern_jk, pattern_ik)
 
@@ -1943,7 +1943,7 @@ class SVARFCI():
                                 self._find_adj(graph, (j, lag_j), pattern_jl,
                                           exclude=[(i, lag_i), (k, lag_k)])))
             else:
-                adjacencies = set([adj for adj in adjacencies 
+                adjacencies = set([adj for adj in adjacencies
                                 if self._is_match(graph, (j, lag_j), adj, '')])
 
             if pattern_kl != '':
@@ -1951,30 +1951,30 @@ class SVARFCI():
                                 self._find_adj(graph, (k, lag_k), pattern_kl,
                                           exclude=[(i, lag_i), (j, lag_j)])))
             else:
-                adjacencies = set([adj for adj in adjacencies 
+                adjacencies = set([adj for adj in adjacencies
                                 if self._is_match(graph, (k, lag_k), adj, '')])
 
             for adj in adjacencies:
                 (l, lag_l) = adj
-                    
+
                 # Now use stationarity and shift quadruple such that the right-most
                 # node (on a line t=..., -2, -1, 0, 1, 2, ...) is at lag 0
                 righmost_lag = max(lag_i, lag_j, lag_k, lag_l)
-                match = ((i, lag_i - righmost_lag), 
+                match = ((i, lag_i - righmost_lag),
                          (j, lag_j - righmost_lag),
                          (k, lag_k - righmost_lag),
                          (l, lag_l - righmost_lag),
                          )
-                largest_lag = min(lag_i - righmost_lag, 
-                                  lag_j - righmost_lag, 
+                largest_lag = min(lag_i - righmost_lag,
+                                  lag_j - righmost_lag,
                                   lag_k - righmost_lag,
                                   lag_l - righmost_lag,
                                   )
                 if match not in matched_quadruples and \
                     -self.tau_max <= largest_lag <= 0:
-                    matched_quadruples.append(match)                       
-                
-        return matched_quadruples 
+                    matched_quadruples.append(match)
+
+        return matched_quadruples
 
 
     def _get_R4_discriminating_paths(self, triple, max_length = np.inf):
@@ -1988,7 +1988,7 @@ class SVARFCI():
 
             # Base Case: If the current path is a discriminating path, return it as single entry of a list
             if len(path_taken) > 3 and link_to_Y == "":
-                return [path_taken]            
+                return [path_taken]
 
             # If the current path is not a discriminating path, continue the path
             paths = []

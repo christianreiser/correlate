@@ -17,7 +17,14 @@ from intervention_proposal.target_eqs_from_pag import load_results
 from regret import compute_regret
 
 """
-Simulation study with Param: # vars, frac, latents, n previous pbs samples, 19. july
+1. CONDITIONAL independence test at interventional discovery Wir partial correlation
+2. A) Adaptive exploration vs exploitation?
+  B) possible to use  also observational data?
+3. Paul's list from meeting
+
+Change intervention value to percentile of data seen so far
+- test what happens without or less observational data
+
 Plots: colorscale, latents? 
 Anmeldung 
 Ask Paul for template or suggest one 
@@ -190,7 +197,7 @@ def simulation_study_with_one_scm(sim_study_input):
 
     # ini converged_on_optimal
     converged_on_optimal = False
-    interv_var, interv_val = None, None
+    interv_var, interv_val, pag_edgemarks = None, None, None
 
     # schedule when to intervene
     is_intervention_list = obs_or_intervene()  # 500 obs + 500 with every 4th intervention
@@ -254,6 +261,8 @@ def simulation_study_with_one_scm(sim_study_input):
                     was_intervened,
                     interv_alpha,
                     n_ini_obs,
+                    pag_edgemarks,
+                    measured_labels,
                 )
 
                 # observational discovery
