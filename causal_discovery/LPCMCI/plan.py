@@ -166,7 +166,7 @@ def calculate_parameters(n_vars_measured, frac_latents, pc_alpha):
     n_measured_links = n_vars_measured
     n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
     labels_strs = [str(i) for i in range(n_vars_all)]
-    interv_alpha = pc_alpha/3
+    interv_alpha = pc_alpha
     return n_measured_links, n_vars_all, labels_strs, interv_alpha
 
 

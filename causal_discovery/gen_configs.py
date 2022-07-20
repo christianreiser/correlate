@@ -16,10 +16,10 @@ def define_settings():
         'frac_latents': [0.3, np.arange(0.0, 0.61, 0.2)],
 
         # significance threshold to keep an adjacency
-        'alpha': [0.7, np.arange(0.05, 0.96, 0.15)],
+        'alpha': [0.5, np.arange(0.05, 0.96, 0.15)],
 
         # how often in a row should the same intervention be applied?
-        'n_samples_per_generation': [50, np.arange(0, 51, 10)]
+        'n_samples_per_generation': [10, np.arange(0, 51, 10)]
     }
 
     # check if settings are valid

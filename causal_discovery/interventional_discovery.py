@@ -3,7 +3,7 @@ import pandas as pd
 import pingouin as pg
 from scipy.stats import pearsonr
 
-from config import verbosity_thesis, tau_max, target_label
+from config import verbosity_thesis, tau_max, target_label, checkpoint_path
 from data_generation import labels_to_ints
 
 
@@ -70,12 +70,12 @@ def add_median_non_interventional_data(cause_and_effect_tau_shifted, df, cause, 
     return cause_and_effect_tau_shifted
 
 
-def get_conditioning_set(effect, df, pag_edgemarks, measured_labels):
+def get_probable_parents(effect, pag_edgemarks, measured_labels):
     """
-    first get probable edgemarks of effect variable with format [probable parent, tau] given effect label.
-    then get their data and shift by tau
+    get probable parents of effect variable
+    output: list of ['var', 'tau']
+    probable parent has edgemark in ['-->', 'o->', 'x->']
 
-    return tau-shifted conditioning_set
     """
     probable_parents = []
     effect_int = labels_to_ints(measured_labels, effect)
@@ -86,23 +86,78 @@ def get_conditioning_set(effect, df, pag_edgemarks, measured_labels):
         for item_idx in range(len(effect_col)):
             item = effect_col[item_idx]
             if item in ['-->', 'o->', 'x->']:
-                probable_parents.append([item_idx, tau])
+                probable_parents.append([measured_labels[item_idx], str(tau)])
         # search for causes is row of effect var
         effect_row = pag_edgemarks[effect_int, :, tau]
         for item_idx in range(len(effect_row)):
             item = effect_row[item_idx]
             if item in ['<--', '<-o', '<-x']:
-                probable_parents.append([item_idx, tau])
+                probable_parents.append([measured_labels[item_idx], str(tau)])
 
-    # get conditioning set
-    conditioning_set = []
-    for probable_parent in probable_parents:
-        to_add = df.loc[:, measured_labels[probable_parent[0]]].copy().shift(periods=probable_parent[1])
-        conditioning_set.append(to_add)  # todo tau shift
+    # remove duplicates
+    if len(probable_parents) > 0:
+        found_duplicate = True
+        while found_duplicate:
+            found_duplicate = False
+            for parents_idx in range(len(probable_parents)):
+                parents = probable_parents[parents_idx]
+                # count how often parents is in probable_parents
+                count = 0
+                for parents_idx2 in range(len(probable_parents)):
+                    if parents == probable_parents[parents_idx2]:
+                        count += 1
+                if count > 1:
+                    found_duplicate = True
+                    probable_parents.pop(parents_idx)
+                    break
+    return probable_parents
 
-    # convert to dataframe
-    conditioning_set = pd.DataFrame(np.array(conditioning_set).T)
-    return conditioning_set
+
+def remove_cause_tau_var(probable_parents, cause, tau):
+    # in probable_parents remove item if item == [cause, tau]
+    probable_parents = list(probable_parents)
+    tau=str(tau)
+    for item_idx in range(len(probable_parents)):
+        item = probable_parents[item_idx]
+        if item[0] == cause and item[1] == tau:
+            # remove item from probable_parents
+            probable_parents.pop(item_idx)
+            break
+    return probable_parents
+
+def get_conditioning_df(probable_parents, df, measured_labels):
+    """
+    get probable_parents' data and shift by tau
+    """
+    if len(probable_parents) <1:
+        # return empty df
+        return pd.DataFrame()
+    else:
+        # get conditioning set
+        conditioning_df = []
+        column_names = []
+        for probable_parent in probable_parents:
+            to_add = df.loc[:, probable_parent[0]].copy().shift(periods=int(probable_parent[1]))
+            conditioning_df.append(to_add)
+
+            # column names in format 'cause_tau'
+            column_names.append(probable_parent[0] + '_' + probable_parent[1])
+
+        # convert to dataframe
+        conditioning_df = pd.DataFrame(np.array(conditioning_df).T, columns=column_names)
+        return conditioning_df
+
+
+def align_cause_effect_due_to_lag(cause_and_effect, tau):
+    # ini tau shifted var
+    cause_and_effect_tau_shifted = cause_and_effect.copy()
+    if tau == 0:
+        return cause_and_effect_tau_shifted
+    else:
+        # shift cause down by tau, to emulate contemporaneous cause
+        cause_and_effect_tau_shifted['cause'] = cause_and_effect_tau_shifted[
+            'cause'].copy().shift(periods=tau)
+        return cause_and_effect_tau_shifted
 
 
 def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_obs, pag_edgemarks, measured_labels):
@@ -139,10 +194,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                 # iterate over all other (potentially effect) variables
                 for effect in df_with_intervention_on_one_cause:
 
-                    # todo get known parents of effect
-                    # returns probable edgemarks of effect variable with format [probable parent, tau]
-                    conditioning_set = get_conditioning_set(effect, df_with_intervention_on_one_cause, pag_edgemarks,
-                                                            measured_labels)
+                    probable_parents = get_probable_parents(effect, pag_edgemarks, measured_labels)
 
                     # get values of effect var
                     effect_values = df_with_intervention_on_one_cause[effect]
@@ -160,38 +212,45 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                         # ignore contemporaneous auto-dependencies and data needs to be at least 3 (due to corr) + tau (shift drop nan) long
                         if ((cause != effect) or (tau != 0)) and (len(cause_and_effect) > 2 + tau):
 
-                            # ini tau shifted var
-                            cause_and_effect_tau_shifted = cause_and_effect.copy()
+                            # get conditioning variables
+                            conditioning_vars = remove_cause_tau_var(probable_parents, cause, tau)
 
-                            # tau shift
-                            if tau > 0:
-                                cause_and_effect_tau_shifted['effect'] = cause_and_effect_tau_shifted[
-                                    'effect'].copy().shift(periods=tau)
+                            # returns probable edgemarks of effect variable with format [probable parent, tau]
+                            conditioning_df = get_conditioning_df(conditioning_vars, df_with_intervention_on_one_cause,
+                                                                    measured_labels)
+
+                            # emulate contemporaneous by shifting cause down by tau
+                            cause_and_effect_tau_shifted = align_cause_effect_due_to_lag(cause_and_effect, tau)
 
                             # add conditioning_set to cause_and_effect_tau_shifted as columns
-                            cause_and_effect_tau_shifted = pd.concat(
-                                [cause_and_effect_tau_shifted, conditioning_set], axis=1)
-                            cause_and_effect_tau_shifted = cause_and_effect_tau_shifted.dropna()
-                            ans = pg.partial_corr(data=cause_and_effect_tau_shifted, x='cause', y='effect',
-                                                  covar=[range(conditioning_set.columns.size)]).round(3)
+                            cause_and_effect_condition_tau_shifted = pd.concat(
+                                [cause_and_effect_tau_shifted.copy(), conditioning_df], axis=1)
+                            cause_and_effect_condition_tau_shifted = cause_and_effect_condition_tau_shifted.dropna()
 
+
+
+                            # get p_val
+                            ans = pg.partial_corr(data=cause_and_effect_condition_tau_shifted, x='cause', y='effect',
+                                                  covar=list(conditioning_df.columns)).round(3)
+                            p_val = ans['p-val'].values[0] # probability of independence
+                            r = ans['r'].values[0] # correlation coefficient
                             # statistical test
-                            r, probability_independent = pearsonr(cause_and_effect_tau_shifted['cause'],
-                                                                  cause_and_effect_tau_shifted['effect'])
+                            # r, p_val = pearsonr(cause_and_effect_tau_shifted['cause'],
+                            #                                       cause_and_effect_tau_shifted['effect'])
                             # if significantly independent:
-                            if probability_independent > interv_alpha:
+                            if p_val > interv_alpha:
 
                                 # save independency information
                                 independencies_from_interv_data.append((cause, effect, tau))
                                 if verbosity_thesis > 2:
                                     print("independency in interventional data: intervened var ", cause,
                                           " is independent of var", effect, "with lag=", tau, ", p-value=",
-                                          probability_independent)
+                                          p_val)
                                 elif verbosity_thesis > 1:
                                     if effect == target_label:
                                         print("independency in interventional data: intervened var ", cause,
                                               " is independent of var", effect, "with lag=", tau, ", p-value=",
-                                              probability_independent)
+                                              p_val)
 
     return independencies_from_interv_data
 
