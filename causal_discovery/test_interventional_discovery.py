@@ -1,14 +1,12 @@
-import unittest
-
 import numpy as np
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 
 from causal_discovery import interventional_discovery
 from config import checkpoint_path
 
 
-class TestInterventionalDiscovery(unittest.TestCase):
+class TestInterventionalDiscovery:
     def test_get_probable_parents(self):
         # Given
         effect = '0'
@@ -22,21 +20,21 @@ class TestInterventionalDiscovery(unittest.TestCase):
                                                                          measured_labels)
         # Then
         true_probable_parents = np.array([['0', '1'], ['1', '1'], ['2', '1'], ['3', '1']])
-        self.assertTrue(np.array_equal(true_probable_parents, probable_parents))
+        assert np.array_equal(true_probable_parents, probable_parents)
 
         # 2. test
         effect = '2'
         pag_edgemarks = np.load(checkpoint_path + 'pag_edgemarks.npy', allow_pickle=True)
         probable_parents = interventional_discovery.get_probable_parents(effect, pag_edgemarks, measured_labels)
         true_probable_parents = np.array([['0', '0'], ['1', '1'], ['2', '1'], ['3', '1']])
-        self.assertTrue(np.array_equal(true_probable_parents, probable_parents))
+        assert np.array_equal(true_probable_parents, probable_parents)
 
         # 3. test
         effect = '3'
         probable_parents = interventional_discovery.get_probable_parents(effect, pag_edgemarks,
                                                                          measured_labels)
         true_probable_parents = np.array([['3', '1']])
-        self.assertTrue(np.array_equal(true_probable_parents, probable_parents))
+        assert np.array_equal(true_probable_parents, probable_parents)
 
     def test_remove_cause_tau_var(self):
         # Given
@@ -47,7 +45,7 @@ class TestInterventionalDiscovery(unittest.TestCase):
         conditioning_vars = interventional_discovery.remove_cause_tau_var(probable_parents, cause, tau)
         # Then
         true_conditioning_vars = [['1', '1'], ['2', '1'], ['3', '1']]
-        self.assertTrue(np.array_equal(true_conditioning_vars, conditioning_vars))
+        assert np.array_equal(true_conditioning_vars, conditioning_vars)
 
     def test_get_conditioning_df(self):
         conditioning_vars = [['1', '1'], ['2', '1'], ['3', '1']]
@@ -81,7 +79,7 @@ class TestInterventionalDiscovery(unittest.TestCase):
         # Then
         true_aligned_cause_and_effect_tau_shifted = pd.DataFrame([[np.NaN, -1.0], [5.0, 0.0], [6.0, 1.0], [7.0, 2.0]],
                                                                  columns=['cause', 'effect'])
-        self.assertTrue(aligned_cause_and_effect_tau_shifted.equals(true_aligned_cause_and_effect_tau_shifted))
+        assert aligned_cause_and_effect_tau_shifted.equals(true_aligned_cause_and_effect_tau_shifted)
 
         # for tau=0
         # When
@@ -89,7 +87,7 @@ class TestInterventionalDiscovery(unittest.TestCase):
             cause_and_effect_tau_shifted, 0)
         # Then
         true_aligned_cause_and_effect_tau_shifted = cause_and_effect_tau_shifted
-        self.assertTrue(aligned_cause_and_effect_tau_shifted.equals(true_aligned_cause_and_effect_tau_shifted))
+        assert aligned_cause_and_effect_tau_shifted.equals(true_aligned_cause_and_effect_tau_shifted)
 
     def test_get_independencies_from_interv_data(self):
         # Given
@@ -105,8 +103,4 @@ class TestInterventionalDiscovery(unittest.TestCase):
                                                                                        measured_labels)
         # Then
         true_indepdendencies = [('3', '0', 1), ('3', '4', 0), ('3', '4', 1), ('3', '5', 0), ('3', '5', 1)]
-        self.assertTrue(np.array_equal(true_indepdendencies, indepdendencies))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert np.array_equal(true_indepdendencies, indepdendencies)

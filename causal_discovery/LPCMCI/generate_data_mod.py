@@ -164,7 +164,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     if noises is None:
         noises = [random_state.randn for j in range(N)]
 
-    if N != max(links.keys()) + 1 or N != len(noises):
+    if noises != 'without' and (N != max(links.keys()) + 1 or N != len(noises)):
         raise ValueError("links and noises keys must match N.")
 
     # Check parameters

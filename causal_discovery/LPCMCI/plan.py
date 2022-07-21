@@ -239,7 +239,7 @@ def simulation_study_with_one_scm(sim_study_input):
 
     """ loop: causal discovery, planning, intervention """
     # intervene, observe, observe, observe, ...
-    for is_intervention_idx in range(len(is_intervention_list)):
+    for is_intervention_idx, is_intervention in enumerate(is_intervention_list):
 
         # stop if converged on optimal
         if not converged_on_optimal:

@@ -82,23 +82,24 @@ def drop_edges_for_cycle_detection(my_graph):
     return my_graph_without_lagged_variables
 
 
-def make_redundant_information_with_symmetry(graph):
+def make_redundant_information_with_symmetry(graph, val):
     """
     make redundant link information of a graph with diagonal symmetry in matrix representation.
     e.g. A-->B = B<--A
     """
-    # iterate through 3ed dimension (tau) of graph
-    for tau in range(graph.shape[2]):
-        # if arrow is forward pointing insert symmetric backward arrow
-        for i in range(graph.shape[0]):
-            for j in range(graph.shape[1]):
-                if i != j:
-                    # only modify if empty
-                    if graph[j, i, tau] == '':
+    # only lag zero
+    tau = 0
+    # if arrow is forward pointing insert symmetric backward arrow
+    for i in range(graph.shape[0]):
+        for j in range(graph.shape[1]):
+            if i != j:
+                # only modify if empty
+                if graph[j, i, tau] == '':
 
-                        if graph[i, j, tau] == '':
-                            pass
-                        elif graph[i, j, tau] == '-->':
+                    if graph[i, j, tau] != '':
+                        pass
+
+                        if graph[i, j, tau] == '-->':
                             graph[j, i, tau] = '<--'
                         elif graph[i, j, tau] == '<--':
                             graph[j, i, tau] = '-->'
@@ -110,20 +111,20 @@ def make_redundant_information_with_symmetry(graph):
                             graph[j, i, tau] = '<-o'
                         elif graph[i, j, tau] == '<-o':
                             graph[j, i, tau] = 'o->'
-
                         else:  # if arrow is not forward pointing, error
                             ValueError('Error: graph[i, j, tau] is not an arrow')
-    return graph
+                        val[j, i, tau] = val[i, j, tau]
+
+    return graph, val
 
 
-def plot_graph(val_min, pag, var_names, label):
-    graph = pag.copy()
-    graph = make_redundant_information_with_symmetry(graph)
+def plot_graph(val_min, pag, my_var_names, link_colorbar_label):
+    graph_redun, val_redun = make_redundant_information_with_symmetry(pag.copy(), val_min.copy())
     tp.plot_graph(
-        val_matrix=val_min,
-        link_matrix=graph,
-        var_names=var_names,
-        link_colorbar_label=label,
+        val_matrix=val_redun,
+        link_matrix=graph_redun,
+        var_names=my_var_names,
+        link_colorbar_label=link_colorbar_label,
         # node_colorbar_label='auto-MCI',
         figsize=(10, 6),
     )
@@ -541,7 +542,7 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
 
     # if intervention was not found
     else:
-        print('WARNING: no intervention found. probably cyclic graph')
+        print('WARNING: no intervention found. probably cyclic graph, or found no effect on target, var')
         best_intervention_var_name = old_intervention[0]
         intervention_value = old_intervention[1]
 

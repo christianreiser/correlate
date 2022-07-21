@@ -1,13 +1,10 @@
-import unittest
-
 import pandas as pd
 from statsmodels.compat.pandas import assert_frame_equal
 
 from data_generation import data_generator
 from intervention_proposal.get_intervention import lin_f
 
-
-class TestGetIntervention(unittest.TestCase):
+class TestGetIntervention:
     def test_data_generator(self):
         # given
         scm = {
@@ -65,5 +62,4 @@ class TestGetIntervention(unittest.TestCase):
         assert_frame_equal(simulated_res, true_simulated_res)
 
 
-if __name__ == '__main__':
-    unittest.main()
+
