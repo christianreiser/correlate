@@ -28,7 +28,8 @@ def nonstationary_check(scm, random_seed, labels_strs):
 
     ts_check = data_generator(scm, intervention_variable=None,
                               intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000,
-                              labels=labels_strs)
+                              labels=labels_strs,
+            noise_type='gaussian')
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
     return nonstationary
 
@@ -183,7 +184,8 @@ def data_generator(scm,
                    ts_old,
                    random_seed,
                    n_samples,
-                   labels):
+                   labels,
+                   noise_type):
     """
     initialize from last samples of ts
     generate new sample
@@ -201,11 +203,15 @@ def data_generator(scm,
             # Get zero-mean unit variance gaussian distribution
             return self.sigma * random_state.randn(n_samples)
 
-    noises = []
-    for link in scm:
-        noise_type = 'gaussian'
-        sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
-        noises.append(getattr(NoiseModel(sigma), noise_type))
+    if noise_type == 'gaussian':
+        noises = []
+        for link in scm:
+            sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
+            noises.append(getattr(NoiseModel(sigma), noise_type))
+    elif noise_type == 'without':
+        noises = 'without'
+    else:
+        raise ValueError('noise_type only implemented for \'without\' or "gaussian"')
 
     # get intervention_var as int. E.g. 'u_0' -> int(0)
     if intervention_variable is not None:

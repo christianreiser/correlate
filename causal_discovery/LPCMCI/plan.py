@@ -210,6 +210,7 @@ def simulation_study_with_one_scm(sim_study_input):
         random_seed=random_seed,
         n_samples=n_ini_obs,
         labels=labels_strs,
+        noise_type='gaussian',
     )
 
     # optimistic intervention on true scm
@@ -275,11 +276,11 @@ def simulation_study_with_one_scm(sim_study_input):
                 """ 
                 propose intervention
                 """
-                # from measured data
+                # from measured data , ,
                 interv_var, interv_val = find_optimistic_intervention(
-                    graph_edgemarks=pag_edgemarks.copy(),
-                    graph_effect_sizes=pag_effect_sizes.copy(),
-                    labels=measured_labels,
+                    my_graph=pag_edgemarks.copy(),
+                    val=pag_effect_sizes.copy(),
+                    var_names=measured_labels,
                     ts=ts_measured_actual[:n_ini_obs],  # only first n_ini_obs samples, to have the same ts as optimal
                     unintervenable_vars=unintervenable_vars,
                     random_seed=random_seed,
@@ -316,6 +317,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed=random_seed,
                 n_samples=n_samples_per_generation,
                 labels=labels_strs,
+            noise_type='gaussian',
             )
             # optimal
             ts_new_optimal = data_generator(
@@ -326,6 +328,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed=random_seed,
                 n_samples=n_samples_per_generation,
                 labels=labels_strs,
+            noise_type='gaussian',
             )
 
             # append new (measured) data

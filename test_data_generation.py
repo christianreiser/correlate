@@ -14,14 +14,16 @@ class TestGetIntervention(unittest.TestCase):
             0: [((0, -1), -2.0, lin_f), ((1, 0), 5.0, lin_f)],
             1: [((0, -1), 4.0, lin_f), ((1, -1), 8.0, lin_f)],
         }
-        intervention_var = None
-        intervention_value_low = None
         ts = pd.DataFrame(
             [[-1.0, 0.0],
              [-2.0, 3.0]],
             columns=['0', '1'])
         random_seed = 0
         n_half_samples = 1
+
+        # no intervention
+        intervention_var = None
+        intervention_value_low = None
         # when
         simulated_res = data_generator(
             scm=scm,
@@ -30,7 +32,8 @@ class TestGetIntervention(unittest.TestCase):
             ts_old=ts,
             random_seed=random_seed,
             n_samples=n_half_samples,
-            labels=ts.columns
+            labels=ts.columns,
+            noise_type='gaussian'
         ).round(6)
         # then
         true_simulated_res = pd.DataFrame(
@@ -40,7 +43,7 @@ class TestGetIntervention(unittest.TestCase):
             columns=['0', '1'], dtype='float32').round(6)
         assert_frame_equal(simulated_res, true_simulated_res)
 
-
+        # with intervention
         intervention_var = '1'
         intervention_value_low = -2.0
         simulated_res = data_generator(
@@ -50,7 +53,8 @@ class TestGetIntervention(unittest.TestCase):
             ts_old=ts,
             random_seed=random_seed,
             n_samples=n_half_samples,
-            labels=ts.columns
+            labels=ts.columns,
+            noise_type='gaussian'
         ).round(4)
         # then
         true_simulated_res = pd.DataFrame(

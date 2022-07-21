@@ -78,10 +78,11 @@ class TestGetIntervention(unittest.TestCase):
             my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies = pickle.load(
                 f)
         # When
-        intervention = find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_vars, random_seed,
+        ans = find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_vars, random_seed,
                                                     old_intervention, label, external_independencies)
         # Then
-        true_intervention = {'0': 1, '1': 1, '2': 1, '3': 1}
+        solution = ('3',-2.0459882020950317)
+        self.assertTrue(solution == ans)
 
 
 if __name__ == '__main__':

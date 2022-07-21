@@ -198,11 +198,16 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     len_ts_old = len(ts_old)
 
     # zeros ini
-    X = np.zeros((T + max_lag, N), dtype='float32')
+    if noises != 'without':
+        X = np.zeros((T + max_lag, N), dtype='float32')
+    else:
+        X = np.ones((T + max_lag, N), dtype='float32')
+
 
     # add noises
-    for j in range(N):
-        X[:, j] = noises[j](T + max_lag)
+    if noises != 'without':
+        for j in range(N):
+            X[:, j] = noises[j](T + max_lag)
 
     # chrei: in X[from len_ts_old for tau_max+1 elements], replace these values with the last (max_lag+1) elements of ts_old
     if len_ts_old > 0:

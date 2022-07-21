@@ -16,29 +16,6 @@ def load_results(name_extension):
     return val_min, graph, var_names
 
 
-def get_intervention_value(var_name, intervention_coeff, ts_measured_actual):
-    ts_measured_actual = pd.DataFrame(ts_measured_actual)
-    intervention_value = 0  # ini
-    # if len >2 then there is the u_ prefix
-    if len(var_name) > 2:
-        intervention_idx = var_name[2:]  # 'u_0' -> '0'
-    else:
-        intervention_idx = var_name
-
-    intervention_var_measured_values = ts_measured_actual[intervention_idx]
-
-    # get 90th percentile of intervention_var_measured_values
-    if intervention_coeff > 0:
-        intervention_value = np.percentile(intervention_var_measured_values,
-                                           random.choice([50, 95]))  # np.random.uniform(50, 95, size=1)
-    elif intervention_coeff < 0:
-        intervention_value = np.percentile(intervention_var_measured_values,
-                                           100 - random.choice([5, 50]))  # np.random.uniform(5, 50, size=1)
-    else:
-        ValueError("intervention_coeff must be positive or negative")
-    return intervention_value
-
-
 def load_eq():
     # load target_ans_per_graph_dict and graph_combinations from file via pickle
     with open(checkpoint_path + 'target_eq_simulated.pkl', 'rb') as f:
@@ -54,7 +31,6 @@ from time import time
 
 import numpy as np
 import pandas as pd
-from scipy.stats import pearsonr
 
 from causal_discovery.LPCMCI.generate_data_mod import Graph
 from config import verbosity_thesis, target_label, tau_max, low_percentile, high_percentile, n_samples_simulation
@@ -496,69 +472,56 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
             intervention_value_low = np.percentile(a=ts[intervention_var], q=low_percentile)
 
             # intervene on intervention_var with low and high values
-            simulated_res = data_generator(
+            simulated_low_interv = data_generator(
                 scm=model,
                 intervention_variable=intervention_var,
                 intervention_value=intervention_value_low,
                 ts_old=ts,
                 random_seed=random_seed,
                 n_samples=n_half_samples,
-                labels=ts.columns
+                labels=ts.columns,
+                noise_type='without'
             )
 
             # if none then cyclic contemporaneous graph and skipp this graph
-            if simulated_res is not None:
+            if simulated_low_interv is not None:
+
+                simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=var_names)
+                sum_target_low_interv = simulated_low_interv[target_label]
 
                 # same for high intervention value
                 intervention_value_high = np.percentile(a=ts[intervention_var], q=high_percentile)
-                simulated_samples = np.zeros(shape=(n_samples_simulation, len(var_names)))
-                simulated_samples[0:n_half_samples] = simulated_res
-                simulated_samples[n_half_samples:n_samples_simulation] = data_generator(
+                simulated_high_interv = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_high,
                     ts_old=ts,
                     random_seed=random_seed,
                     n_samples=n_half_samples,
-                    labels=ts.columns
+                    labels=ts.columns,
+                    noise_type = 'without',
                 )
+                simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=var_names)
+                sum_target_high_interv = simulated_high_interv[target_label]
 
-                # for all tau
-                coeffs_across_taus = np.zeros(shape=(tau_max + 1))
-                for tau in range(tau_max + 1):
+                # get absolute difference between low and high intervention
+                abs_coeff = np.abs(sum_target_high_interv - sum_target_low_interv).mean()
 
-                    # intervention_var and target series as columns in df
-                    simulated_samples = pd.DataFrame(simulated_samples, columns=var_names)
-                    var_and_target = pd.DataFrame(
-                        dict(intervention_var=simulated_samples[intervention_var],
-                             target=simulated_samples[target_label]))
+                # get relative difference between low and high intervention
+                coeff = (sum_target_high_interv - sum_target_low_interv).mean()
 
-                    # tau shift
-                    if tau > 0:
-                        var_and_target['target'] = var_and_target['target'].shift(periods=tau)
-                        var_and_target = var_and_target.dropna()
-
-                    # check var_and_target for NaNs and infs
-                    if np.any(np.isnan(var_and_target)):
-                        print('NaN in var_and_target')
-                        print(var_and_target[var_and_target.isnull()])
-                        raise ValueError('NaN in var_and_target')
-                    if np.any(np.isinf(var_and_target)):
-                        print('inf in var_and_target')
-                        print(var_and_target[var_and_target.isinf()])
-                        raise ValueError('inf in var_and_target')
-
-                    # statistical test
-                    r, probability_independent = pearsonr(var_and_target['intervention_var'],
-                                                          var_and_target['target'])
-                    coeffs_across_taus[tau] = r
-                mean_coeff_across_taus = np.mean(coeffs_across_taus)
-                if abs(mean_coeff_across_taus) > largest_abs_coeff:
-                    largest_abs_coeff = abs(mean_coeff_across_taus)
-                    largest_coeff = mean_coeff_across_taus
+                # if abs_coeff > largest_abs_coeff:
+                if abs_coeff > largest_abs_coeff:
+                    largest_abs_coeff = abs_coeff
                     best_intervention_var_name = intervention_var
                     most_optimistic_graph_idx = unique_graph_idx
                     most_optimistic_graph = unique_graph
+                    if coeff > 0:
+                        intervention_value = intervention_value_high
+                    else:
+                        intervention_value = intervention_value_low
+
+
 
     # measure how long
     end_time = time()
@@ -576,7 +539,6 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
         if verbosity_thesis > 1 and label != 'true_scm':
             plot_graph(val, most_optimistic_graph, var_names, 'most optimistic')
 
-        intervention_value = get_intervention_value(best_intervention_var_name, largest_coeff, ts)
     # if intervention was not found
     else:
         print('WARNING: no intervention found. probably cyclic graph')
