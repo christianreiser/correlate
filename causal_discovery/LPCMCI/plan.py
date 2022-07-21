@@ -1,7 +1,6 @@
 import math
 import pickle
 
-import dill as dill
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -9,11 +8,9 @@ from tqdm import tqdm
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
-from checkpoints import load_checkpoint, save_checkpoint
-from config import target_label, coeff, min_coeff, n_mixed, nth, load_checkpoint_on, verbosity_thesis, checkpoint_path
+from config import target_label, coeff, min_coeff, n_mixed, nth, verbosity_thesis
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
-from intervention_proposal.target_eqs_from_pag import load_results
 from regret import compute_regret
 
 """
@@ -219,7 +216,7 @@ def simulation_study_with_one_scm(sim_study_input):
     intervention_var_optimal_backup, intervention_value_optimal_backup = find_optimistic_intervention(
         edgemarks_true.copy(),
         effect_sizes_true.copy(),
-        labels=[str(var_name) for var_name in range(n_vars_all)],
+        var_names=[str(var_name) for var_name in range(n_vars_all)],
         ts=ts_generated_actual,
         unintervenable_vars=unintervenable_vars,
         random_seed=random_seed,

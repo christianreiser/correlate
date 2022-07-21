@@ -169,9 +169,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
 
     # Check parameters
     max_lag = 0
-    contemp = False
     contemp_dag = Graph(N)
-    causal_order = list(range(N))
     for j in range(N):
         for link_props in links[j]:
             var, lag = link_props[0]
@@ -190,8 +188,6 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
             # Create contemp DAG
             if var != j and lag == 0:
                 contemp_dag.addEdge(var, j)
-                # a, b = causal_order.index(var), causal_order.index(j)
-                # causal_order[b], causal_order[a] = causal_order[a], causal_order[b]
 
     if contemp_dag.isCyclic() == 1:
         # raise ValueError("Contemporaneous links must not contain cycle.")
@@ -202,17 +198,17 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
     len_ts_old = len(ts_old)
 
     # zeros ini
-    X = np.zeros((T + max_lag + len_ts_old, N), dtype='float32')
+    X = np.zeros((T + max_lag, N), dtype='float32')
 
     # add noises
     for j in range(N):
-        X[:, j] = noises[j](T + max_lag + len_ts_old)
+        X[:, j] = noises[j](T + max_lag)
 
     # chrei: in X[from len_ts_old for tau_max+1 elements], replace these values with the last (max_lag+1) elements of ts_old
     if len_ts_old > 0:
-        X[len_ts_old:max_lag +1+ len_ts_old] = ts_old[-(max_lag+1):]
+        X[:max_lag] = ts_old[-max_lag:]
 
-    for t in range(max_lag + len_ts_old, T + max_lag + len_ts_old):  # for all time steps
+    for t in range(max_lag, T + max_lag):  # for all time steps
         for j in causal_order:  # for all affected variables j ( in causal order)
             # if j is intervened, set value to intervention_value
             if j == intervention_variable:
@@ -226,15 +222,12 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
                     func = link_props[2]
                     base_value = X[t + lag, var]
                     val_to_add = coeff * func(base_value)
-                    noise_val = X[t, j]
-                    new_value = noise_val + val_to_add
+                    old_val = X[t, j]
+                    new_value = old_val + val_to_add
                     X[t, j] = new_value  # add value on noise for var j and time t
 
     # chrei: remove some value because they were added for initialization before
-    if len_ts_old != 0:
-        X = X[max_lag + len_ts_old:]
-    else:
-        X = X[max_lag:]
+    X = X[max_lag:]
     return X
 
 
