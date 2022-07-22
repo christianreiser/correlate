@@ -94,4 +94,4 @@ class TestGetIntervention:
                                            old_intervention, label, external_independencies)
         # Then
         solution = ('3', -2.0459882020950317)
-        assert solution == ans
+        assert ans == solution

@@ -29,7 +29,7 @@ def nonstationary_check(scm, random_seed, labels_strs):
     ts_check = data_generator(scm, intervention_variable=None,
                               intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000,
                               labels=labels_strs,
-            noise_type='gaussian')
+                              noise_type='gaussian')
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
     return nonstationary
 
@@ -75,7 +75,8 @@ def is_cross_dependent_on_target_var(scm):
         return False
 
 
-def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measured_links, n_vars_measured, n_vars_all, labels_strs):
+def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measured_links, n_vars_measured, n_vars_all,
+                            labels_strs):
     """
     generate scms until a stationary one is found
     """
@@ -106,7 +107,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measu
             random_state=random_state)  # MT19937(random_state)
         cross_dependency_on_target_var = is_cross_dependent_on_target_var(scm)
         nonstationary = nonstationary_check(scm, random_seed, labels_strs)
-        if verbosity_thesis > 1 and counter >4:
+        if verbosity_thesis > 1 and counter > 4:
             print("nonstationary / cross_dependency_on_target_var:", nonstationary, '/', cross_dependency_on_target_var,
                   "counter:", counter)
         counter += 1
@@ -174,7 +175,7 @@ def measure(ts, obs_vars):
 def labels_to_ints(labels, label):
     # get index of label in measured_labels
     # needs tp get the corresponding labels. importnat if latents are included or not
-    res = np.where(np.array(labels)==label)[0][0]
+    res = np.where(np.array(labels) == label)[0][0]
     return res
 
 
@@ -195,12 +196,6 @@ def data_generator(scm,
 
     random_state = np.random.RandomState(random_seed)
 
-    # # save ts_old to file via pickle to checkpoint_dir
-    # ts_old.to_csv('/home/chrei/PycharmProjects/correlate/checkpoints/TestGetIntervention_ValueError.dat', index=False)
-    # # load
-    # ts_old = pd.read_csv('/home/chrei/PycharmProjects/correlate/checkpoints/TestGetIntervention_ValueError.dat')
-
-
     class NoiseModel:
         def __init__(self, sigma=1):
             self.sigma = sigma
@@ -210,10 +205,10 @@ def data_generator(scm,
             return self.sigma * random_state.randn(n_samples)
 
     if noise_type == 'gaussian':
-        noises = []
-        for link in scm:
+        noises = [None]*len(scm)
+        for link, link_idx in enumerate(scm):
             sigma = noise_sigma[0] + (noise_sigma[1] - noise_sigma[0]) * random_state.rand()  # 2,1.2,1,7
-            noises.append(getattr(NoiseModel(sigma), noise_type))
+            noises[link_idx] = getattr(NoiseModel(sigma), noise_type) # check if correct
     elif noise_type == 'without':
         noises = 'without'
     else:

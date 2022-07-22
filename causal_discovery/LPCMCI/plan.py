@@ -15,13 +15,9 @@ from intervention_proposal.get_intervention import find_optimistic_intervention
 from regret import compute_regret
 
 """
-1. CONDITIONAL independence test at interventional discovery Wir partial correlation
-2. A) Adaptive exploration vs exploitation?
-  B) possible to use  also observational data?
+  B) 
 3. Paul's list from meeting
 
-Change intervention value to percentile of data seen so far
-- test what happens without or less observational data
 
 Plots: colorscale, latents? 
 Anmeldung 
@@ -47,6 +43,19 @@ x prune weak links
 - instead of append and r_ ini array and fill
 """
 
+def is_debug():
+    import sys
+
+    gettrace = getattr(sys, 'gettrace', None)
+
+    if gettrace is None:
+        return False
+    else:
+        v = gettrace()
+        if v is None:
+            return False
+        else:
+            return True
 
 def ensure_0_in_measured_labels(measured_labels):
     if 0 not in measured_labels:
@@ -118,7 +127,6 @@ def obs_or_intervene():
     false: observation
     true: intervention
     """
-    # is_obs = np.zeros(n_ini_obs).astype(bool)
     is_mixed = np.zeros(n_mixed).astype(bool)
     for i in range(len(is_mixed)):
         if i % nth == 0:
@@ -161,12 +169,13 @@ def store_interv(was_intervened, intervention_variable, n_samples_per_generation
     return was_intervened
 
 
-def calculate_parameters(n_vars_measured, frac_latents, pc_alpha):
+def calculate_parameters(n_vars_measured, frac_latents, pc_alpha, n_ini_obs):
     n_measured_links = n_vars_measured
     n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
     labels_strs = [str(i) for i in range(n_vars_all)]
     interv_alpha = pc_alpha
-    return n_measured_links, n_vars_all, labels_strs, interv_alpha
+    n_ini_obs = int(n_ini_obs)
+    return n_measured_links, n_vars_all, labels_strs, interv_alpha, n_ini_obs
 
 
 def simulation_study_with_one_scm(sim_study_input):
@@ -174,8 +183,8 @@ def simulation_study_with_one_scm(sim_study_input):
     random_seed = sim_study_input[1]
     print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
 
-    n_measured_links, n_vars_all, labels_strs, interv_alpha = calculate_parameters(n_vars_measured, frac_latents,
-                                                                                   pc_alpha)
+    n_measured_links, n_vars_all, labels_strs, interv_alpha, n_ini_obs = calculate_parameters(n_vars_measured, frac_latents,
+                                                                                   pc_alpha, n_ini_obs)
 
     random_state = np.random.RandomState(random_seed)
 
@@ -363,6 +372,8 @@ def simulation_study_with_one_scm(sim_study_input):
     return regret_sum
 
 
+
+
 def run_all_experiments():
     # get settings
     all_param_study_settings = define_settings()
@@ -376,19 +387,12 @@ def run_all_experiments():
             regret_list_over_scms = []
 
             # repeat each parameter setting for 100 randomly sampled scms
-            if __debug__:
-                for i_th_scm in tqdm(range(1, 100)):
-                    ## run experiment ###
-                    regret_list_over_scms.append(
-                        simulation_study_with_one_scm((one_param_setting, 25)))  # todo i_th_scm))
-                    ######################
-            elif not __debug__:
-                multi_processing_input = []
-                for i_th_scm in range(1, 100):
-                    multi_processing_input.append((one_param_setting, i_th_scm))
-                # multiprocessing
-                with Pool() as pool:
-                    regret_list_over_scms = pool.map(simulation_study_with_one_scm, multi_processing_input)
+
+            for i_th_scm in tqdm(range(1, 2)): # todo 100
+                ## run experiment ###
+                regret_list_over_scms.append(
+                    simulation_study_with_one_scm((one_param_setting, i_th_scm)))
+                ######################
 
             print('mean regret', np.mean(regret_list_over_scms))
             print('variance regret', np.var(regret_list_over_scms))
@@ -397,6 +401,7 @@ def run_all_experiments():
         # save results of one parameter setting
         with open('regret_list_over_simulation_study.pickle', 'wb') as f:
             pickle.dump([regret_list_over_simulation_study, simulation_study], f)
+    print('all done')
 
 
 run_all_experiments()
