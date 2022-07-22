@@ -189,6 +189,9 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
             if var != j and lag == 0:
                 contemp_dag.addEdge(var, j)
 
+    if max_lag == 0:
+        return 'max_lag == 0'
+
     if contemp_dag.isCyclic() == 1:
         # raise ValueError("Contemporaneous links must not contain cycle.")
         return None  # chrei

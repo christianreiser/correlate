@@ -1,6 +1,6 @@
 import numpy as np
 
-from config import target_label, regret_convergence_thresh, n_below_regret_thresh
+from config import target_label, regret_convergence_thresh, n_below_regret_thresh, verbosity_thesis
 
 
 def get_last_outcome(ts_measured_actual, n_samples_per_generation):
@@ -37,7 +37,8 @@ def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samp
     #           '\nintervention_var_optimal_backup:', intervention_var_optimal_backup,
     #           '\nintervention_variable:', interv_var)
     #     ValueError("Regret is negative! See prints above")
-    print('new_regret: ', new_regret)
+    if verbosity_thesis >0:
+        print('new_regret: ', new_regret)
     regret_list = np.append(regret_list, new_regret)
 
     # check if converged on optimal

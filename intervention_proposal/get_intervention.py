@@ -1,9 +1,9 @@
 import itertools
 import pickle
-import random
 
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
+from tqdm import tqdm
 
 from config import checkpoint_path, private_folder_path
 
@@ -402,10 +402,14 @@ def create_all_graph_combinations(graph, ambiguous_locations):
         corresponding_unambiguous_links_list = get_unambiguous_links(ambiguous_locations)
         links_permutations = get_links_permutations(corresponding_unambiguous_links_list)
 
-        for graph_idx in (range(number_of_graph_combinations)):
+        for graph_idx in range(number_of_graph_combinations):
             write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
 
         graph_combinations = load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations)
+
+        # remove graph combinations without any lagged links
+        graph_combinations = [graph_combinations[graph_idx] for graph_idx in range(number_of_graph_combinations) if
+                              graph_combinations[graph_idx].shape[2] > 0]
 
         return graph_combinations
 
@@ -420,7 +424,6 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
     # save my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies to file via pickle
     # with open(checkpoint_path + '{}.pkl'.format(label), 'wb') as f:
     #     pickle.dump([my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies], f)
-
 
     # measure how long get it takes
     start_time = time()
@@ -458,7 +461,7 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
     most_optimistic_graph_idx = None
     most_optimistic_graph = None
 
-    for unique_graph_idx, unique_graph in enumerate(graph_combinations):
+    for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True)):
         model = graph_to_scm(unique_graph, val)
 
         # todo handle if pag does not contain an ACYCLIC graph, right leads to intervention = none. but could be better, esp for product
@@ -484,8 +487,8 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
                 noise_type='without'
             )
 
-            # if none then cyclic contemporaneous graph and skipp this graph
-            if simulated_low_interv is not None:
+            # skip: cyclic contemporaneous graph (none) and 'max_lag == 0'
+            if simulated_low_interv is not None and isinstance(ts, str) and simulated_low_interv != 'max_lag == 0':
 
                 simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=var_names)
                 sum_target_low_interv = simulated_low_interv[target_label]
@@ -500,7 +503,7 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
                     random_seed=random_seed,
                     n_samples=n_half_samples,
                     labels=ts.columns,
-                    noise_type = 'without',
+                    noise_type='without',
                 )
                 simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=var_names)
                 sum_target_high_interv = simulated_high_interv[target_label]
@@ -521,8 +524,6 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
                         intervention_value = intervention_value_high
                     else:
                         intervention_value = intervention_value_low
-
-
 
     # measure how long
     end_time = time()
@@ -547,6 +548,7 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
         intervention_value = old_intervention[1]
 
     return best_intervention_var_name, intervention_value
+
 
 # val_min, graph, var_names = load_results('chr')
 # var_names = [str(x) for x in var_names]

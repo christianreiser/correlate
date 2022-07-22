@@ -18,7 +18,6 @@ class TestGetIntervention:
         true_graph = np.array([[['', '0->'], ['', '-->']], [['<--', '<->'], ['', '-->']]])
         assert np.array_equal(true_graph, modified_graph)
 
-
     def test_make_redundant_information_with_symmetry(self):
         # Given
         original_graph = np.array([[['', '0->'], ['', '<->']], [['<--', ''], ['', '-->']]])
@@ -53,6 +52,7 @@ class TestGetIntervention:
         assert np.array_equal(true_ambiguous_locations, ambiguous_locations)
 
     def test_create_all_graph_combinations(self):
+        # normal
         # given
         my_graph = np.array([[['', 'o->'], ['', '-->']], [['x->', '<->'], ['', '-->']]])
         ambiguous_locations = [
@@ -91,7 +91,7 @@ class TestGetIntervention:
                 f)
         # When
         ans = find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_vars, random_seed,
-                                                    old_intervention, label, external_independencies)
+                                           old_intervention, label, external_independencies)
         # Then
-        solution = ('3',-2.0459882020950317)
+        solution = ('3', -2.0459882020950317)
         assert solution == ans

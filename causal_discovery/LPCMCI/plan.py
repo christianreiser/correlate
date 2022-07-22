@@ -1,5 +1,6 @@
 import math
 import pickle
+from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,7 @@ from tqdm import tqdm
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
-from config import target_label, coeff, min_coeff, n_mixed, nth, verbosity_thesis
+from config import target_label, coeff, min_coeff, n_mixed, nth, verbosity_thesis, checkpoint_path
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
 from regret import compute_regret
@@ -69,7 +70,6 @@ def has_measured_cross_dependencies_on_target_var(scm, unmeasured_labels_ints):
         return False
     else:
         return True
-
 
 
 def get_measured_labels(n_vars_all, random_state, frac_latents, scm):
@@ -172,7 +172,10 @@ def calculate_parameters(n_vars_measured, frac_latents, pc_alpha):
 def simulation_study_with_one_scm(sim_study_input):
     n_ini_obs, n_vars_measured, frac_latents, pc_alpha, n_samples_per_generation = sim_study_input[0]
     random_seed = sim_study_input[1]
-    n_measured_links, n_vars_all, labels_strs, interv_alpha = calculate_parameters(n_vars_measured, frac_latents, pc_alpha)
+    print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
+
+    n_measured_links, n_vars_all, labels_strs, interv_alpha = calculate_parameters(n_vars_measured, frac_latents,
+                                                                                   pc_alpha)
 
     random_state = np.random.RandomState(random_seed)
 
@@ -234,14 +237,19 @@ def simulation_study_with_one_scm(sim_study_input):
     # measure new data (hide latents)
     ts_measured_actual = measure(ts_generated_actual, obs_vars=measured_labels)
 
-    # if load_checkpoint_on:
-        # load data from last checkpoint
-        # ts_measured_actual, was_intervened, ts_generated_actual, scm, ts_generated_optimal, regret_list, setting, random_seed, random_state = load_checkpoint(
-        #     n_measured_links, n_vars_measured, n_vars_all, labels_strs)
-
     """ loop: causal discovery, planning, intervention """
     # intervene, observe, observe, observe, ...
     for is_intervention_idx, is_intervention in enumerate(is_intervention_list):
+
+        # safe all local variables file
+        filename = checkpoint_path + 'global_save.pkl'
+        with open(filename, 'wb') as f:
+            pickle.dump([converged_on_optimal, is_intervention_idx, is_intervention, ts_generated_actual, regret_list,
+                         interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
+                         pag_edgemarks, interv_var], f)
+        # load
+        # with open(filename, 'rb') as f:
+        #     converged_on_optimal, is_intervention_idx, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var = pickle.load(f)
 
         # stop if converged on optimal
         if not converged_on_optimal:
@@ -319,7 +327,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed=random_seed,
                 n_samples=n_samples_per_generation,
                 labels=labels_strs,
-            noise_type='gaussian',
+                noise_type='gaussian',
             )
             # optimal
             ts_new_optimal = data_generator(
@@ -330,7 +338,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed=random_seed,
                 n_samples=n_samples_per_generation,
                 labels=labels_strs,
-            noise_type='gaussian',
+                noise_type='gaussian',
             )
 
             # append new (measured) data
@@ -347,13 +355,8 @@ def simulation_study_with_one_scm(sim_study_input):
             if is_intervention:
                 regret_list, converged_on_optimal = compute_regret(ts_measured_actual, ts_generated_optimal,
                                                                    regret_list, n_samples_per_generation)
-                if regret_list[-1] !=0 and interv_var == interv_var_opti and interv_val == interv_val_opti:
+                if regret_list[-1] != 0 and interv_var == interv_var_opti and interv_val == interv_val_opti:
                     raise ValueError("regret is not 0 but optimal intervention = actual intervention")
-
-            # """checkpoint"""
-            # # save data to checkpoint
-            # filename = checkpoint_path+'global_save.pkl'
-            # dill.dump_session(filename)
 
     regret_sum = sum(regret_list)
     print('converged on optimal intervention. regret_sum:', regret_sum, '\n\n')
@@ -373,12 +376,19 @@ def run_all_experiments():
             regret_list_over_scms = []
 
             # repeat each parameter setting for 100 randomly sampled scms
-            for i_th_scm in tqdm(range(1,100)):
-                print('setting:', one_param_setting, 'random_seed:', i_th_scm)
-
-                ### run experiment ###
-                regret_list_over_scms.append(simulation_study_with_one_scm((one_param_setting, i_th_scm)))
-                #######################
+            if __debug__:
+                for i_th_scm in tqdm(range(1, 100)):
+                    ## run experiment ###
+                    regret_list_over_scms.append(
+                        simulation_study_with_one_scm((one_param_setting, 25)))  # todo i_th_scm))
+                    ######################
+            elif not __debug__:
+                multi_processing_input = []
+                for i_th_scm in range(1, 100):
+                    multi_processing_input.append((one_param_setting, i_th_scm))
+                # multiprocessing
+                with Pool() as pool:
+                    regret_list_over_scms = pool.map(simulation_study_with_one_scm, multi_processing_input)
 
             print('mean regret', np.mean(regret_list_over_scms))
             print('variance regret', np.var(regret_list_over_scms))

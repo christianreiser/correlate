@@ -195,6 +195,12 @@ def data_generator(scm,
 
     random_state = np.random.RandomState(random_seed)
 
+    # # save ts_old to file via pickle to checkpoint_dir
+    # ts_old.to_csv('/home/chrei/PycharmProjects/correlate/checkpoints/TestGetIntervention_ValueError.dat', index=False)
+    # # load
+    # ts_old = pd.read_csv('/home/chrei/PycharmProjects/correlate/checkpoints/TestGetIntervention_ValueError.dat')
+
+
     class NoiseModel:
         def __init__(self, sigma=1):
             self.sigma = sigma
@@ -228,6 +234,10 @@ def data_generator(scm,
     # if none, then cyclic contemporaneous scm. then skipp this graph
     if ts is None:
         return None
+    # check if ts is a string
+
+    elif isinstance(ts, str) and ts == 'max_lag == 0':
+        return ts
 
     # if ts contains NaNs, value error
     if np.isnan(ts).any():
