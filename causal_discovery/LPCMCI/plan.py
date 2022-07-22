@@ -148,9 +148,11 @@ def store_interv(was_intervened, intervention_variable, n_samples_per_generation
         # mark intervened var
         new_series[intervention_idx] = True
 
-    # append new_series to was_intervened
+    # concat new_series to was_intervened
+    tmp_data = []
     for i in range(n_samples_per_generation):
-        was_intervened = was_intervened.append(new_series, ignore_index=True)
+        tmp_data.append(new_series)
+    was_intervened = pd.concat([was_intervened, pd.DataFrame(tmp_data)], axis=0, ignore_index=True)
 
     # # save was_intervened dataframe to file
     # import os
