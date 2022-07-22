@@ -143,7 +143,7 @@ def plot_scm(original_graph, original_vals):
             link_matrix=original_graph,
             var_names=range(n_vars_all),
             link_colorbar_label='original SCM',
-            node_colorbar_label='auto-',
+            node_colorbar_label='TODOTODO',
             figsize=(10, 6),
         )
         plt.show()

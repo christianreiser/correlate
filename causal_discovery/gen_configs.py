@@ -19,8 +19,10 @@ def define_settings():
         'alpha': [0.5, np.arange(0.05, 0.96, 0.15)],
 
         # how often in a row should the same intervention be applied?
-        'n_samples_per_generation': [10, np.arange(0, 51, 10)]
+        'n_samples_per_generation': [1, np.arange(0, 11, 2)]
     }
+
+
 
     # check if settings are valid
     if max(settings_default_and_list['n_vars_measured'][0],max(settings_default_and_list['n_vars_measured'][1])) > 99:
@@ -48,11 +50,10 @@ def define_settings():
                     one_param_setting.append(settings_default_and_list[var2][0])
                 else:
                     one_param_setting.append(setting)
-            one_param_study_settings.append(np.array(one_param_setting))
-        all_param_study_settings.append(np.array(one_param_study_settings))
+            one_param_study_settings.append(np.array(one_param_setting,dtype = object))
+        all_param_study_settings.append(np.array(one_param_study_settings,dtype = object))
     print('total_scms in settings:', total_scms*100)
 
     return all_param_study_settings
 
 
-define_settings()

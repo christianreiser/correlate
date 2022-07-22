@@ -71,8 +71,7 @@ nth = 4
 n_samples_per_generation = 4 # todo 1
 
 # action simulation
-n_samples_total = 1000
-n_samples_simulation = 1000
+n_samples_simulation = 100
 
 intervention_value_percentile = 95
 high_percentile = intervention_value_percentile
