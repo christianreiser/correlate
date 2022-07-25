@@ -5,6 +5,7 @@ def define_settings():
     """
     generate settings for simulation study
     """
+
     settings_default_and_list = {
         # n obs before first intervention
         'n_ini_obs': [500, [50, 500, 5000]],
@@ -22,10 +23,25 @@ def define_settings():
         'n_samples_per_generation': [1, np.arange(0, 11, 2)]
     }
 
+    settings_default_and_list = {
+        # n obs before first intervention
+        'n_ini_obs': [200, [200]],
 
+        # n measured vars
+        'n_vars_measured': [5, [5]],
+
+        # fraction of additional latents
+        'frac_latents': [0.3, [0.3]],
+
+        # significance threshold to keep an adjacency
+        'alpha': [0.5, [0.5]],
+
+        # how often in a row should the same intervention be applied?
+        'n_samples_per_generation': [1, [1]]
+    }
 
     # check if settings are valid
-    if max(settings_default_and_list['n_vars_measured'][0],max(settings_default_and_list['n_vars_measured'][1])) > 99:
+    if max(settings_default_and_list['n_vars_measured'][0], max(settings_default_and_list['n_vars_measured'][1])) > 99:
         raise ValueError(
             'Config error. n_vars_measured must have <3 digits. or change len(intervention_variable)>2: in data_generator')
 
@@ -50,10 +66,14 @@ def define_settings():
                     one_param_setting.append(settings_default_and_list[var2][0])
                 else:
                     one_param_setting.append(setting)
-            one_param_study_settings.append(np.array(one_param_setting,dtype = object))
-        all_param_study_settings.append(np.array(one_param_study_settings,dtype = object))
-    print('total_scms in settings:', total_scms*100)
+            one_param_study_settings.append(np.array(one_param_setting, dtype=object))
+        all_param_study_settings.append(np.array(one_param_study_settings, dtype=object))
+    print('total_scms in settings:', total_scms * 100)
+
+    # #ini obs, #vars, frac latents, alpha, n_samples_per_generation
+    all_param_study_settings = [
+        [np.array([100, 5, 0.3, 0.01, 1], dtype=object), np.array([100, 5, 0.3, 0.05, 1], dtype=object),
+         np.array([100, 5, 0.3, 0.1, 1], dtype=object), np.array([100, 5, 0.3, 0.5, 1], dtype=object),
+         np.array([100, 5, 0.3, 0.7, 1], dtype=object)]]  # todo remove after testing alpha
 
     return all_param_study_settings
-
-

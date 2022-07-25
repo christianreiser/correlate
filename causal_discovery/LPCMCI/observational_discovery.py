@@ -70,7 +70,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         # df = df.drop(['Date'], axis=1)  # drop date col
         """
 
-        if verbosity_thesis > 2:
+        if verbosity_thesis > 9:
             print('observational_causal_discovery ...')
         # measure how long observational_causal_discovery takes
         start_time = time()

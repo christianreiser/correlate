@@ -167,7 +167,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
     output: (causing intervened var, independent var, tau)
     """
 
-    if verbosity_thesis > 2:
+    if verbosity_thesis > 9:
         print('get_independencies_from_interv_data ...')
 
     # get interventional data per variable
@@ -227,30 +227,30 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                 [cause_and_effect_tau_shifted.copy(), conditioning_df], axis=1)
                             cause_and_effect_condition_tau_shifted = cause_and_effect_condition_tau_shifted.dropna()
 
+                            if len(cause_and_effect_condition_tau_shifted) > 2:
 
+                                # get p_val
+                                ans = pg.partial_corr(data=cause_and_effect_condition_tau_shifted, x='cause', y='effect',
+                                                      covar=list(conditioning_df.columns)).round(3)
+                                p_val = ans['p-val'].values[0] # probability of independence
+                                r = ans['r'].values[0] # correlation coefficient
+                                # statistical test
+                                # r, p_val = pearsonr(cause_and_effect_tau_shifted['cause'],
+                                #                                       cause_and_effect_tau_shifted['effect'])
+                                # if significantly independent:
+                                if p_val > interv_alpha:
 
-                            # get p_val
-                            ans = pg.partial_corr(data=cause_and_effect_condition_tau_shifted, x='cause', y='effect',
-                                                  covar=list(conditioning_df.columns)).round(3)
-                            p_val = ans['p-val'].values[0] # probability of independence
-                            r = ans['r'].values[0] # correlation coefficient
-                            # statistical test
-                            # r, p_val = pearsonr(cause_and_effect_tau_shifted['cause'],
-                            #                                       cause_and_effect_tau_shifted['effect'])
-                            # if significantly independent:
-                            if p_val > interv_alpha:
-
-                                # save independency information
-                                independencies_from_interv_data.append((cause, effect, tau))
-                                if verbosity_thesis > 2:
-                                    print("independency in interventional data: intervened var ", cause,
-                                          " is independent of var", effect, "with lag=", tau, ", p-value=",
-                                          p_val)
-                                elif verbosity_thesis > 1:
-                                    if effect == target_label:
+                                    # save independency information
+                                    independencies_from_interv_data.append((cause, effect, tau))
+                                    if verbosity_thesis > 2:
                                         print("independency in interventional data: intervened var ", cause,
                                               " is independent of var", effect, "with lag=", tau, ", p-value=",
                                               p_val)
+                                    elif verbosity_thesis > 1:
+                                        if effect == target_label:
+                                            print("independency in interventional data: intervened var ", cause,
+                                                  " is independent of var", effect, "with lag=", tau, ", p-value=",
+                                                  p_val)
 
     return independencies_from_interv_data
 

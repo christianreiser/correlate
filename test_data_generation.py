@@ -1,6 +1,5 @@
 import pandas as pd
 from statsmodels.compat.pandas import assert_frame_equal
-import pytest
 from config import checkpoint_path
 from data_generation import data_generator
 from intervention_proposal.get_intervention import lin_f
@@ -21,7 +20,7 @@ class TestGetIntervention:
         n_samples = 500
         labels = ts_old.columns
         noise_type = 'without'
-        assert 'max_lag == 0' == data_generator(scm,
+        assert (None, 'max_lag == 0') == data_generator(scm,
                        intervention_variable,
                        intervention_value,
                        ts_old,
@@ -47,7 +46,7 @@ class TestGetIntervention:
         intervention_var = None
         intervention_value_low = None
         # when
-        simulated_res = data_generator(
+        simulated_res, health = data_generator(
             scm=scm,
             intervention_variable=intervention_var,
             intervention_value=intervention_value_low,
@@ -56,7 +55,8 @@ class TestGetIntervention:
             n_samples=n_half_samples,
             labels=ts.columns,
             noise_type='gaussian'
-        ).round(6)
+        )
+        simulated_res = simulated_res.round(6)
         # then
         true_simulated_res = pd.DataFrame(
             [
@@ -64,11 +64,12 @@ class TestGetIntervention:
             ],
             columns=['0', '1'], dtype='float32').round(6)
         assert_frame_equal(simulated_res, true_simulated_res)
+        assert health == 'good'
 
         # with intervention
         intervention_var = '1'
         intervention_value_low = -2.0
-        simulated_res = data_generator(
+        simulated_res, health = data_generator(
             scm=scm,
             intervention_variable=intervention_var,
             intervention_value=intervention_value_low,
@@ -77,14 +78,14 @@ class TestGetIntervention:
             n_samples=n_half_samples,
             labels=ts.columns,
             noise_type='gaussian'
-        ).round(4)
+        )
         # then
         true_simulated_res = pd.DataFrame(
             [
                 [-3.0348, -2.0],
             ],
-            columns=['0', '1'], dtype='float32').round(4)
-        assert_frame_equal(simulated_res, true_simulated_res)
+            columns=['0', '1'], dtype='float32')
+        assert_frame_equal(simulated_res.round(4), true_simulated_res.round(4))
 
 
 

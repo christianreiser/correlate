@@ -4,6 +4,7 @@ import pickle
 from matplotlib import pyplot as plt
 from tigramite import plotting as tp
 from tqdm import tqdm
+from scipy.stats import norm
 
 from config import checkpoint_path, private_folder_path
 
@@ -33,7 +34,7 @@ import numpy as np
 import pandas as pd
 
 from causal_discovery.LPCMCI.generate_data_mod import Graph
-from config import verbosity_thesis, target_label, tau_max, low_percentile, high_percentile, n_samples_simulation
+from config import verbosity_thesis, target_label, tau_max, percentile, n_samples_simulation
 from data_generation import data_generator
 
 
@@ -273,8 +274,6 @@ def get_ambiguous_graph_locations(graph):
 
                     # append ambiguous location
                     ambiguous_locations.append([i, j, k, original_link, new_links_combinations[index]])
-    if verbosity_thesis > 3:
-        print('len(ambiguous_locations)', len(ambiguous_locations))
     return ambiguous_locations
 
 
@@ -409,7 +408,7 @@ def create_all_graph_combinations(graph, ambiguous_locations):
         return graph_combinations
 
 
-def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_vars, random_seed,
+def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
                                  old_intervention, label, external_independencies,
                                  ):
     """
@@ -429,7 +428,7 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
     # don't intervene on variables that where independent of target var in interventional data for all taus,
     # by add them to unintervenable_vars
     if external_independencies is not None and len(external_independencies) > 0:
-        to_add = get_all_tau_external_independencies_wrt_target(external_independencies, var_names)
+        to_add = get_all_tau_external_independencies_wrt_target(external_independencies, ts.columns)
         if to_add is not None and len(to_add) > 0:
             unintervenable_vars = unintervenable_vars + to_add
 
@@ -445,10 +444,19 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
 
     # create a list of all unique graph combinations
     graph_combinations = create_all_graph_combinations(my_graph, ambiguous_locations)
-    if verbosity_thesis > 3:
-        print('len(graph_combinations): ', len(graph_combinations))
 
     n_half_samples = int(n_samples_simulation / 2)
+
+    # get intervention value from fitted gaussian percentile
+    intervention_value_low = {}
+    intervention_value_high = {}
+    for var_name in ts.columns:
+        # Fit a normal distribution to the data:
+        mu, std = norm.fit(ts[var_name])
+        # get 95th percentile from normal distribution
+        intervention_value_low[var_name] = norm.ppf(1 - percentile / 100, loc=mu, scale=std)
+        intervention_value_high[var_name] = norm.ppf(percentile / 100, loc=mu, scale=std)
+
 
     largest_abs_coeff = 0
     largest_coeff = 0
@@ -465,16 +473,15 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
         # check_contemporaneous_cycle(val, unique_graph, var_names, 'cycle check')
 
         # for all measured vars except unintervenable intervention_vars
-        for intervention_var in list(set(var_names) - set(unintervenable_vars)):
+        for intervention_var in list(set(ts.columns) - set(unintervenable_vars)):
 
-            # get low intervention value from low percentile
-            intervention_value_low = np.percentile(a=ts[intervention_var], q=low_percentile)
+
 
             # intervene on intervention_var with low and high values
-            simulated_low_interv = data_generator(
+            simulated_low_interv, health = data_generator(
                 scm=model,
                 intervention_variable=intervention_var,
-                intervention_value=intervention_value_low,
+                intervention_value=intervention_value_low[intervention_var],
                 ts_old=ts,
                 random_seed=random_seed,
                 n_samples=n_half_samples,
@@ -482,25 +489,27 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
                 noise_type='without'
             )
 
-            # skip: cyclic contemporaneous graph (none) and 'max_lag == 0'
-            if simulated_low_interv is not None and simulated_low_interv._typ == 'dataframe':
+            # get runtime type of simulated_low_interv
 
-                simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=var_names)
+
+            # skip: cyclic contemporaneous graph (none) and 'max_lag == 0'
+            if simulated_low_interv is not None and not isinstance(simulated_low_interv, str) and simulated_low_interv._typ == 'dataframe':
+
+                simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=ts.columns)
                 sum_target_low_interv = simulated_low_interv[target_label]
 
                 # same for high intervention value
-                intervention_value_high = np.percentile(a=ts[intervention_var], q=high_percentile)
-                simulated_high_interv = data_generator(
+                simulated_high_interv, health = data_generator(
                     scm=model,
                     intervention_variable=intervention_var,
-                    intervention_value=intervention_value_high,
+                    intervention_value=intervention_value_high[intervention_var],
                     ts_old=ts,
                     random_seed=random_seed,
                     n_samples=n_half_samples,
                     labels=ts.columns,
                     noise_type='without',
                 )
-                simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=var_names)
+                simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=ts.columns)
                 sum_target_high_interv = simulated_high_interv[target_label]
 
                 # get relative difference between low and high intervention
@@ -516,17 +525,16 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
                     most_optimistic_graph_idx = unique_graph_idx
                     most_optimistic_graph = unique_graph
                     if coeff > 0:
-                        intervention_value = intervention_value_high
+                        intervention_value = intervention_value_high[intervention_var]
                     else:
-                        intervention_value = intervention_value_low
+                        intervention_value = intervention_value_low[intervention_var]
 
     # measure how long
     end_time = time()
-    if verbosity_thesis > 2:
-        print('get optimistic_intervention_var_via_simulation took: ', end_time - start_time)
+
     if most_optimistic_graph_idx is None:
         mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
-        plot_graph(val, mygraph_without_lagged, var_names, 'contemp graph for cycle detection')
+        plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection')
         print('WARNING: hack: no most optimistic graph found')
 
     # # if intervention was found
@@ -534,13 +542,17 @@ def find_optimistic_intervention(my_graph, val, var_names, ts, unintervenable_va
 
         # plot most optimistic graph
         if verbosity_thesis > 1 and label != 'true_scm':
-            plot_graph(val, most_optimistic_graph, var_names, 'most optimistic')
+            plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic')
 
     # if intervention was not found
     else:
         print('WARNING: no intervention found. probably cyclic graph, or found no effect on target, var')
         best_intervention_var_name = old_intervention[0]
         intervention_value = old_intervention[1]
+
+    if verbosity_thesis > 1:
+        print("intervention_variable", label, best_intervention_var_name, "interv_val_opti: ",
+              intervention_value)
 
     return best_intervention_var_name, intervention_value
 

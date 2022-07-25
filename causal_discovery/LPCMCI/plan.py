@@ -1,6 +1,5 @@
 import math
 import pickle
-from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
@@ -9,10 +8,10 @@ from tqdm import tqdm
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
-from config import target_label, coeff, min_coeff, n_mixed, nth, verbosity_thesis, checkpoint_path
+from config import target_label, coeff, min_coeff, n_mixed, nth, checkpoint_path
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
-from regret import compute_regret
+from regret import compute_regret, cost_function
 
 """
   B) 
@@ -43,6 +42,7 @@ x prune weak links
 - instead of append and r_ ini array and fill
 """
 
+
 def is_debug():
     import sys
 
@@ -56,6 +56,7 @@ def is_debug():
             return False
         else:
             return True
+
 
 def ensure_0_in_measured_labels(measured_labels):
     if 0 not in measured_labels:
@@ -183,8 +184,9 @@ def simulation_study_with_one_scm(sim_study_input):
     random_seed = sim_study_input[1]
     print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
 
-    n_measured_links, n_vars_all, labels_strs, interv_alpha, n_ini_obs = calculate_parameters(n_vars_measured, frac_latents,
-                                                                                   pc_alpha, n_ini_obs)
+    n_measured_links, n_vars_all, labels_strs, interv_alpha, n_ini_obs = calculate_parameters(n_vars_measured,
+                                                                                              frac_latents,
+                                                                                              pc_alpha, n_ini_obs)
 
     random_state = np.random.RandomState(random_seed)
 
@@ -206,8 +208,7 @@ def simulation_study_with_one_scm(sim_study_input):
     # ini regret
     regret_list = []
 
-    # ini converged_on_optimal
-    converged_on_optimal = False
+    # ini
     interv_var, interv_val, pag_edgemarks = None, None, None
 
     # schedule when to intervene
@@ -216,7 +217,7 @@ def simulation_study_with_one_scm(sim_study_input):
 
     """ generate first n_ini_obs samples without intervention"""
     # generate observational data
-    ts_generated_actual = data_generator(
+    ts_generated_actual, health = data_generator(
         scm=scm,
         intervention_variable=None,
         intervention_value=None,
@@ -226,22 +227,7 @@ def simulation_study_with_one_scm(sim_study_input):
         labels=labels_strs,
         noise_type='gaussian',
     )
-
-    # optimistic intervention on true scm
-    intervention_var_optimal_backup, intervention_value_optimal_backup = find_optimistic_intervention(
-        edgemarks_true.copy(),
-        effect_sizes_true.copy(),
-        var_names=[str(var_name) for var_name in range(n_vars_all)],
-        ts=ts_generated_actual,
-        unintervenable_vars=unintervenable_vars,
-        random_seed=random_seed,
-        old_intervention=[None, None],
-        label='true_scm',
-        external_independencies=None,
-    )
-    if verbosity_thesis > 1:
-        print("intervention_variable_optimal: ", intervention_var_optimal_backup, "interv_val_opti: ",
-              intervention_value_optimal_backup)
+    ts_generated_optimal = ts_generated_actual
 
     # measure new data (hide latents)
     ts_measured_actual = measure(ts_generated_actual, obs_vars=measured_labels)
@@ -253,125 +239,127 @@ def simulation_study_with_one_scm(sim_study_input):
         # safe all local variables file
         filename = checkpoint_path + 'global_save.pkl'
         with open(filename, 'wb') as f:
-            pickle.dump([converged_on_optimal, is_intervention_idx, is_intervention, ts_generated_actual, regret_list,
+            pickle.dump([is_intervention_idx, is_intervention, ts_generated_actual, regret_list,
                          interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
                          pag_edgemarks, interv_var], f)
         # load
         # with open(filename, 'rb') as f:
-        #     converged_on_optimal, is_intervention_idx, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var = pickle.load(f)
+        #     is_intervention_idx, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var = pickle.load(f)
 
-        # stop if converged on optimal
-        if not converged_on_optimal:
+        # intervene or observe var?
+        is_intervention = is_intervention_list[is_intervention_idx]
 
-            # intervene or observe var?
-            is_intervention = is_intervention_list[is_intervention_idx]
-
-            # if intervention is scheduled
-            if is_intervention:
-
-                """
-                causal discovery
-                """
-                # interventional discovery
-                independencies_from_interv_data = get_independencies_from_interv_data(
-                    ts_measured_actual.copy(),
-                    was_intervened,
-                    interv_alpha,
-                    n_ini_obs,
-                    pag_edgemarks,
-                    measured_labels,
-                )
-
-                # observational discovery
-                pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
-                    df=ts_measured_actual.copy(),
-                    was_intervened=was_intervened.copy(),
-                    external_independencies=independencies_from_interv_data,
-                    measured_label_to_idx=measured_label_as_idx,
-                    pc_alpha=pc_alpha,
-                )
-                # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
-
-                """ 
-                propose intervention
-                """
-                # from measured data , ,
-                interv_var, interv_val = find_optimistic_intervention(
-                    my_graph=pag_edgemarks.copy(),
-                    val=pag_effect_sizes.copy(),
-                    var_names=measured_labels,
-                    ts=ts_measured_actual[:n_ini_obs],  # only first n_ini_obs samples, to have the same ts as optimal
-                    unintervenable_vars=unintervenable_vars,
-                    random_seed=random_seed,
-                    old_intervention=[interv_var, interv_val],
-                    label='actual_data',
-                    external_independencies=independencies_from_interv_data,
-                )
-
-                if verbosity_thesis > 1:
-                    print("intervention_variable: ", interv_var, "interv_val: ", interv_val)
-
-                # get interv_var_opti from backup backup
-                interv_var_opti = intervention_var_optimal_backup
-                interv_val_opti = intervention_value_optimal_backup
-
-
-            # if no intervention is scheduled
-            else:
-                interv_var, interv_val, interv_var_opti, interv_val_opti = None, None, None, None
-
-            # keep track of if and where in the ts the intervention is
-            was_intervened = store_interv(was_intervened, interv_var, n_samples_per_generation, n_vars_measured)
+        # if intervention is scheduled
+        if is_intervention:
 
             """
-            intervene as proposed and generate new data.
-            Interv might be none
+            causal discovery
             """
-            # actual
-            ts_new_actual = data_generator(
-                scm=scm,
-                intervention_variable=interv_var,
-                intervention_value=interv_val,
-                ts_old=ts_generated_actual,
-                random_seed=random_seed,
-                n_samples=n_samples_per_generation,
-                labels=labels_strs,
-                noise_type='gaussian',
-            )
-            # optimal
-            ts_new_optimal = data_generator(
-                scm=scm,
-                intervention_variable=interv_var_opti,
-                intervention_value=interv_val_opti,
-                ts_old=ts_generated_actual,
-                random_seed=random_seed,
-                n_samples=n_samples_per_generation,
-                labels=labels_strs,
-                noise_type='gaussian',
+            # interventional discovery
+            independencies_from_interv_data = get_independencies_from_interv_data(
+                ts_measured_actual.copy(),
+                was_intervened,
+                interv_alpha,
+                n_ini_obs,
+                pag_edgemarks,
+                measured_labels,
             )
 
-            # append new (measured) data
-            ts_generated_actual = np.r_[ts_generated_actual, ts_new_actual]  # append actual generated data
-            new_measurements = measure(ts_new_actual, obs_vars=measured_labels)  # measure new data (drop latent data)
-            ts_measured_actual = pd.DataFrame(np.r_[ts_measured_actual, new_measurements], columns=measured_labels)
-            # optimal
-            ts_generated_optimal = pd.DataFrame(np.r_[ts_generated_optimal, ts_new_optimal], columns=labels_strs)
+            # observational discovery
+            pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
+                df=ts_measured_actual.copy(),
+                was_intervened=was_intervened.copy(),
+                external_independencies=independencies_from_interv_data,
+                measured_label_to_idx=measured_label_as_idx,
+                pc_alpha=pc_alpha,
+            )
+            # pag_effect_sizes, pag_edgemarks, var_names = load_results(name_extension='simulated')
 
             """ 
-            regret
+            propose intervention
             """
-            # only if it was an intervention
-            if is_intervention:
-                regret_list, converged_on_optimal = compute_regret(ts_measured_actual, ts_generated_optimal,
-                                                                   regret_list, n_samples_per_generation)
-                if regret_list[-1] != 0 and interv_var == interv_var_opti and interv_val == interv_val_opti:
-                    raise ValueError("regret is not 0 but optimal intervention = actual intervention")
+            # from measured data
+            interv_var, interv_val = find_optimistic_intervention(
+                my_graph=pag_edgemarks.copy(),
+                val=pag_effect_sizes.copy(),
+                ts=ts_measured_actual,  # only first n_ini_obs samples, to have the same ts as optimal
+                unintervenable_vars=unintervenable_vars,
+                random_seed=random_seed,
+                old_intervention=[interv_var, interv_val],
+                label='actual_data',
+                external_independencies=independencies_from_interv_data,
+            )
+
+            # from true SCM
+            interv_var_opti, interv_val_opti = find_optimistic_intervention(
+                edgemarks_true.copy(),
+                effect_sizes_true.copy(),
+                ts=pd.DataFrame(ts_generated_actual, columns=labels_strs),
+                # needed for 1. percentile from mu, std 2. simulation start 3. labels
+                unintervenable_vars=unintervenable_vars,
+                random_seed=random_seed,
+                old_intervention=[None, None],
+                label='true_scm',
+                external_independencies=None,
+            )
+
+
+
+        # if no intervention is scheduled
+        else:
+            interv_var, interv_val, interv_var_opti, interv_val_opti = None, None, None, None
+
+        # keep track of if and where in the ts the intervention is
+        was_intervened = store_interv(was_intervened, interv_var, n_samples_per_generation, n_vars_measured)
+
+        """
+        intervene as proposed and generate new data.
+        Interv might be none
+        """
+        # actual
+        ts_new_actual, health = data_generator(
+            scm=scm,
+            intervention_variable=interv_var,
+            intervention_value=interv_val,
+            ts_old=ts_generated_actual,
+            random_seed=random_seed,
+            n_samples=n_samples_per_generation,
+            labels=labels_strs,
+            noise_type='gaussian',
+        )
+        # optimal
+        ts_new_optimal, health = data_generator(
+            scm=scm,
+            intervention_variable=interv_var_opti,
+            intervention_value=interv_val_opti,
+            ts_old=ts_generated_optimal,
+            random_seed=random_seed,
+            n_samples=n_samples_per_generation,
+            labels=labels_strs,
+            noise_type='gaussian',
+        )
+
+        # append new (measured) data
+        ts_generated_actual = np.r_[ts_generated_actual, ts_new_actual]  # append actual generated data
+        new_measurements = measure(ts_new_actual, obs_vars=measured_labels)  # measure new data (drop latent data)
+        ts_measured_actual = pd.DataFrame(np.r_[ts_measured_actual, new_measurements], columns=measured_labels)
+        # optimal
+        ts_generated_optimal = pd.DataFrame(np.r_[ts_generated_optimal, ts_new_optimal], columns=labels_strs)
+
+        """ 
+        regret
+        """
+        # only if it was an intervention
+        if is_intervention:
+            regret_list = compute_regret(ts_measured_actual, ts_generated_optimal,
+                                         regret_list, n_samples_per_generation)
+            print(random_seed ,'r', format(regret_list[-1], ".3f"), '\t\to var', interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
+                  interv_var, '\ta val', format(interv_val, ".3f"))
 
     regret_sum = sum(regret_list)
-    print('converged on optimal intervention. regret_sum:', regret_sum, '\n\n')
-    return regret_sum
-
-
+    cost = cost_function(regret_list, is_intervention_list, n_ini_obs)
+    print('regret_sum:', regret_sum, '\n\n')
+    return [regret_sum, cost]
 
 
 def run_all_experiments():
@@ -388,14 +376,16 @@ def run_all_experiments():
 
             # repeat each parameter setting for 100 randomly sampled scms
 
-            for i_th_scm in tqdm(range(1, 2)): # todo 100
+            for i_th_scm in tqdm(range(0, 100)):
                 ## run experiment ###
                 regret_list_over_scms.append(
                     simulation_study_with_one_scm((one_param_setting, i_th_scm)))
                 ######################
 
-            print('mean regret', np.mean(regret_list_over_scms))
-            print('variance regret', np.var(regret_list_over_scms))
+            print('mean regret', np.mean(np.array(regret_list_over_scms)[:,0]))
+            print('variance regret', np.var(np.array(regret_list_over_scms)[:,0]))
+            print('mean loss', np.mean(np.array(regret_list_over_scms)[:,1]))
+            print('variance loss', np.var(np.array(regret_list_over_scms)[:,1]))
             regret_list_over_simulation_study.append(regret_list_over_scms)
 
         # save results of one parameter setting

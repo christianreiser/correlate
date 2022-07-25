@@ -3,7 +3,7 @@ config parameters
 """
 
 verbosity = 0
-verbosity_thesis = 90
+verbosity_thesis = 0 # 1 regret, 2
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
@@ -65,21 +65,16 @@ tau_max = 1
 
 
 # sampling config dict n_ini_obs=500, n_mixed=500, nth=4
-# n_ini_obs = 500, # todo var
-n_mixed = 100,
+n_mixed = 200, # todo 500
 nth = 4
 n_samples_per_generation = 4 # todo 1
 
 # action simulation
 n_samples_simulation = 100
 
-intervention_value_percentile = 95
-high_percentile = intervention_value_percentile
-low_percentile =100-intervention_value_percentile
+percentile = 95 # for actual, optimal and simulated intervention
 
-# evaluation
-n_below_regret_thresh = 3 # todo 10
-regret_convergence_thresh = 0.0
+
 
 # test
 correct390_0 = 2.5380406379699707

@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
 
-from config import target_label, regret_convergence_thresh, n_below_regret_thresh, verbosity_thesis
+from config import target_label, verbosity_thesis
 
 
 def get_last_outcome(ts_measured_actual, n_samples_per_generation):
@@ -10,19 +11,6 @@ def get_last_outcome(ts_measured_actual, n_samples_per_generation):
     outcome_last = np.array(ts_measured_actual.loc[:, target_label])[-n_samples_per_generation:]
     return outcome_last
 
-
-def check_converged_on_optimal(regret_list):
-    """
-    check if the optimal solution has been reached n_0_regret times in a row
-    """
-    if len(regret_list) < n_below_regret_thresh:
-        return False
-    else:
-        regret_list = regret_list[-n_below_regret_thresh:]
-        if np.all(regret_list[-n_below_regret_thresh:] <= [regret_convergence_thresh] * n_below_regret_thresh):
-            return True
-        else:
-            return False
 
 def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samples_per_generation):
     outcome_actual = get_last_outcome(ts_measured_actual, n_samples_per_generation)
@@ -37,11 +25,37 @@ def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samp
     #           '\nintervention_var_optimal_backup:', intervention_var_optimal_backup,
     #           '\nintervention_variable:', interv_var)
     #     ValueError("Regret is negative! See prints above")
-    if verbosity_thesis >0:
+    if verbosity_thesis > 0:
         print('new_regret: ', new_regret)
     regret_list = np.append(regret_list, new_regret)
+    return regret_list
 
-    # check if converged on optimal
-    converged_on_optimal = check_converged_on_optimal(regret_list)
 
-    return regret_list, converged_on_optimal
+def test_compute_regret():
+    ts_measured_actual = pd.DataFrame(np.array([[1, 3], [4, 6], [7, 9]]), columns=['0', '1'])
+    ts_generated_optimal = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), columns=['0', '1', '2'])
+    regret_list = np.array([])
+    n_samples_per_generation = 1
+    regret_list = compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samples_per_generation)
+    assert regret_list == [0]
+
+
+def cost_function(regret_list, is_intervention_list, n_ini_obs):
+    """
+    compute cost function
+    """
+    cost_per_observation = 1
+    cost_per_intervention = 10
+    cost_per_regret = 34  # 3.4*10
+    # count number of interventions
+    n_interventions = sum(is_intervention_list)
+    # count number of observations
+    n_observations = len(is_intervention_list) - n_interventions + n_ini_obs
+    # compute cost
+    sum_regret = sum(regret_list)
+    cost = cost_per_observation * n_observations + cost_per_intervention * n_interventions + cost_per_regret * sum_regret
+    print(
+        'cost', cost, ' = cost_per_observation', cost_per_observation, ' * n_observations', n_observations,
+        ' + cost_per_intervention', cost_per_intervention, ' * n_interventions', n_interventions, ' + cost_per_regret',
+        cost_per_regret, ' * sum_regret', sum_regret)
+    return cost
