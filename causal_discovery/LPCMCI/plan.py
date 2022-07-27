@@ -8,7 +8,7 @@ from tqdm import tqdm
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
-from config import target_label, coeff, min_coeff, n_mixed, nth, checkpoint_path
+from config import target_label, coeff, min_coeff, n_days, nth, checkpoint_path, n_scms
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
 from regret import compute_regret, cost_function
@@ -124,11 +124,11 @@ def get_measured_labels(n_vars_all, random_state, frac_latents, scm):
 def obs_or_intervene():
     """
     first n_ini_obs samples are observational
-    then for n_mixed samples, very nth sample is an intervention
+    then for n_days samples, very nth sample is an intervention
     false: observation
     true: intervention
     """
-    is_mixed = np.zeros(n_mixed).astype(bool)
+    is_mixed = np.zeros(n_days).astype(bool)
     for i in range(len(is_mixed)):
         if i % nth == 0:
             is_mixed[i] = True
@@ -200,7 +200,7 @@ def simulation_study_with_one_scm(sim_study_input):
         n_vars_all, random_state, frac_latents, scm)
 
     # ini ts
-    ts_generated_actual, ts_generated_optimal = np.zeros((0, n_vars_all)), np.zeros((0, n_vars_all))
+    ts_generated_actual = np.zeros((0, n_vars_all))
 
     # ini var that keeps track of where the intervention is
     was_intervened = pd.DataFrame(np.zeros((n_ini_obs, n_vars_measured), dtype=bool), columns=measured_labels)
@@ -234,20 +234,21 @@ def simulation_study_with_one_scm(sim_study_input):
 
     """ loop: causal discovery, planning, intervention """
     # intervene, observe, observe, observe, ...
-    for is_intervention_idx, is_intervention in enumerate(is_intervention_list):
+    for day, is_intervention in enumerate(is_intervention_list):
 
         # safe all local variables file
-        filename = checkpoint_path + 'global_save.pkl'
-        with open(filename, 'wb') as f:
-            pickle.dump([is_intervention_idx, is_intervention, ts_generated_actual, regret_list,
-                         interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
-                         pag_edgemarks, interv_var], f)
+        filename = checkpoint_path + 'global_save1.pkl'
+        # with open(filename, 'wb') as f:
+        #     pickle.dump([day, is_intervention, ts_generated_actual, regret_list,
+        #                  interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
+        #                  pag_edgemarks, interv_var, is_intervention_list], f)
         # load
-        # with open(filename, 'rb') as f:
-        #     is_intervention_idx, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var = pickle.load(f)
+        with open(filename, 'rb') as f:
+            day, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var, is_intervention_list = pickle.load(
+                f)
 
         # intervene or observe var?
-        is_intervention = is_intervention_list[is_intervention_idx]
+        is_intervention = is_intervention_list[day]
 
         # if intervention is scheduled
         if is_intervention:
@@ -285,7 +286,6 @@ def simulation_study_with_one_scm(sim_study_input):
                 ts=ts_measured_actual,  # only first n_ini_obs samples, to have the same ts as optimal
                 unintervenable_vars=unintervenable_vars,
                 random_seed=random_seed,
-                old_intervention=[interv_var, interv_val],
                 label='actual_data',
                 external_independencies=independencies_from_interv_data,
             )
@@ -298,7 +298,6 @@ def simulation_study_with_one_scm(sim_study_input):
                 # needed for 1. percentile from mu, std 2. simulation start 3. labels
                 unintervenable_vars=unintervenable_vars,
                 random_seed=random_seed,
-                old_intervention=[None, None],
                 label='true_scm',
                 external_independencies=None,
             )
@@ -350,16 +349,26 @@ def simulation_study_with_one_scm(sim_study_input):
         regret
         """
         # only if it was an intervention
-        if is_intervention:
-            regret_list = compute_regret(ts_measured_actual, ts_generated_optimal,
-                                         regret_list, n_samples_per_generation)
-            print(random_seed ,'r', format(regret_list[-1], ".3f"), '\t\to var', interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
+        regret_list = compute_regret(ts_measured_actual, ts_generated_optimal,
+                                     regret_list, n_samples_per_generation)
+
+        if interv_val_opti is not None and interv_val is not None:
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
+                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
                   interv_var, '\ta val', format(interv_val, ".3f"))
+        elif interv_val_opti is not None and interv_val is None:
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
+                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
+                  interv_var, '\ta val', interv_val)
+        elif interv_val_opti is None and interv_val is not None:
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
+                  interv_var_opti, '\to val', interv_val_opti, '\t\ta var',
+                  interv_var, '\ta val', interv_val)
 
     regret_sum = sum(regret_list)
-    cost = cost_function(regret_list, is_intervention_list, n_ini_obs)
+    cost = cost_function(regret_list, was_intervened, n_ini_obs)
     print('regret_sum:', regret_sum, '\n\n')
-    return [regret_sum, cost]
+    return [regret_list, cost]
 
 
 def run_all_experiments():
@@ -367,7 +376,7 @@ def run_all_experiments():
     all_param_study_settings = define_settings()
 
     # run parameter studies
-    for simulation_study in all_param_study_settings:
+    for simulation_study_idx, simulation_study in enumerate(all_param_study_settings):
         regret_list_over_simulation_study = []
 
         # run one parameter setting
@@ -376,20 +385,16 @@ def run_all_experiments():
 
             # repeat each parameter setting for 100 randomly sampled scms
 
-            for i_th_scm in tqdm(range(0, 100)):
+            for i_th_scm in tqdm(range(0, n_scms)):  # n people or scms
                 ## run experiment ###
                 regret_list_over_scms.append(
                     simulation_study_with_one_scm((one_param_setting, i_th_scm)))
                 ######################
 
-            print('mean regret', np.mean(np.array(regret_list_over_scms)[:,0]))
-            print('variance regret', np.var(np.array(regret_list_over_scms)[:,0]))
-            print('mean loss', np.mean(np.array(regret_list_over_scms)[:,1]))
-            print('variance loss', np.var(np.array(regret_list_over_scms)[:,1]))
             regret_list_over_simulation_study.append(regret_list_over_scms)
 
         # save results of one parameter setting
-        with open('regret_list_over_simulation_study.pickle', 'wb') as f:
+        with open(checkpoint_path + str(simulation_study_idx) + 'regret_list_over_simulation_study.pickle', 'wb') as f:
             pickle.dump([regret_list_over_simulation_study, simulation_study], f)
     print('all done')
 

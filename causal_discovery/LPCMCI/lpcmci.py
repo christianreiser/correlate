@@ -2,6 +2,7 @@ from itertools import product, combinations
 
 import numpy as np
 
+
 class LPCMCI():
     r"""
     This class implements the LPCMCI algorithm for constraint-based causal discovery on stationary times series with
@@ -131,7 +132,8 @@ class LPCMCI():
         #######################################################################################################################
         #######################################################################################################################
         # Step 0: Initializations
-        self._initialize(external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px, max_p_global, max_p_non_ancestral,
+        self._initialize(external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px,
+                         max_p_global, max_p_non_ancestral,
                          max_q_global, max_pds_set, prelim_with_collider_rules, parents_of_lagged, prelim_only,
                          break_once_separated, no_non_ancestral_phase, use_a_pds_t_for_majority, orient_contemp,
                          update_middle_marks, prelim_rules, fix_all_edges_before_final_orientation, auto_first,
@@ -247,7 +249,8 @@ class LPCMCI():
         # Return the estimated graph
         return self.graph
 
-    def _initialize(self, external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px, max_p_global, max_p_non_ancestral,
+    def _initialize(self, external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px,
+                    max_p_global, max_p_non_ancestral,
                     max_q_global, max_pds_set, prelim_with_collider_rules, parents_of_lagged, prelim_only,
                     break_once_separated, no_non_ancestral_phase, use_a_pds_t_for_majority, orient_contemp,
                     update_middle_marks, prelim_rules, fix_all_edges_before_final_orientation, auto_first,
@@ -298,27 +301,23 @@ class LPCMCI():
         # Return
         return True
 
-
-    def orient_with_interv_data(self, intervewntional_independencies):
+    def orient_with_interv_data(self, interv_independencies):
         """
         chrei:
         for all items in list, remove ancestry of corresponding links
         """
-        if intervewntional_independencies is not None and len(intervewntional_independencies) > 0:
-            for independency in intervewntional_independencies:
-                X = (independency[0], independency[2])
-                Y = (independency[1], 0)
-                (var_X, lag_X) = X
-                (var_Y, lag_Y) = Y
-                lag_X = -lag_X
-                lag_Y = -lag_Y
-                if self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["o"]:
-                    self.graph_dict[var_Y][(var_X, lag_X - lag_Y)] = "<"+str(self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][1:])
-                # elif self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0] in ["<"]:
-                #     pass
+        if interv_independencies is not None and len(interv_independencies) > 0:
+            for independency in interv_independencies:
+                eff = (independency[0], independency[2])
+                cause = (independency[1], 0)
+                (var_cause, lag_cause) = cause
+                (var_eff, lag_eff) = eff
+                if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0] in ["o"]:
+                    self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "<" + str(
+                        self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1:])
                 else:
-                    ValueError("orient with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_Y][(var_X, lag_X - lag_Y)][0])
-
+                    ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
+                               self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
 
     def _initialize_run_memory(self, external_independencies):
         """Function for initializing various memory variables for storing the current graph, sepsets etc."""
@@ -431,7 +430,6 @@ class LPCMCI():
                 # Iterate through all edges specified by links.
                 # Note that since the variables paris are ordered, (A, B) and (B, A) are seen as different pairs.
                 for pair in links:
-
                     # Decode the elements of links into pairs of variables (X, Y)
                     if len(pair) == 2:
                         X = (pair[0], pair[1])
@@ -446,7 +444,6 @@ class LPCMCI():
 
                     ######################################################################################################
                     ### Exclusion of links ###############################################################################
-
                     # Exclude the current link if ...
                     # ... X = Y
                     if X[1] == 0 and X[0] == Y[0]:
@@ -465,7 +462,6 @@ class LPCMCI():
                     # ... the link is definitely part of G
                     if link[1] == "-":
                         continue
-
                     ######################################################################################################
                     ### Determine  which tests the link will be  subjected to  ###########################################
 
@@ -474,7 +470,6 @@ class LPCMCI():
                     test_Y = True if link[1] not in ["R", "!"] else False
                     test_X = True if (link[1] not in ["L", "!"] and (
                             X[1] == 0 or (self.max_cond_px > 0 and self.max_cond_px >= p_pc))) else False
-
                     ######################################################################################################
                     ### Preparation PC search set and default conditioning set ###########################################
 
@@ -483,7 +478,6 @@ class LPCMCI():
 
                     if test_X:
                         S_default_XY, S_search_XY = self._get_default_and_search_sets(X, Y, "ancestral")
-
                     ######################################################################################################
                     ### Middle mark updates ##############################################################################
 
@@ -494,11 +488,12 @@ class LPCMCI():
                         if len(S_search_YX) < p_pc:
                             # Note that X is smaller than Y. If S_search_YX exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(Y). Therefore, the middle mark on the edge between X and Y can be updated with 'R'
                             if (X, Y) not in self._cannot_mark:
+                                if X == (0, 0) and Y == (3, 0):
+                                    print()
                                 self._apply_middle_mark(X, Y, "R")
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.
                             has_converged = False
-
                     if test_X:
                         if len(S_search_XY) < p_pc:
                             # Note that X is smaller than Y. If S_search_XY exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(X). Therefore, the middle mark on the edge between X and Y can be updated with 'L'
@@ -507,7 +502,6 @@ class LPCMCI():
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.
                             has_converged = False
-
                     ######################################################################################################
 
                     ######################################################################################################
@@ -519,7 +513,6 @@ class LPCMCI():
                             S_search_YX = self._sort_search_set(S_search_YX, Y)
                         if test_X:
                             S_search_XY = self._sort_search_set(S_search_XY, X)
-
                     # Run through all cardinality p_pc subsets of S_search_YX
                     if test_Y:
 
@@ -542,17 +535,14 @@ class LPCMCI():
                                 print("ANC(Y):    %s _|_ %s  |  S_def = %s, S_pc = %s: val = %.2f / pval = % .4f" %
                                       (X, Y, ' '.join([str(z) for z in S_default_YX]), ' '.join([str(z) for z in S_pc]),
                                        val, pval))
-
                             # Accordingly update dictionaries that keep track of the test statistic, the corresponding
                             # p-value and the cardinality of conditioning sets
                             self._update_val_min(X, Y, val)
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))
-
                             # chr: pvalalpha
                             # Check whether test result was significant
                             if pval > self.pc_alpha:
-
                                 # Mark the edge from X to Y for removal and save sepset
                                 to_remove[Y[0]][X] = True
                                 self._save_sepset(X, Y, (frozenset(Z), "wm"))
@@ -561,10 +551,8 @@ class LPCMCI():
                                 if self.verbosity >= 1:
                                     print("({},{:2}) {:11} {} given {} union {}".format(X[0], X[1], "independent", Y,
                                                                                         S_pc, S_default_YX))
-
                                 if self.break_once_separated:
                                     break
-
                     # Run through all cardinality p_pc subsets of S_search_XY
                     if test_X:
 
@@ -575,14 +563,12 @@ class LPCMCI():
                             if q_count > self.max_q_global:
                                 self._cannot_mark.add((X, Y))
                                 break
-
                             # Build the full conditioning set
                             Z = set(S_pc)
                             Z = Z.union(S_default_XY)
 
                             # Test conditional independence of X and Y given Z
                             val, pval = self.cond_ind_test.run_test(X=[X], Y=[Y], Z=list(Z), tau_max=self.tau_max)
-
                             if self.verbosity >= 2:
                                 print("ANC(X):    %s _|_ %s  |  S_def = %s, S_pc = %s: val = %.2f / pval = % .4f" %
                                       (X, Y, ' '.join([str(z) for z in S_default_XY]), ' '.join([str(z) for z in S_pc]),
@@ -592,7 +578,6 @@ class LPCMCI():
                             self._update_val_min(X, Y, val)
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))
-
                             # Check whether test result was significant
                             # chr: pvalalpha
                             if pval > self.pc_alpha:
@@ -600,15 +585,12 @@ class LPCMCI():
                                 # Mark the edge from X to Y for removal and save sepset
                                 to_remove[Y[0]][X] = True
                                 self._save_sepset(X, Y, (frozenset(Z), "wm"))
-
                                 # Verbose output
                                 if self.verbosity >= 1:
                                     print("({},{:2}) {:11} {} given {} union {}".format(X[0], X[1], "independent", Y,
                                                                                         S_pc, S_default_XY))
-
                                 if self.break_once_separated:
                                     break
-
                 # for pair in links
 
                 ##########################################################################################################
@@ -656,7 +638,6 @@ class LPCMCI():
                     break
                 else:
                     p_pc = p_pc + 1
-
         # end while True
 
         ##################################################################################################################
@@ -665,7 +646,6 @@ class LPCMCI():
         # Run through the entire graph
         for j in range(self.N):
             for (i, lag_i) in self.graph_dict[j].keys():
-
                 X = (i, lag_i)
                 Y = (j, 0)
 
@@ -684,7 +664,6 @@ class LPCMCI():
                     # Update all middle marks to '!'
                     if link[1] not in ["-", "!"]:
                         self._write_link((i, lag_i), (j, 0), link[0] + "!" + link[2])
-
         ##################################################################################################################
         ### Final rule applications ######################################################################################
 
@@ -2831,7 +2810,7 @@ class LPCMCI():
             if new_abs_min < old_abs_min:
                 self.val_min[Y[0]][X] = val
             else:
-                self.val_min[Y[0]][X] =self.val_min[Y[0]][X]
+                self.val_min[Y[0]][X] = self.val_min[Y[0]][X]
         else:
             old_abs_min = np.abs(self.val_min[X[0]][Y])
             new_abs_min = np.abs(val)

@@ -3,7 +3,7 @@ config parameters
 """
 
 verbosity = 0
-verbosity_thesis = 0 # 1 regret, 2
+verbosity_thesis = 1 # 1 regret, 2
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
@@ -47,7 +47,6 @@ pca_on = False
 load_checkpoint_on = False
 causal_discovery_on = True
 LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
-# pc_alpha = 0.6  # todo 0.95 or so
 # interv_alpha = pc_alpha
 remove_link_threshold = 0.01
 
@@ -64,13 +63,14 @@ tau_max = 1
 # random_state = np.random.RandomState(random_seed)  # MT19937
 
 
-# sampling config dict n_ini_obs=500, n_mixed=500, nth=4
-n_mixed = 200, # todo 500
+# sampling config dict n_ini_obs=500, n_days=500, nth=4
+n_days = 200 # todo 300
+n_scms = 1 # todo 50
 nth = 4
-n_samples_per_generation = 4 # todo 1
+n_samples_per_generation = 1
 
 # action simulation
-n_samples_simulation = 100
+n_samples_simulation = 50
 
 percentile = 95 # for actual, optimal and simulated intervention
 

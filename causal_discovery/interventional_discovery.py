@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 import pingouin as pg
-from scipy.stats import pearsonr
-
-from config import verbosity_thesis, tau_max, target_label, checkpoint_path
+from config import verbosity_thesis, tau_max, target_label
 from data_generation import labels_to_ints
 
 
@@ -246,10 +244,10 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                         print("independency in interventional data: intervened var ", cause,
                                               " is independent of var", effect, "with lag=", tau, ", p-value=",
                                               p_val)
-                                    elif verbosity_thesis > 1:
+                                    elif verbosity_thesis > 0:
                                         if effect == target_label:
-                                            print("independency in interventional data: intervened var ", cause,
-                                                  " is independent of var", effect, "with lag=", tau, ", p-value=",
+                                            print("interv discovery: ", cause,
+                                                  " is independent of target with lag", tau, "\t, p-value=",
                                                   p_val)
 
     return independencies_from_interv_data

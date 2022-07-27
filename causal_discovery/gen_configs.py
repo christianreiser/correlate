@@ -71,9 +71,9 @@ def define_settings():
     print('total_scms in settings:', total_scms * 100)
 
     # #ini obs, #vars, frac latents, alpha, n_samples_per_generation
-    all_param_study_settings = [
-        [np.array([100, 5, 0.3, 0.01, 1], dtype=object), np.array([100, 5, 0.3, 0.05, 1], dtype=object),
-         np.array([100, 5, 0.3, 0.1, 1], dtype=object), np.array([100, 5, 0.3, 0.5, 1], dtype=object),
-         np.array([100, 5, 0.3, 0.7, 1], dtype=object)]]  # todo remove after testing alpha
+    all_param_study_settings = [[
+        np.array([10, 5, 0.3, 0.05, 1], dtype=object),
+        np.array([10, 5, 0.3, 0.5, 1], dtype=object),
+    ]]  # todo remove after testing alpha
 
     return all_param_study_settings

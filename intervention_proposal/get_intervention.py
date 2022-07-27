@@ -1,12 +1,11 @@
 import itertools
-import pickle
 
 from matplotlib import pyplot as plt
+from scipy.stats import norm
 from tigramite import plotting as tp
 from tqdm import tqdm
-from scipy.stats import norm
 
-from config import checkpoint_path, private_folder_path
+from config import private_folder_path
 
 
 def load_results(name_extension):
@@ -17,15 +16,15 @@ def load_results(name_extension):
     return val_min, graph, var_names
 
 
-def load_eq():
-    # load target_ans_per_graph_dict and graph_combinations from file via pickle
-    with open(checkpoint_path + 'target_eq_simulated.pkl', 'rb') as f:
-        target_eq = pickle.load(f)
-    with open(checkpoint_path + 'graph_combinations_simulated.pkl',
-              'rb') as f:
-        graph_combinations = pickle.load(f)
-    print("attention: target_eq and graph_combinations loaded from file")
-    return target_eq, graph_combinations
+# def load_eq():
+#     # load target_ans_per_graph_dict and graph_combinations from file via pickle
+#     with open(checkpoint_path + 'target_eq_simulated.pkl', 'rb') as f:
+#         target_eq = pickle.load(f)
+#     with open(checkpoint_path + 'graph_combinations_simulated.pkl',
+#               'rb') as f:
+#         graph_combinations = pickle.load(f)
+#     print("attention: target_eq and graph_combinations loaded from file")
+#     return target_eq, graph_combinations
 
 
 from time import time
@@ -88,39 +87,50 @@ def make_redundant_information_with_symmetry(graph, val):
     make redundant link information of a graph with diagonal symmetry in matrix representation.
     e.g. A-->B = B<--A
     """
-    # only lag zero
-    tau = 0
     # if arrow is forward pointing insert symmetric backward arrow
     for i in range(graph.shape[0]):
         for j in range(graph.shape[1]):
             if i != j:
-                # only modify if empty
-                if graph[j, i, tau] == '':
-
-                    if graph[i, j, tau] != '':
+                # only write in empty cells
+                if graph[j, i, 0] == '':
+                    pass
+                    # pass if original cell also already empty
+                    original_arrow = graph[i, j, 0]
+                    if original_arrow == '':
                         pass
+                    # insert symmetric arrow
+                    elif original_arrow == '-->':
+                        graph[j, i, 0] = '<--'
+                    elif original_arrow == '<--':
+                        graph[j, i, 0] = '-->'
+                    elif original_arrow == 'x-x':
+                        graph[j, i, 0] = 'x-x'
+                    elif original_arrow == 'o-o':
+                        graph[j, i, 0] = 'o-o'
+                    elif original_arrow == '<->':
+                        graph[j, i, 0] = '<->'
+                    elif original_arrow == 'o->':
+                        graph[j, i, 0] = '<-o'
+                    elif original_arrow == '<-o':
+                        graph[j, i, 0] = 'o->'
+                    else:  # if arrow is not forward pointing, error
+                        raise ValueError('Error: graph[i, j, tau] is not an arrow')
 
-                        if graph[i, j, tau] == '-->':
-                            graph[j, i, tau] = '<--'
-                        elif graph[i, j, tau] == '<--':
-                            graph[j, i, tau] = '-->'
-                        elif graph[i, j, tau] == 'x-x':
-                            graph[j, i, tau] = 'x-x'
-                        elif graph[i, j, tau] == '<->':
-                            graph[j, i, tau] = '<->'
-                        elif graph[i, j, tau] == 'o->':
-                            graph[j, i, tau] = '<-o'
-                        elif graph[i, j, tau] == '<-o':
-                            graph[j, i, tau] = 'o->'
-                        else:  # if arrow is not forward pointing, error
-                            ValueError('Error: graph[i, j, tau] is not an arrow')
-                        val[j, i, tau] = val[i, j, tau]
+                    val[j, i, 0] = val[i, j, 0]
 
     return graph, val
 
 
-def plot_graph(val_min, pag, my_var_names, link_colorbar_label):
-    graph_redun, val_redun = make_redundant_information_with_symmetry(pag.copy(), val_min.copy())
+def plot_graph(val_min, pag, my_var_names, link_colorbar_label, make_redundant):
+    # filename = checkpoint_path + 'plot_error.pkl'
+    # with open(filename, 'wb') as f:
+    #     pickle.dump([val_min, pag, my_var_names, link_colorbar_label], f)
+
+    if make_redundant:
+        graph_redun, val_redun = make_redundant_information_with_symmetry(pag.copy(), val_min.copy())
+    else:
+        graph_redun = pag.copy()
+        val_redun = val_min.copy()
     tp.plot_graph(
         val_matrix=val_redun,
         link_matrix=graph_redun,
@@ -130,6 +140,8 @@ def plot_graph(val_min, pag, my_var_names, link_colorbar_label):
         figsize=(10, 6),
     )
     plt.show()
+
+
 
 
 def check_contemporaneous_cycle(val_min, graph, var_names, label):
@@ -156,7 +168,7 @@ def check_contemporaneous_cycle(val_min, graph, var_names, label):
         cycle_nodes = contemp_dag.get_cycle_nodes()
         cont_graph = drop_edges_for_cycle_detection(graph)
         if verbosity_thesis > 0:
-            plot_graph(val_min, cont_graph, var_names, 'contemp cycle detected')
+            plot_graph(val_min, cont_graph, var_names, 'contemp cycle detected', make_redundant=False)
         raise ValueError("Contemporaneous links must not contain cycle.")  # todo check if this always illegitimate
 
 
@@ -164,6 +176,9 @@ def get_all_tau_external_independencies_wrt_target(external_independencies, var_
     """
     if a var is in external dependencies for all tau w.r.t. target_label, then add it to is unintervenable
     """
+    if external_independencies is None or len(external_independencies) > 0:
+        return []
+
     # external_independencies to list without lag
     external_independencies_str = []
     for external_independency in external_independencies:
@@ -334,15 +349,10 @@ def make_links_point_forward(graph):
     return graph_forward
 
 
-def load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations):
-    for graph_idx in range(number_of_graph_combinations):
-        with open(checkpoint_path + '{}.pkl'.format(
-                graph_idx), 'rb') as f:
-            graph_combinations[graph_idx] = pickle.load(f)
-    return graph_combinations
 
 
-def write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx):
+
+def get_one_graph_combination(ambiguous_locations, links_permutations, graph_combinations, graph_idx):
     for ambiguous_location_idx in range(len(ambiguous_locations)):
         ambiguous_location = ambiguous_locations[ambiguous_location_idx]
 
@@ -371,11 +381,7 @@ def write_one_graph_combination_to_file(ambiguous_locations, links_permutations,
     # make links point forward
     graph_combinations[graph_idx] = make_links_point_forward(graph_combinations[graph_idx])
 
-    # save graph_combinations[graph_idx] and graph_idx to file with pickle
-    with open(
-            checkpoint_path + '{}.pkl'.format(
-                graph_idx), 'wb') as f:
-        pickle.dump(graph_combinations[graph_idx], f)
+    return graph_combinations[graph_idx]
 
 
 def create_all_graph_combinations(graph, ambiguous_locations):
@@ -401,40 +407,28 @@ def create_all_graph_combinations(graph, ambiguous_locations):
         corresponding_unambiguous_links_list = get_unambiguous_links(ambiguous_locations)
         links_permutations = get_links_permutations(corresponding_unambiguous_links_list)
 
+        # write graph combi
         for graph_idx in range(number_of_graph_combinations):
-            write_one_graph_combination_to_file(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
+            graph_combinations[graph_idx] = get_one_graph_combination(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
 
-        graph_combinations = load_all_graph_combinations_from_file(graph_combinations, number_of_graph_combinations)
         return graph_combinations
 
 
 def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
-                                 old_intervention, label, external_independencies,
+                                 label, external_independencies,
                                  ):
     """
     Optimal control to find the most optimistic intervention.
     """
-
-    # save my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies to file via pickle
-    # with open(checkpoint_path + '{}.pkl'.format(label), 'wb') as f:
-    #     pickle.dump([my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies], f)
-
-    # measure how long get it takes
-    start_time = time()
-
     if verbosity_thesis > 2:
         print('get optimistic_intervention_var_via_simulation ...')
 
     # don't intervene on variables that where independent of target var in interventional data for all taus,
     # by add them to unintervenable_vars
-    if external_independencies is not None and len(external_independencies) > 0:
-        to_add = get_all_tau_external_independencies_wrt_target(external_independencies, ts.columns)
-        if to_add is not None and len(to_add) > 0:
-            unintervenable_vars = unintervenable_vars + to_add
-
-    # plot graph
-    # if verbosity_thesis > 1 and label != 'true_scm':
-    #     plot_graph(val, my_graph, var_names, 'current graph estimate')
+    external_independencies_wrt_target = get_all_tau_external_independencies_wrt_target(external_independencies,
+                                                                                        ts.columns)
+    if len(external_independencies_wrt_target) > 0:
+        unintervenable_vars = unintervenable_vars + external_independencies_wrt_target
 
     # drop redundant info in graph
     my_graph = drop_redundant_information_due_to_symmetry(my_graph)
@@ -457,25 +451,16 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
         intervention_value_low[var_name] = norm.ppf(1 - percentile / 100, loc=mu, scale=std)
         intervention_value_high[var_name] = norm.ppf(percentile / 100, loc=mu, scale=std)
 
-
     largest_abs_coeff = 0
-    largest_coeff = 0
     best_intervention_var_name = None
     most_optimistic_graph_idx = None
     most_optimistic_graph = None
 
-    for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True)):
+    for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True, delay=10)):
         model = graph_to_scm(unique_graph, val)
-
-        # todo handle if pag does not contain an ACYCLIC graph, right leads to intervention = none. but could be better, esp for product
-        # """start handle if graph has cont cycle"""
-        # # ensure no contemporaneous cycles
-        # check_contemporaneous_cycle(val, unique_graph, var_names, 'cycle check')
 
         # for all measured vars except unintervenable intervention_vars
         for intervention_var in list(set(ts.columns) - set(unintervenable_vars)):
-
-
 
             # intervene on intervention_var with low and high values
             simulated_low_interv, health = data_generator(
@@ -489,11 +474,8 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                 noise_type='without'
             )
 
-            # get runtime type of simulated_low_interv
-
-
             # skip: cyclic contemporaneous graph (none) and 'max_lag == 0'
-            if simulated_low_interv is not None and not isinstance(simulated_low_interv, str) and simulated_low_interv._typ == 'dataframe':
+            if health == 'good':
 
                 simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=ts.columns)
                 sum_target_low_interv = simulated_low_interv[target_label]
@@ -528,13 +510,15 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                         intervention_value = intervention_value_high[intervention_var]
                     else:
                         intervention_value = intervention_value_low[intervention_var]
+            elif health == 'max_lag == 0' and verbosity_thesis>2:
+                print('skipped because max_lag == 0')
+            elif health == 'cyclic contemporaneous scm':
+                print('skipped because cyclic contemporaneous scm')
 
-    # measure how long
-    end_time = time()
 
-    if most_optimistic_graph_idx is None:
+    if most_optimistic_graph_idx is None and verbosity_thesis >1:
         mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
-        plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection')
+        plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection', make_redundant=True)
         print('WARNING: hack: no most optimistic graph found')
 
     # # if intervention was found
@@ -542,19 +526,77 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
 
         # plot most optimistic graph
         if verbosity_thesis > 1 and label != 'true_scm':
-            plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic')
+            plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic', make_redundant=True)
 
     # if intervention was not found
     else:
-        print('WARNING: no intervention found. probably cyclic graph, or found no effect on target, var')
-        best_intervention_var_name = old_intervention[0]
-        intervention_value = old_intervention[1]
-
-    if verbosity_thesis > 1:
-        print("intervention_variable", label, best_intervention_var_name, "interv_val_opti: ",
-              intervention_value)
-
+        print('WARNING: no intervention found. now ignoring scm directions')
+        most_extreme_val, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
+                                                                                                  target_label,
+                                                                                                  labels_as_str=ts.columns,
+                                                                                                  external_independencies_wrt_target=external_independencies_wrt_target,
+                                                                                                  ignore_external_independencies=False)
+        if (most_extreme_val, best_intervention_var_name) == (None, None):
+            most_extreme_val, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
+                                                       target_label,
+                                                       labels_as_str=ts.columns,
+                                                       external_independencies_wrt_target=external_independencies_wrt_target,
+                                                       ignore_external_independencies=True)
+        if most_extreme_val is None:
+            best_intervention_var_name, intervention_value = None, None
+        elif most_extreme_val > 0:
+            intervention_value = intervention_value_high[best_intervention_var_name]
+        elif most_extreme_val < 0:
+            intervention_value = intervention_value_low[best_intervention_var_name]
+        else:
+            raise ValueError('most extreme value is 0')
     return best_intervention_var_name, intervention_value
+
+
+def get_intervention_ignoring_directionalities(vals, var_name_as_str, labels_as_str,
+                                               external_independencies_wrt_target, ignore_external_independencies):
+    # fix int vs str format
+    var = list(labels_as_str).index(var_name_as_str)
+    if ignore_external_independencies:
+        unintervenables_without_var = []
+    else:
+        unintervenables_without_var = [list(labels_as_str).index(var) for var in external_independencies_wrt_target]
+
+    highest_abs_corr = 0
+    most_extreme_val = 0
+    most_extreme_var = []
+    # set vals to zero if auto corr or non-target adjacent var or unintervenable var
+    for i in range(vals.shape[0]):
+        for j in range(vals.shape[1]):
+            if i == j or (
+                    i != var and j != var) or i in unintervenables_without_var or j in unintervenables_without_var:
+                for tau in range(vals.shape[2]):
+                    vals[i, j, tau] = 0
+    # find max val in vals
+    for i in range(vals.shape[0]):
+        for j in range(vals.shape[1]):
+            for tau in range(vals.shape[2]):
+                if np.abs(vals[i, j, tau]) > highest_abs_corr:
+                    highest_abs_corr = np.abs(vals[i, j, tau])
+                    most_extreme_val = vals[i, j, tau]
+                    most_extreme_var = [i, j]
+
+    # remove target from most extreme var
+    for i in range(len(most_extreme_var)):
+        if most_extreme_var[i] == var:
+            most_extreme_var.pop(i)
+            break
+    if len(most_extreme_var) > 1:
+        raise Exception('len(most_extreme_var) > 0')
+    elif len(most_extreme_var) == 0:
+        print('ignore_external_independencies is True')
+        return None, None
+    else: # len(most_extreme_var) == 1
+        most_extreme_var = most_extreme_var[0]
+    return most_extreme_val, labels_as_str[most_extreme_var]
+
+
+
 
 # val_min, graph, var_names = load_results('chr')
 # var_names = [str(x) for x in var_names]

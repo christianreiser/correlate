@@ -25,8 +25,6 @@ def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samp
     #           '\nintervention_var_optimal_backup:', intervention_var_optimal_backup,
     #           '\nintervention_variable:', interv_var)
     #     ValueError("Regret is negative! See prints above")
-    if verbosity_thesis > 0:
-        print('new_regret: ', new_regret)
     regret_list = np.append(regret_list, new_regret)
     return regret_list
 
@@ -40,7 +38,7 @@ def test_compute_regret():
     assert regret_list == [0]
 
 
-def cost_function(regret_list, is_intervention_list, n_ini_obs):
+def cost_function(regret_list, was_intervened, n_ini_obs):
     """
     compute cost function
     """
@@ -48,9 +46,9 @@ def cost_function(regret_list, is_intervention_list, n_ini_obs):
     cost_per_intervention = 10
     cost_per_regret = 34  # 3.4*10
     # count number of interventions
-    n_interventions = sum(is_intervention_list)
+    n_interventions = was_intervened.to_numpy().sum()
     # count number of observations
-    n_observations = len(is_intervention_list) - n_interventions + n_ini_obs
+    n_observations = was_intervened.shape[0] - n_interventions
     # compute cost
     sum_regret = sum(regret_list)
     cost = cost_per_observation * n_observations + cost_per_intervention * n_interventions + cost_per_regret * sum_regret

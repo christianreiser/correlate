@@ -1,3 +1,4 @@
+import pickle
 from time import time
 
 import numpy as np
@@ -8,7 +9,7 @@ from tigramite import plotting as tp
 import matplotlib.pyplot as plt
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
 from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, \
-    remove_link_threshold, verbosity, verbosity_thesis
+    remove_link_threshold, verbosity, verbosity_thesis, checkpoint_path
 
 
 # function that saves val_min, graph, and var_names to a file
@@ -91,6 +92,15 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                                                                            measured_label_to_idx)
 
         if LPCMCI_or_PCMCI:
+            # save dataframe, external_independencies, tau_max pc_alpha via pickle to file
+            filename = checkpoint_path + 'test_run_lpcmci.pkl'
+            with open(filename, 'wb') as f:
+                pickle.dump([dataframe, external_independencies, tau_max, pc_alpha], f)
+
+            # save dataframe, external_independencies, tau_max pc_alpha via pickle to file
+            filename = checkpoint_path + 'test_run_lpcmci.pkl'
+            with open(filename, 'wb') as f:
+                pickle.dump([dataframe, external_independencies, tau_max, pc_alpha], f)
             lpcmci = LPCMCI(
                 dataframe=dataframe,
                 cond_ind_test=ParCorr(
@@ -128,19 +138,19 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         val_min[graph == ""] = 0
 
         # plot predicted PAG
-        if verbosity_thesis > 1:
+        if verbosity_thesis > 0:
             tp.plot_graph(
                 val_matrix=val_min,
                 link_matrix=graph,
                 var_names=var_names,
-                link_colorbar_label='current LPCMCI estimate',
+                link_colorbar_label='current LPCMCI estimate. day'+str(df.shape[0]),
                 node_colorbar_label='auto-MCI',
                 figsize=(10, 6),
             )
             plt.show()
 
-        # save results
-        save_results(val_min, graph, var_names, 'simulated')
+        # # save results
+        # save_results(val_min, graph, var_names, 'simulated')
 
         # measure how long observational_causal_discovery takes
         end_time = time()
