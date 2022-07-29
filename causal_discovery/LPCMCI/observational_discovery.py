@@ -117,6 +117,15 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                 verbosity=verbosity)
 
             graph = lpcmci.graph
+            """test if works as expected""" # todo remove
+            for exi in external_independencies:
+                exi = list(exi)
+                backward_arrow = graph[exi[0], exi[1], exi[2]]
+                forward_arrow = graph[exi[1], exi[0], exi[2]]
+                assert backward_arrow == "" or backward_arrow[2] == ">"
+                assert forward_arrow == "" or forward_arrow[0] == "<"
+
+
             val_min = lpcmci.val_min_matrix
 
         else:
@@ -152,7 +161,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         # # save results
         # save_results(val_min, graph, var_names, 'simulated')
 
-        # measure how long observational_causal_discovery takes
+        # measure how long observational_causal_discovery tak
         end_time = time()
         if verbosity_thesis > 2:
             print('observational_causal_discovery took: ', end_time - start_time)

@@ -28,16 +28,22 @@ class TestLPCMCI:
                 (var_cause, lag_cause) = cause
                 (var_eff, lag_eff) = eff
                 if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0] in ["o"]:
-                    self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "<"+str(self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1:])
+                    self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "<" + str(
+                        self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1:])
+                    # If A and B are contemporaneous, also the link from B to A is written as the reverse
+                    if lag_eff ==0:
+                        self.graph_dict[var_cause][(var_eff, 0)] = str(
+                            self.graph_dict[var_cause][(var_eff, 0)][:2])+">"
                 else:
-                    ValueError("orient with_interv_data: unexpected edgemark. expected o but is:", self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
+                    ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
+                               self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
 
 
         solution_graph_dict = {
             0: {(1, 0): 'o?o', (2, 0): 'o?o', (3, 0): '<?o', (4, 0): 'o?o', (0, -1): 'oL>', (1, -1): 'oL>',(2, -1): 'oL>', (3, -1): '<L>', (4, -1): 'oL>'},
             1: {(0, 0): 'o?o', (2, 0): 'o?o', (3, 0): '<?o', (4, 0): 'o?o', (0, -1): 'oL>', (1, -1): 'oL>',(2, -1): 'oL>', (3, -1): '<L>', (4, -1): 'oL>'},
             2: {(0, 0): 'o?o', (1, 0): 'o?o', (3, 0): '<?o', (4, 0): 'o?o', (0, -1): 'oL>', (1, -1): 'oL>',(2, -1): 'oL>', (3, -1): '<L>', (4, -1): 'oL>'},
-            3: {(0, 0): 'o?o', (1, 0): 'o?o', (2, 0): 'o?o', (4, 0): 'o?o', (0, -1): 'oL>', (1, -1): 'oL>',(2, -1): 'oL>', (3, -1): 'oL>', (4, -1): 'oL>'},
+            3: {(0, 0): 'o?>', (1, 0): 'o?>', (2, 0): 'o?>', (4, 0): 'o?o', (0, -1): 'oL>', (1, -1): 'oL>',(2, -1): 'oL>', (3, -1): 'oL>', (4, -1): 'oL>'},
             4: {(0, 0): 'o?o', (1, 0): 'o?o', (2, 0): 'o?o', (3, 0): 'o?o', (0, -1): 'oL>', (1, -1): 'oL>',(2, -1): 'oL>', (3, -1): 'oL>', (4, -1): 'oL>'}}
         assert self.graph_dict == solution_graph_dict
 
@@ -81,5 +87,5 @@ class TestLPCMCI:
             exi = list(exi)
             backward_arrow = graph[exi[0], exi[1], exi[2]]
             forward_arrow = graph[exi[1], exi[0], exi[2]]
-            assert backward_arrow == "" or backward_arrow[2] == "<"
-            assert forward_arrow == "" or forward_arrow[0] == ">"
+            assert backward_arrow == "" or backward_arrow[2] == ">"
+            assert forward_arrow == "" or forward_arrow[0] == "<"

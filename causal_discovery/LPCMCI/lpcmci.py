@@ -304,7 +304,9 @@ class LPCMCI():
     def orient_with_interv_data(self, interv_independencies):
         """
         chrei:
-        for all items in list, remove ancestry of corresponding links
+        for all items in interv_independencies, remove ancestry of corresponding links
+                If A and B are contemporaneous, also the link from B to A is written as the reverse
+
         """
         if interv_independencies is not None and len(interv_independencies) > 0:
             for independency in interv_independencies:
@@ -315,6 +317,10 @@ class LPCMCI():
                 if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0] in ["o"]:
                     self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "<" + str(
                         self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1:])
+                    # If A and B are contemporaneous, also the link from B to A is written as the reverse
+                    if lag_eff ==0:
+                        self.graph_dict[var_cause][(var_eff, 0)] = str(
+                            self.graph_dict[var_cause][(var_eff, 0)][:2])+">"
                 else:
                     ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
                                self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
@@ -1903,7 +1909,7 @@ class LPCMCI():
         """Update the middle mark on the link between X and Y with the character char"""
 
         # Get the old link
-        old_link = self._get_link(X, Y)
+        old_link = self._get_link(X,Y)
 
         # Determine the new link
         if old_link[1] == "?":
