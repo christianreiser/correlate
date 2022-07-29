@@ -3,7 +3,7 @@ config parameters
 """
 
 verbosity = 0
-verbosity_thesis = 1 # 1 regret, 2
+verbosity_thesis = 9 # 1 regret, 2
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'

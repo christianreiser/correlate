@@ -1,4 +1,3 @@
-import pickle
 from time import time
 
 import numpy as np
@@ -8,8 +7,7 @@ from tigramite.pcmci import PCMCI
 from tigramite import plotting as tp
 import matplotlib.pyplot as plt
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
-from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, \
-    remove_link_threshold, verbosity, verbosity_thesis, checkpoint_path
+from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, remove_link_threshold, verbosity, verbosity_thesis
 
 
 # function that saves val_min, graph, and var_names to a file
@@ -70,9 +68,6 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         # df = non_contemporary_time_series_generation(df)  # todo, how to automate on and off
         # df = df.drop(['Date'], axis=1)  # drop date col
         """
-
-        if verbosity_thesis > 9:
-            print('observational_causal_discovery ...')
         # measure how long observational_causal_discovery takes
         start_time = time()
 
@@ -118,6 +113,14 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                 forward_arrow = graph[exi[1], exi[0], exi[2]]
                 assert backward_arrow == "" or backward_arrow[2] == ">"
                 assert forward_arrow == "" or forward_arrow[0] == "<"
+            for exi in external_dependencies:
+                exi = list(exi)
+                backward_arrow = graph[exi[0], exi[1], exi[2]]
+                forward_arrow = graph[exi[1], exi[0], exi[2]]
+                assert backward_arrow == "" or backward_arrow[2] == "-"
+                assert backward_arrow == "" or backward_arrow[0] == "<"
+                assert forward_arrow == "" or forward_arrow[0] == "-"
+                assert forward_arrow == "" or forward_arrow[2] == ">"
 
 
             val_min = lpcmci.val_min_matrix
@@ -157,7 +160,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 
         # measure how long observational_causal_discovery tak
         end_time = time()
-        if verbosity_thesis > 2:
+        if verbosity_thesis > 9:
             print('observational_causal_discovery took: ', end_time - start_time)
         return val_min, graph
 

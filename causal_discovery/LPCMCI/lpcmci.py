@@ -521,8 +521,8 @@ class LPCMCI():
                         if len(S_search_YX) < p_pc:
                             # Note that X is smaller than Y. If S_search_YX exists and has fewer than p elements, X and Y are not d-separated by S \subset Par(Y). Therefore, the middle mark on the edge between X and Y can be updated with 'R'
                             if (X, Y) not in self._cannot_mark:
-                                if X == (0, 0) and Y == (3, 0):
-                                    print()
+                                # if X == (0, 0) and Y == (3, 0):
+                                #     print()
                                 self._apply_middle_mark(X, Y, "R")
                         else:
                             # Since S_search_YX exists and has hat least p_pc elements, the link between X and Y will be subjected to conditional independenc tests. Therefore, the algorithm has not converged yet.

@@ -189,9 +189,6 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
             if var != j and lag == 0:
                 contemp_dag.addEdge(var, j)
 
-    if max_lag == 0:
-        return 'max_lag == 0'
-
     if contemp_dag.isCyclic() == 1:
         # raise ValueError("Contemporaneous links must not contain cycle.")
         return None  # chrei
@@ -213,7 +210,7 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
             X[:, j] = noises[j](T + max_lag)
 
     # chrei: in X[from len_ts_old for tau_max+1 elements], replace these values with the last (max_lag+1) elements of ts_old
-    if len_ts_old > 0:
+    if len_ts_old > 0 and max_lag > 0:
         X[:max_lag] = ts_old[-max_lag:]
 
     for t in range(max_lag, T + max_lag):  # for all time steps

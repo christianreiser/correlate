@@ -59,4 +59,3 @@ df = df.reindex(idx, fill_value=np.nan)
 df.to_csv(output_name)
 print(str(output_name) + ' written')
 
-print()

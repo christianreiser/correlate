@@ -85,7 +85,6 @@ def append_current_weather(long,lat, hourly_weather_path):
     weather_df = weather_df.append(current_weather_dict, ignore_index=True)
     weather_df.to_csv(hourly_weather_path, index=False)
 
-    print()
 
 def main():
     # measure time: start

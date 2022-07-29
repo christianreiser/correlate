@@ -21,4 +21,3 @@ for regret_loss, setting in zip(regret_list_over_simulation_study, simulation_st
           '\nregret',regret,
           '\nloss',loss,'\n')
 
-print()

@@ -287,7 +287,8 @@ def simulation_study_with_one_scm(sim_study_input):
                 val=pag_effect_sizes.copy(),
                 ts=ts_measured_actual,  # only first n_ini_obs samples, to have the same ts as optimal
                 unintervenable_vars=unintervenable_vars,
-                random_seed=random_seed,
+                random_seed_scm=random_seed,
+                random_seed_day=day,
                 label='actual_data',
                 external_independencies=independencies_from_interv_data,
                 external_dependencies=dependencies_from_interv_data,
@@ -300,7 +301,8 @@ def simulation_study_with_one_scm(sim_study_input):
                 ts=pd.DataFrame(ts_generated_actual, columns=labels_strs),
                 # needed for 1. percentile from mu, std 2. simulation start 3. labels
                 unintervenable_vars=unintervenable_vars,
-                random_seed=random_seed,
+                random_seed_scm=random_seed,
+                random_seed_day=day,
                 label='true_scm',
                 external_independencies=None,
                 external_dependencies=None,
@@ -359,7 +361,7 @@ def simulation_study_with_one_scm(sim_study_input):
         if interv_val_opti is not None and interv_val is not None:
             print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
                   interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
-                  interv_var, '\ta val', format(interv_val, ".3f"))
+                  interv_var, '\ta val', format(interv_val, ".3f"), '\tind',independencies_from_interv_data, '\tdep', dependencies_from_interv_data)
         elif interv_val_opti is not None and interv_val is None:
             print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
                   interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',

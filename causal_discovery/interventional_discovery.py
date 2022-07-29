@@ -205,9 +205,6 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
     output: (causing intervened var, independent var, tau)
     """
 
-    if verbosity_thesis > 9:
-        print('get_independencies_from_interv_data ...')
-
     # get interventional data per variable
     interventional_dict = get_interventional_data_per_var(df, was_intervened)
 
@@ -290,19 +287,23 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                             print("interv discovery: ", cause,
                                                   " is independent of target with lag", tau, "\t, p-value=",
                                                   p_val)
-                                elif 1-p_val > interv_alpha:
-                                    dependencies_from_interv_data.append((cause, effect, tau, 1-p_val))
-                                    if verbosity_thesis > 2:
-                                        print("independency in interventional data: intervened var ", cause,
-                                              " is dependent of var", effect, "with lag=", tau, ", p-value=",
-                                              p_val)
-                                    elif verbosity_thesis > 0:
-                                        if effect == target_label:
-                                            print("interv discovery: ", cause,
-                                                  " is dependent of target with lag", tau, "\t, p-value=",
-                                                  p_val)
+                                elif p_val < 1-interv_alpha:
+                                    dependencies_from_interv_data.append((cause, effect, tau, p_val))
+
     # if contemporaneus cycle in dependencies_from_interv_data, remove link with weaker p-value
     dependencies_from_interv_data = remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data)
+
+    # print
+    for dependency in dependencies_from_interv_data:
+        if verbosity_thesis > 2:
+            print("independency in interventional data: intervened var ", dependency[0],
+                  " is dependent of var", dependency[1], "with lag=", dependency[2], ", p-value=",
+                  dependency[3])
+        elif verbosity_thesis > 0:
+            if dependency[1] == target_label:
+                print("interv discovery: ", dependency[0],
+                      " is dependent of target with lag", dependency[2], "\t, p-value=",
+                      dependency[3])
     return independencies_from_interv_data, dependencies_from_interv_data
 
 # # load ts dataframe from file

@@ -23,9 +23,6 @@ def nonstationary_check(scm, random_seed, labels_strs):
     """
     check if scm is stationary
     """
-    if verbosity_thesis > 2:
-        print('data_generator ...')
-
     ts_check, health = data_generator(scm, intervention_variable=None,
                               intervention_value=None, ts_old=[], random_seed=random_seed, n_samples=2000,
                               labels=labels_strs,
@@ -229,10 +226,6 @@ def data_generator(scm,
     # if none, then cyclic contemporaneous scm. then skipp this graph
     if ts is None:
         return None, 'cyclic contemporaneous scm'
-    # check if ts is a string
-
-    elif isinstance(ts, str) and ts == 'max_lag == 0':
-        return None, ts
 
     # if ts contains NaNs, value error
     if np.isnan(ts).any():

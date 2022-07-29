@@ -409,15 +409,12 @@ def create_all_graph_combinations(graph, ambiguous_locations):
         return graph_combinations
 
 
-def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
+def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed_scm, random_seed_day,
                                  label, external_independencies,external_dependencies
                                  ):
     """
     Optimal control to find the most optimistic intervention.
     """
-    if verbosity_thesis > 2:
-        print('get optimistic_intervention_var_via_simulation ...')
-
     # don't intervene on variables that where independent of target var in interventional data for all taus,
     # by add them to unintervenable_vars
     external_independencies_wrt_target = get_all_tau_external_independencies_wrt_target(external_independencies,
@@ -465,7 +462,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                 intervention_variable=intervention_var,
                 intervention_value=intervention_value_low[intervention_var],
                 ts_old=ts,
-                random_seed=random_seed,
+                random_seed=random_seed_scm,
                 n_samples=n_half_samples,
                 labels=ts.columns,
                 noise_type='without'
@@ -483,7 +480,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_high[intervention_var],
                     ts_old=ts,
-                    random_seed=random_seed,
+                    random_seed=random_seed_scm,
                     n_samples=n_half_samples,
                     labels=ts.columns,
                     noise_type='without',
@@ -504,6 +501,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                     most_optimistic_graph_idx = unique_graph_idx
                     most_optimistic_graph = unique_graph
                     if label == 'actual_data':
+                        np.random.seed(random_seed_day)
                         if coeff > 0:
                             intervention_value = choice(
                             [intervention_value_median[intervention_var], intervention_value_high[intervention_var]])
@@ -548,6 +546,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                                                                                                       labels_as_str=ts.columns,
                                                                                                       external_independencies_wrt_target=external_independencies_wrt_target,
                                                                                                       ignore_external_independencies=True)
+        np.random.seed(random_seed_day)
         if most_extreme_val is None:
             best_intervention_var_name, intervention_value = None, None
         elif most_extreme_val > 0:
