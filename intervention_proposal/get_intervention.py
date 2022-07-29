@@ -1,4 +1,5 @@
 import itertools
+from random import choice
 
 from matplotlib import pyplot as plt
 from scipy.stats import norm
@@ -26,8 +27,6 @@ def load_results(name_extension):
 #     print("attention: target_eq and graph_combinations loaded from file")
 #     return target_eq, graph_combinations
 
-
-from time import time
 
 import numpy as np
 import pandas as pd
@@ -140,8 +139,6 @@ def plot_graph(val_min, pag, my_var_names, link_colorbar_label, make_redundant):
         figsize=(10, 6),
     )
     plt.show()
-
-
 
 
 def check_contemporaneous_cycle(val_min, graph, var_names, label):
@@ -349,9 +346,6 @@ def make_links_point_forward(graph):
     return graph_forward
 
 
-
-
-
 def get_one_graph_combination(ambiguous_locations, links_permutations, graph_combinations, graph_idx):
     for ambiguous_location_idx in range(len(ambiguous_locations)):
         ambiguous_location = ambiguous_locations[ambiguous_location_idx]
@@ -409,13 +403,14 @@ def create_all_graph_combinations(graph, ambiguous_locations):
 
         # write graph combi
         for graph_idx in range(number_of_graph_combinations):
-            graph_combinations[graph_idx] = get_one_graph_combination(ambiguous_locations, links_permutations, graph_combinations, graph_idx)
+            graph_combinations[graph_idx] = get_one_graph_combination(ambiguous_locations, links_permutations,
+                                                                      graph_combinations, graph_idx)
 
         return graph_combinations
 
 
 def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
-                                 label, external_independencies,
+                                 label, external_independencies,external_dependencies
                                  ):
     """
     Optimal control to find the most optimistic intervention.
@@ -444,12 +439,14 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
     # get intervention value from fitted gaussian percentile
     intervention_value_low = {}
     intervention_value_high = {}
+    intervention_value_median = {}
     for var_name in ts.columns:
         # Fit a normal distribution to the data:
         mu, std = norm.fit(ts[var_name])
         # get 95th percentile from normal distribution
         intervention_value_low[var_name] = norm.ppf(1 - percentile / 100, loc=mu, scale=std)
         intervention_value_high[var_name] = norm.ppf(percentile / 100, loc=mu, scale=std)
+        intervention_value_median[var_name] = norm.ppf(0.5, loc=mu, scale=std)
 
     largest_abs_coeff = 0
     best_intervention_var_name = None
@@ -506,17 +503,26 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                     best_intervention_var_name = intervention_var
                     most_optimistic_graph_idx = unique_graph_idx
                     most_optimistic_graph = unique_graph
-                    if coeff > 0:
-                        intervention_value = intervention_value_high[intervention_var]
+                    if label == 'actual_data':
+                        if coeff > 0:
+                            intervention_value = choice(
+                            [intervention_value_median[intervention_var], intervention_value_high[intervention_var]])
+                        else:
+                            intervention_value = choice(
+                        [intervention_value_median[intervention_var], intervention_value_low[intervention_var]])
+                    elif label == 'true_scm':
+                        if coeff > 0:
+                            intervention_value = intervention_value_high[intervention_var]
+                        else:
+                            intervention_value = intervention_value_low[intervention_var]
                     else:
-                        intervention_value = intervention_value_low[intervention_var]
-            elif health == 'max_lag == 0' and verbosity_thesis>2:
+                        raise ValueError('label must be either actual_data or true_scm')
+            elif health == 'max_lag == 0' and verbosity_thesis > 2:
                 print('skipped because max_lag == 0')
             elif health == 'cyclic contemporaneous scm':
                 print('skipped because cyclic contemporaneous scm')
 
-
-    if most_optimistic_graph_idx is None and verbosity_thesis >1:
+    if most_optimistic_graph_idx is None and verbosity_thesis > 1:
         mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
         plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection', make_redundant=True)
         print('WARNING: hack: no most optimistic graph found')
@@ -538,16 +544,18 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                                                                                                   ignore_external_independencies=False)
         if (most_extreme_val, best_intervention_var_name) == (None, None):
             most_extreme_val, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
-                                                       target_label,
-                                                       labels_as_str=ts.columns,
-                                                       external_independencies_wrt_target=external_independencies_wrt_target,
-                                                       ignore_external_independencies=True)
+                                                                                                      target_label,
+                                                                                                      labels_as_str=ts.columns,
+                                                                                                      external_independencies_wrt_target=external_independencies_wrt_target,
+                                                                                                      ignore_external_independencies=True)
         if most_extreme_val is None:
             best_intervention_var_name, intervention_value = None, None
         elif most_extreme_val > 0:
-            intervention_value = intervention_value_high[best_intervention_var_name]
+            intervention_value = choice(
+                    [intervention_value_median[best_intervention_var_name], intervention_value_high[best_intervention_var_name]])
         elif most_extreme_val < 0:
-            intervention_value = intervention_value_low[best_intervention_var_name]
+            intervention_value = choice(
+                    [intervention_value_median[best_intervention_var_name], intervention_value_low[best_intervention_var_name]])
         else:
             raise ValueError('most extreme value is 0')
     return best_intervention_var_name, intervention_value
@@ -591,12 +599,9 @@ def get_intervention_ignoring_directionalities(vals, var_name_as_str, labels_as_
     elif len(most_extreme_var) == 0:
         print('ignore_external_independencies is True')
         return None, None
-    else: # len(most_extreme_var) == 1
+    else:  # len(most_extreme_var) == 1
         most_extreme_var = most_extreme_var[0]
     return most_extreme_val, labels_as_str[most_extreme_var]
-
-
-
 
 # val_min, graph, var_names = load_results('chr')
 # var_names = [str(x) for x in var_names]

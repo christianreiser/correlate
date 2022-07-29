@@ -158,6 +158,46 @@ def align_cause_effect_due_to_lag(cause_and_effect, tau):
         return cause_and_effect_tau_shifted
 
 
+def remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data):
+    # get contemporaneous links
+    contemporaneous_links = []
+    for var in dependencies_from_interv_data:
+        if var[2] == 0:
+            contemporaneous_links.append(var)
+
+
+    # for all cont links
+    removed_link = True
+    while removed_link:
+        removed_link = False
+        for contemporaneous_link in contemporaneous_links:
+            # remove current link and check if there is a reverse link
+            cont_links_wo_this_link = [link for link in contemporaneous_links if link != contemporaneous_link]
+            for cont_link_wo_this_link in cont_links_wo_this_link:
+                if cont_link_wo_this_link[0] == contemporaneous_link[1] and cont_link_wo_this_link[1] == contemporaneous_link[0]:
+                    # remove link with higher p-value
+                    if cont_link_wo_this_link[3] > contemporaneous_link[3]:
+                        contemporaneous_links.remove(cont_link_wo_this_link)
+                        dependencies_from_interv_data.remove(cont_link_wo_this_link)
+                        cont_links_wo_this_link.remove(cont_link_wo_this_link)
+                    else:
+                        contemporaneous_links.remove(contemporaneous_link)
+                        dependencies_from_interv_data.remove(contemporaneous_link)
+                        cont_links_wo_this_link.remove(contemporaneous_link)
+                    removed_link = True
+                    break
+            if removed_link:
+                break
+
+
+    return dependencies_from_interv_data
+
+
+
+
+
+
+
 def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_obs, pag_edgemarks, measured_labels):
     """
     orient links with interventional data.
@@ -173,6 +213,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
 
     # ini dependencies list
     independencies_from_interv_data = []
+    dependencies_from_interv_data = []
 
     # iterate over causes/interventions
     for cause in interventional_dict:
@@ -239,7 +280,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                 if p_val > interv_alpha:
 
                                     # save independency information
-                                    independencies_from_interv_data.append((cause, effect, tau))
+                                    independencies_from_interv_data.append((cause, effect, tau, p_val))
                                     if verbosity_thesis > 2:
                                         print("independency in interventional data: intervened var ", cause,
                                               " is independent of var", effect, "with lag=", tau, ", p-value=",
@@ -249,8 +290,20 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                             print("interv discovery: ", cause,
                                                   " is independent of target with lag", tau, "\t, p-value=",
                                                   p_val)
-
-    return independencies_from_interv_data
+                                elif 1-p_val > interv_alpha:
+                                    dependencies_from_interv_data.append((cause, effect, tau, 1-p_val))
+                                    if verbosity_thesis > 2:
+                                        print("independency in interventional data: intervened var ", cause,
+                                              " is dependent of var", effect, "with lag=", tau, ", p-value=",
+                                              p_val)
+                                    elif verbosity_thesis > 0:
+                                        if effect == target_label:
+                                            print("interv discovery: ", cause,
+                                                  " is dependent of target with lag", tau, "\t, p-value=",
+                                                  p_val)
+    # if contemporaneus cycle in dependencies_from_interv_data, remove link with weaker p-value
+    dependencies_from_interv_data = remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data)
+    return independencies_from_interv_data, dependencies_from_interv_data
 
 # # load ts dataframe from file
 # import os

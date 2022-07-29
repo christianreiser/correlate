@@ -104,6 +104,7 @@ class LPCMCI():
 
     def run_lpcmci(self,
                    external_independencies,
+                   external_dependencies,
                    tau_max=1,
                    pc_alpha=0.05,
                    n_preliminary_iterations=1,
@@ -132,7 +133,8 @@ class LPCMCI():
         #######################################################################################################################
         #######################################################################################################################
         # Step 0: Initializations
-        self._initialize(external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px,
+        self._initialize(external_independencies, external_dependencies, tau_max, pc_alpha, n_preliminary_iterations,
+                         max_cond_px,
                          max_p_global, max_p_non_ancestral,
                          max_q_global, max_pds_set, prelim_with_collider_rules, parents_of_lagged, prelim_only,
                          break_once_separated, no_non_ancestral_phase, use_a_pds_t_for_majority, orient_contemp,
@@ -176,7 +178,8 @@ class LPCMCI():
                                            self._get_link((i, lag_i), (j, 0)) != ""}
                 def_ancs = smaller_def_ancs
 
-            self._initialize_run_memory(external_independencies=external_independencies)
+            self._initialize_run_memory(external_independencies=external_independencies,
+                                        external_dependencies=external_dependencies)
             self._apply_new_ancestral_information(None, def_ancs)
 
         #######################################################################################################################
@@ -249,7 +252,8 @@ class LPCMCI():
         # Return the estimated graph
         return self.graph
 
-    def _initialize(self, external_independencies, tau_max, pc_alpha, n_preliminary_iterations, max_cond_px,
+    def _initialize(self, external_independencies, external_dependencies, tau_max, pc_alpha, n_preliminary_iterations,
+                    max_cond_px,
                     max_p_global, max_p_non_ancestral,
                     max_q_global, max_pds_set, prelim_with_collider_rules, parents_of_lagged, prelim_only,
                     break_once_separated, no_non_ancestral_phase, use_a_pds_t_for_majority, orient_contemp,
@@ -296,36 +300,59 @@ class LPCMCI():
                            ["ER-09"], ["ER-10"], ["ER-00-b"], ["ER-00-a"]]
 
         # Initialize various memory variables for storing the current graph, sepsets etc.
-        self._initialize_run_memory(external_independencies=external_independencies)
+        self._initialize_run_memory(external_independencies=external_independencies,
+                                    external_dependencies=external_dependencies)
 
         # Return
         return True
 
-    def orient_with_interv_data(self, interv_independencies):
+    def orient_with_interv_data(self, interv_independencies, interv_dependencies):
         """
         chrei:
         for all items in interv_independencies, remove ancestry of corresponding links
                 If A and B are contemporaneous, also the link from B to A is written as the reverse
 
         """
+        # independencies
         if interv_independencies is not None and len(interv_independencies) > 0:
             for independency in interv_independencies:
                 eff = (independency[0], independency[2])
                 cause = (independency[1], 0)
                 (var_cause, lag_cause) = cause
                 (var_eff, lag_eff) = eff
+                # if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] != "":
                 if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0] in ["o"]:
                     self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "<" + str(
                         self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1:])
                     # If A and B are contemporaneous, also the link from B to A is written as the reverse
-                    if lag_eff ==0:
+                    if lag_eff == 0:
                         self.graph_dict[var_cause][(var_eff, 0)] = str(
-                            self.graph_dict[var_cause][(var_eff, 0)][:2])+">"
+                            self.graph_dict[var_cause][(var_eff, 0)][:2]) + ">"
                 else:
-                    ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
+                    raise ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
                                self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
 
-    def _initialize_run_memory(self, external_independencies):
+        # dependencies
+        if interv_dependencies is not None and len(interv_dependencies) > 0:
+            for dependency in interv_dependencies:
+                eff = (dependency[0], dependency[2])
+                cause = (dependency[1], 0)
+                (var_cause, lag_cause) = cause
+                (var_eff, lag_eff) = eff
+                # if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] != "":
+                if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0] in ["o"] and \
+                        self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][2] in ["o", ">"]:
+                    self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "-" + str(
+                        self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1] + ">")
+                    # If A and B are contemporaneous, also the link from B to A is written as the reverse
+                    if lag_eff == 0:
+                        self.graph_dict[var_cause][(var_eff, 0)] = "<"+ str(
+                            self.graph_dict[var_cause][(var_eff, 0)][1]) + "-"
+                else:
+                    raise ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
+                               self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
+
+    def _initialize_run_memory(self, external_independencies, external_dependencies):
         """Function for initializing various memory variables for storing the current graph, sepsets etc."""
 
         # Initialize the nested dictionary for storing the current graph.
@@ -343,7 +370,7 @@ class LPCMCI():
                     {(i, -tau): "o?>" for i in range(self.N) for tau in range(1, self.tau_max + 1)})
 
         # chrei:
-        self.orient_with_interv_data(external_independencies)
+        self.orient_with_interv_data(external_independencies, external_dependencies)
 
         # Initialize the nested dictionary for storing separating sets
         # Syntax: self.sepsets[j][(i, -tau)] stores separating sets of X^i_{t-tau} to X^j_t. For tau = 0, i < j.
@@ -1909,7 +1936,7 @@ class LPCMCI():
         """Update the middle mark on the link between X and Y with the character char"""
 
         # Get the old link
-        old_link = self._get_link(X,Y)
+        old_link = self._get_link(X, Y)
 
         # Determine the new link
         if old_link[1] == "?":

@@ -3,6 +3,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 from causal_discovery import interventional_discovery
+from causal_discovery.interventional_discovery import remove_weaker_links_of_contempt_cycles
 from config import checkpoint_path
 
 
@@ -98,9 +99,26 @@ class TestInterventionalDiscovery:
         pag_edgemarks = np.load(checkpoint_path + 'pag_edgemarks.npy', allow_pickle=True)
         measured_labels = ['0', '2', '3', '4', '5']
         # When
-        indepdendencies = interventional_discovery.get_independencies_from_interv_data(df, was_intervened, interv_alpha,
-                                                                                       n_ini_obs, pag_edgemarks,
-                                                                                       measured_labels)
+        indepdendencies, dependencies = interventional_discovery.get_independencies_from_interv_data(df, was_intervened,
+                                                                                                     interv_alpha,
+                                                                                                     n_ini_obs,
+                                                                                                     pag_edgemarks,
+                                                                                                     measured_labels)
         # Then
-        true_indepdendencies = [('3', '0', 1), ('3', '4', 0), ('3', '4', 1), ('3', '5', 0), ('3', '5', 1)]
+        true_indepdendencies = [('3', '0', 1,0.404), ('3', '4', 0,0.817), ('3', '4', 1,0.993), ('3', '5', 0,0.664), ('3', '5', 1,0.87)]
         assert np.array_equal(true_indepdendencies, indepdendencies)
+
+    def test_remove_weaker_links_of_contempt_cycles(self):
+        dependencies_from_interv_data = [
+            ('3', '0', 1, 0.1), ('0', '3', 1, 0.2),
+            ('3', '1', 0, 0.1), ('1', '3', 0, 0.2),
+            ('4', '0', 1, 0.1), ('0', '4', 1, 0.2),
+            ('4', '1', 0, 0.1), ('1', '4', 0, 0.2),
+        ]
+        dependencies_from_interv_data = remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data)
+        assert dependencies_from_interv_data == [
+            ('3', '0', 1, 0.1), ('0', '3', 1, 0.2),
+            ('3', '1', 0, 0.1),
+            ('4', '0', 1, 0.1), ('0', '4', 1, 0.2),
+            ('4', '1', 0, 0.1)
+        ]

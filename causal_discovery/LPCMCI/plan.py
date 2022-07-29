@@ -170,13 +170,12 @@ def store_interv(was_intervened, intervention_variable, n_samples_per_generation
     return was_intervened
 
 
-def calculate_parameters(n_vars_measured, frac_latents, pc_alpha, n_ini_obs):
+def calculate_parameters(n_vars_measured, frac_latents, n_ini_obs):
     n_measured_links = n_vars_measured
     n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
     labels_strs = [str(i) for i in range(n_vars_all)]
-    interv_alpha = pc_alpha
     n_ini_obs = int(n_ini_obs)
-    return n_measured_links, n_vars_all, labels_strs, interv_alpha, n_ini_obs
+    return n_measured_links, n_vars_all, labels_strs, n_ini_obs
 
 
 def simulation_study_with_one_scm(sim_study_input):
@@ -184,9 +183,11 @@ def simulation_study_with_one_scm(sim_study_input):
     random_seed = sim_study_input[1]
     print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
 
-    n_measured_links, n_vars_all, labels_strs, interv_alpha, n_ini_obs = calculate_parameters(n_vars_measured,
+    n_measured_links, n_vars_all, labels_strs, n_ini_obs = calculate_parameters(n_vars_measured,
                                                                                               frac_latents,
-                                                                                              pc_alpha, n_ini_obs)
+                                                                                              n_ini_obs)
+
+    interv_alpha = 0.9
 
     random_state = np.random.RandomState(random_seed)
 
@@ -257,7 +258,7 @@ def simulation_study_with_one_scm(sim_study_input):
             causal discovery
             """
             # interventional discovery
-            independencies_from_interv_data = get_independencies_from_interv_data(
+            independencies_from_interv_data, dependencies_from_interv_data = get_independencies_from_interv_data(
                 ts_measured_actual.copy(),
                 was_intervened,
                 interv_alpha,
@@ -271,6 +272,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 df=ts_measured_actual.copy(),
                 was_intervened=was_intervened.copy(),
                 external_independencies=independencies_from_interv_data,
+                external_dependencies=dependencies_from_interv_data,
                 measured_label_to_idx=measured_label_as_idx,
                 pc_alpha=pc_alpha,
             )
@@ -288,6 +290,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed=random_seed,
                 label='actual_data',
                 external_independencies=independencies_from_interv_data,
+                external_dependencies=dependencies_from_interv_data,
             )
 
             # from true SCM
@@ -300,6 +303,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed=random_seed,
                 label='true_scm',
                 external_independencies=None,
+                external_dependencies=None,
             )
 
 

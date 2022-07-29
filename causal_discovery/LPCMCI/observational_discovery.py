@@ -40,7 +40,7 @@ def external_independencies_var_names_to_int(external_independencies, measured_l
     return external_independencies
 
 
-def observational_causal_discovery(df, was_intervened, external_independencies, measured_label_to_idx, pc_alpha):
+def observational_causal_discovery(df, was_intervened, external_independencies, external_dependencies, measured_label_to_idx, pc_alpha):
     """
     1. get observational ts
     2. ini graph with previous pag_edgemarks and pag_effect_sizes
@@ -90,17 +90,10 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 
         external_independencies = external_independencies_var_names_to_int(external_independencies,
                                                                            measured_label_to_idx)
+        external_dependencies = external_independencies_var_names_to_int(external_dependencies,
+                                                                           measured_label_to_idx)
 
         if LPCMCI_or_PCMCI:
-            # save dataframe, external_independencies, tau_max pc_alpha via pickle to file
-            filename = checkpoint_path + 'test_run_lpcmci.pkl'
-            with open(filename, 'wb') as f:
-                pickle.dump([dataframe, external_independencies, tau_max, pc_alpha], f)
-
-            # save dataframe, external_independencies, tau_max pc_alpha via pickle to file
-            filename = checkpoint_path + 'test_run_lpcmci.pkl'
-            with open(filename, 'wb') as f:
-                pickle.dump([dataframe, external_independencies, tau_max, pc_alpha], f)
             lpcmci = LPCMCI(
                 dataframe=dataframe,
                 cond_ind_test=ParCorr(
@@ -109,6 +102,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
 
             lpcmci.run_lpcmci(
                 external_independencies=external_independencies,
+                external_dependencies=external_dependencies,
                 tau_max=tau_max,
                 pc_alpha=pc_alpha,
                 max_p_non_ancestral=2,  # todo 3
@@ -117,7 +111,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                 verbosity=verbosity)
 
             graph = lpcmci.graph
-            """test if works as expected""" # todo remove
+            """test if works as expected""" # todo test for dependencies
             for exi in external_independencies:
                 exi = list(exi)
                 backward_arrow = graph[exi[0], exi[1], exi[2]]
