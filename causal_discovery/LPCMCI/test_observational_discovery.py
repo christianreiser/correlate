@@ -77,7 +77,7 @@ class TestLPCMCI:
             pc_alpha = 0.05
             tau_max = 1
         external_independencies = [(0, 3, 0), (0, 3, 1), (1, 3, 0), (1, 3, 1), (2, 3, 0), (2, 3, 1)]
-        external_dependencies = [(4, 2, 0)]
+        external_dependencies = [(4, 2, 1)]
 
         # run lpcmci
         lpcmci = LPCMCI(

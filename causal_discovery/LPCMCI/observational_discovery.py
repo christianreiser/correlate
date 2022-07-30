@@ -11,6 +11,9 @@ from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_
 
 
 # function that saves val_min, graph, and var_names to a file
+from intervention_proposal.get_intervention import plot_graph
+
+
 def save_results(val_min, graph, var_names, name_extension):
     np.save(str(private_folder_path) + 'val_min_' + str(name_extension), val_min)
     np.save(str(private_folder_path) + 'graph_' + str(name_extension), graph)
@@ -106,6 +109,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                 verbosity=verbosity)
 
             graph = lpcmci.graph
+            val_min = lpcmci.val_min_matrix
             """test if works as expected""" # todo test for dependencies
             for exi in external_independencies:
                 exi = list(exi)
@@ -117,13 +121,13 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
                 exi = list(exi)
                 backward_arrow = graph[exi[0], exi[1], exi[2]]
                 forward_arrow = graph[exi[1], exi[0], exi[2]]
+                plot_graph(val_min, graph, df.columns, 'test', make_redundant=False)
                 assert backward_arrow == "" or backward_arrow[2] == "-"
                 assert backward_arrow == "" or backward_arrow[0] == "<"
                 assert forward_arrow == "" or forward_arrow[0] == "-"
                 assert forward_arrow == "" or forward_arrow[2] == ">"
 
 
-            val_min = lpcmci.val_min_matrix
 
         else:
             """pcmci"""

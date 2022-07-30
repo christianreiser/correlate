@@ -1,5 +1,4 @@
 import itertools
-from random import choice
 
 from matplotlib import pyplot as plt
 from scipy.stats import norm
@@ -7,6 +6,11 @@ from tigramite import plotting as tp
 from tqdm import tqdm
 
 from config import private_folder_path
+import numpy as np
+import pandas as pd
+
+from config import verbosity_thesis, target_label, tau_max, percentile, n_samples_simulation
+from data_generation import data_generator
 
 
 def load_results(name_extension):
@@ -17,23 +21,7 @@ def load_results(name_extension):
     return val_min, graph, var_names
 
 
-# def load_eq():
-#     # load target_ans_per_graph_dict and graph_combinations from file via pickle
-#     with open(checkpoint_path + 'target_eq_simulated.pkl', 'rb') as f:
-#         target_eq = pickle.load(f)
-#     with open(checkpoint_path + 'graph_combinations_simulated.pkl',
-#               'rb') as f:
-#         graph_combinations = pickle.load(f)
-#     print("attention: target_eq and graph_combinations loaded from file")
-#     return target_eq, graph_combinations
 
-
-import numpy as np
-import pandas as pd
-
-from causal_discovery.LPCMCI.generate_data_mod import Graph
-from config import verbosity_thesis, target_label, tau_max, percentile, n_samples_simulation
-from data_generation import data_generator
 
 
 def lin_f(x):
@@ -121,10 +109,6 @@ def make_redundant_information_with_symmetry(graph, val):
 
 
 def plot_graph(val_min, pag, my_var_names, link_colorbar_label, make_redundant):
-    # filename = checkpoint_path + 'plot_error.pkl'
-    # with open(filename, 'wb') as f:
-    #     pickle.dump([val_min, pag, my_var_names, link_colorbar_label], f)
-
     if make_redundant:
         graph_redun, val_redun = make_redundant_information_with_symmetry(pag.copy(), val_min.copy())
     else:
@@ -135,38 +119,9 @@ def plot_graph(val_min, pag, my_var_names, link_colorbar_label, make_redundant):
         link_matrix=graph_redun,
         var_names=my_var_names,
         link_colorbar_label=link_colorbar_label,
-        # node_colorbar_label='auto-MCI',
         figsize=(10, 6),
     )
     plt.show()
-
-
-def check_contemporaneous_cycle(val_min, graph, var_names, label):
-    # # save val_min, graph, var_names, label to file via pickle
-    # with open(checkpoint_path + 'tmp.pkl', 'wb') as f:
-    #     pickle.dump([val_min, graph, var_names, label], f)
-
-    links = graph_to_scm(graph, val_min)
-    N = len(links.keys())
-
-    # Check parameters
-    max_lag = 0
-    contemp_dag = Graph(N)
-    for j in range(N):
-        for link_props in links[j]:
-            var, lag = link_props[0]
-
-            max_lag = max(max_lag, abs(lag))
-
-            # Create contemp DAG
-            if var != j and lag == 0:
-                contemp_dag.addEdge(var, j)
-    if contemp_dag.isCyclic() == 1:
-        cycle_nodes = contemp_dag.get_cycle_nodes()
-        cont_graph = drop_edges_for_cycle_detection(graph)
-        if verbosity_thesis > 0:
-            plot_graph(val_min, cont_graph, var_names, 'contemp cycle detected', make_redundant=False)
-        raise ValueError("Contemporaneous links must not contain cycle.")  # todo check if this always illegitimate
 
 
 def get_all_tau_external_independencies_wrt_target(external_independencies, var_names):
@@ -410,7 +365,7 @@ def create_all_graph_combinations(graph, ambiguous_locations):
 
 
 def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed_scm, random_seed_day,
-                                 label, external_independencies,external_dependencies
+                                 label, external_independencies, external_dependencies
                                  ):
     """
     Optimal control to find the most optimistic intervention.
@@ -447,8 +402,8 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
 
     largest_abs_coeff = 0
     best_intervention_var_name = None
-    most_optimistic_graph_idx = None
-    most_optimistic_graph = None
+    most_optimistic_graph = my_graph
+    most_extreme_coeff= None
 
     for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True, delay=10)):
         model = graph_to_scm(unique_graph, val)
@@ -472,7 +427,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
             if health == 'good':
 
                 simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=ts.columns)
-                sum_target_low_interv = simulated_low_interv[target_label]
+                target_low_interv = simulated_low_interv[target_label]
 
                 # same for high intervention value
                 simulated_high_interv, health = data_generator(
@@ -486,10 +441,10 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                     noise_type='without',
                 )
                 simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=ts.columns)
-                sum_target_high_interv = simulated_high_interv[target_label]
+                target_high_interv = simulated_high_interv[target_label]
 
                 # get relative difference between low and high intervention
-                coeff = (sum_target_high_interv - sum_target_low_interv).mean()
+                coeff = (target_high_interv - target_low_interv).mean()
 
                 # get absolute difference between low and high intervention
                 abs_coeff = np.abs(coeff)
@@ -497,66 +452,72 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                 # if abs_coeff > largest_abs_coeff:
                 if abs_coeff > largest_abs_coeff:
                     largest_abs_coeff = abs_coeff
+                    most_extreme_coeff = coeff
                     best_intervention_var_name = intervention_var
-                    most_optimistic_graph_idx = unique_graph_idx
                     most_optimistic_graph = unique_graph
-                    if label == 'actual_data':
-                        np.random.seed(random_seed_day)
-                        if coeff > 0:
-                            intervention_value = choice(
-                            [intervention_value_median[intervention_var], intervention_value_high[intervention_var]])
-                        else:
-                            intervention_value = choice(
-                        [intervention_value_median[intervention_var], intervention_value_low[intervention_var]])
-                    elif label == 'true_scm':
-                        if coeff > 0:
-                            intervention_value = intervention_value_high[intervention_var]
-                        else:
-                            intervention_value = intervention_value_low[intervention_var]
-                    else:
-                        raise ValueError('label must be either actual_data or true_scm')
-            elif health == 'max_lag == 0' and verbosity_thesis > 2:
-                print('skipped because max_lag == 0')
+
             elif health == 'cyclic contemporaneous scm':
+                mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
+                plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection',
+                           make_redundant=True)
                 print('skipped because cyclic contemporaneous scm')
+            else:
+                raise ValueError('health must be either good or cyclic contemporaneous scm')
 
-    if most_optimistic_graph_idx is None and verbosity_thesis > 1:
-        mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
-        plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection', make_redundant=True)
-        print('WARNING: hack: no most optimistic graph found')
-
-    # # if intervention was found
-    if best_intervention_var_name is not None:
-
-        # plot most optimistic graph
-        if verbosity_thesis > 1 and label != 'true_scm':
-            plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic', make_redundant=True)
-
-    # if intervention was not found
-    else:
-        print('WARNING: no intervention found. now ignoring scm directions')
-        most_extreme_val, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
-                                                                                                  target_label,
-                                                                                                  labels_as_str=ts.columns,
-                                                                                                  external_independencies_wrt_target=external_independencies_wrt_target,
-                                                                                                  ignore_external_independencies=False)
-        if (most_extreme_val, best_intervention_var_name) == (None, None):
-            most_extreme_val, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
-                                                                                                      target_label,
-                                                                                                      labels_as_str=ts.columns,
-                                                                                                      external_independencies_wrt_target=external_independencies_wrt_target,
-                                                                                                      ignore_external_independencies=True)
-        np.random.seed(random_seed_day)
-        if most_extreme_val is None:
-            best_intervention_var_name, intervention_value = None, None
-        elif most_extreme_val > 0:
-            intervention_value = choice(
-                    [intervention_value_median[best_intervention_var_name], intervention_value_high[best_intervention_var_name]])
-        elif most_extreme_val < 0:
-            intervention_value = choice(
-                    [intervention_value_median[best_intervention_var_name], intervention_value_low[best_intervention_var_name]])
+    # from true SCM
+    if label == 'true_scm':
+        if most_extreme_coeff > 0:
+            intervention_value = intervention_value_high[best_intervention_var_name]
         else:
-            raise ValueError('most extreme value is 0')
+            intervention_value = intervention_value_low[best_intervention_var_name]
+    # from measured data
+    elif label == 'actual_data':
+        # no intervention found
+        if best_intervention_var_name is None:
+            # ignoring directions
+            print('no intervention found. trying again ignoring scm directions')
+            most_extreme_coeff, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
+                                                                                                        target_label,
+                                                                                                        labels_as_str=ts.columns,
+                                                                                                        external_independencies_wrt_target=external_independencies_wrt_target,
+                                                                                                        ignore_external_independencies=False)
+            # still no intervention found: ignore external independencies
+            if (most_extreme_coeff, best_intervention_var_name) == (None, None):
+                print('again no intervention found. now also ignore_external_independencies')
+
+                most_extreme_coeff, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
+                                                                                                            target_label,
+                                                                                                            labels_as_str=ts.columns,
+                                                                                                            external_independencies_wrt_target=external_independencies_wrt_target,
+                                                                                                            ignore_external_independencies=True)
+
+        # still no intervention found:
+        if best_intervention_var_name is None:
+            best_intervention_var_name, intervention_value = None, None
+
+        # intervention found
+        else:
+            # plot most optimistic graph
+            if verbosity_thesis > 1:
+                plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic', make_redundant=True)
+
+            # get intervention value
+            if most_extreme_coeff > 0:
+                intervention_value = np.random.RandomState(random_seed_day).choice([
+                    intervention_value_median[best_intervention_var_name],
+                    intervention_value_high[best_intervention_var_name]
+                ])
+            elif most_extreme_coeff < 0:
+                intervention_value = np.random.RandomState(random_seed_day).choice([
+                    intervention_value_median[best_intervention_var_name],
+                    intervention_value_low[best_intervention_var_name]
+                ])
+            else:
+                raise ValueError('most extreme value is 0')
+
+    else:
+        raise ValueError('label must be either true_scm or actual_data')
+
     return best_intervention_var_name, intervention_value
 
 
@@ -570,7 +531,7 @@ def get_intervention_ignoring_directionalities(vals, var_name_as_str, labels_as_
         unintervenables_without_var = [list(labels_as_str).index(var) for var in external_independencies_wrt_target]
 
     highest_abs_corr = 0
-    most_extreme_val = 0
+    most_extreme_val = None
     most_extreme_var = []
     # set vals to zero if auto corr or non-target adjacent var or unintervenable var
     for i in range(vals.shape[0]):
@@ -602,32 +563,3 @@ def get_intervention_ignoring_directionalities(vals, var_name_as_str, labels_as_
         most_extreme_var = most_extreme_var[0]
     return most_extreme_val, labels_as_str[most_extreme_var]
 
-# val_min, graph, var_names = load_results('chr')
-# var_names = [str(x) for x in var_names]
-#
-# # save ts via pickle
-# # with open(checkpoint_path+'ts.pickle', 'wb') as f:
-# #     pickle.dump(ts, f)
-#
-# # load ts via pickle
-# with open(checkpoint_path + 'ts.pickle', 'rb') as f:
-#     ts = pickle.load(f)
-# print('WARNING: loaded ts from pickle')
-#
-# largest_abs_coeff, best_intervention_var_name, most_optimistic_graph_idx, largest_coeff = get_optimistic_intervention_var_via_simulation(
-#     val_min, graph, var_names, ts, unintervenable_vars, random_seed, external_independencies=external_independencies)
-#
-# # load val_min, graph, var_names, label from file via pickle
-# with open(checkpoint_path + 'tmp.pkl', 'rb') as f:
-#     val_min, graph, var_names, label = pickle.load(f)
-# check_contemporaneous_cycle(val_min, graph, var_names, 'cycle check')
-
-#
-#
-# unintervenable_vars = ['0', '1', '6']
-# var_names = ['0', '2', '3', '4', '5']
-# external_independencies = [(1, 0, 0), (1, 0, 1), (1, 4, 0)]
-# get_all_tau_external_independencies_wrt_target(external_independencies, var_names)
-
-
-# ############

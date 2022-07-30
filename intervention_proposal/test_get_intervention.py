@@ -1,13 +1,11 @@
 import pickle
-import re
 
 import numpy as np
-import pytest
+
 from config import checkpoint_path
 from intervention_proposal.get_intervention import find_optimistic_intervention, \
     drop_redundant_information_due_to_symmetry, get_ambiguous_graph_locations, create_all_graph_combinations, \
-    graph_to_scm, lin_f, make_redundant_information_with_symmetry, plot_graph, \
-    get_intervention_ignoring_directionalities
+    graph_to_scm, lin_f, make_redundant_information_with_symmetry, get_intervention_ignoring_directionalities
 
 
 class TestGetIntervention:
@@ -48,9 +46,6 @@ class TestGetIntervention:
         true_val = np.array([[[0.0, 2.0], [5.0, 4.0]], [[5.0, 6.0], [0.0, 8.0]]])
         assert np.array_equal(true_graph, modified_graph)
         assert np.array_equal(true_val, modified_val)
-
-
-
 
     def test_get_ambiguous_graph_locations(self):
         # Given
@@ -112,8 +107,9 @@ class TestGetIntervention:
             my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies = pickle.load(
                 f)
         # When
-        ans = find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
-                                           label, external_independencies, external_dependencies=[])
+        ans = find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed, random_seed,
+                                           label, external_independencies=external_independencies,
+                                           external_dependencies=[])
         # Then
         solution = ('3', -2.1165126341215634)
         assert ans == solution
