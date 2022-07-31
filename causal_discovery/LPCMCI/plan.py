@@ -240,14 +240,14 @@ def simulation_study_with_one_scm(sim_study_input):
 
         # safe all local variables file
         filename = checkpoint_path + 'global_save1.pkl'
-        # with open(filename, 'wb') as f:
-        #     pickle.dump([day, is_intervention, ts_generated_actual, regret_list,
-        #                  interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
-        #                  pag_edgemarks, interv_var, is_intervention_list], f)
+        with open(filename, 'wb') as f:
+            pickle.dump([day, is_intervention, ts_generated_actual, regret_list,
+                         interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
+                         pag_edgemarks, interv_var, is_intervention_list], f)
         # load
-        with open(filename, 'rb') as f:
-            day, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var, is_intervention_list = pickle.load(
-                f)
+        # with open(filename, 'rb') as f:
+        #     day, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var, is_intervention_list = pickle.load(
+        #         f)
 
         # intervene or observe var?
         is_intervention = is_intervention_list[day]

@@ -183,7 +183,6 @@ def remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data):
                     else:
                         contemporaneous_links.remove(contemporaneous_link)
                         dependencies_from_interv_data.remove(contemporaneous_link)
-                        cont_links_wo_this_link.remove(contemporaneous_link)
                     removed_link = True
                     break
             if removed_link:

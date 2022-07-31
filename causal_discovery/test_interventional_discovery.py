@@ -105,10 +105,26 @@ class TestInterventionalDiscovery:
                                                                                                      pag_edgemarks,
                                                                                                      measured_labels)
         # Then
-        true_indepdendencies = [('0', '3', 1,0.404), ('4', '3', 0,0.817), ('4', '3', 1,0.993), ('5', '3', 0,0.664), ('5', '3', 1,0.87)]
+        true_indepdendencies = [('0', '3', 1, 0.404), ('4', '3', 0, 0.817), ('4', '3', 1, 0.993), ('5', '3', 0, 0.664),
+                                ('5', '3', 1, 0.87)]
         assert np.array_equal(true_indepdendencies, indepdendencies)
 
     def test_remove_weaker_links_of_contempt_cycles(self):
+        dependencies_from_interv_data = [
+            ('0', '2', 0, 0.118),
+            ('3', '2', 0, 0.145),
+            ('0', '3', 1, 0.009),
+            ('2', '3', 0, 0.012),
+            ('5', '3', 0, 0.001)
+        ]
+        dependencies_from_interv_data = remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data)
+        assert dependencies_from_interv_data == [
+            ('0', '2', 0, 0.118),
+            ('0', '3', 1, 0.009),
+            ('2', '3', 0, 0.012),
+            ('5', '3', 0, 0.001)
+        ]
+
         dependencies_from_interv_data = [
             ('3', '0', 1, 0.1), ('0', '3', 1, 0.2),
             ('3', '1', 0, 0.1), ('1', '3', 0, 0.2),
@@ -122,3 +138,5 @@ class TestInterventionalDiscovery:
             ('4', '0', 1, 0.1), ('0', '4', 1, 0.2),
             ('4', '1', 0, 0.1)
         ]
+
+
