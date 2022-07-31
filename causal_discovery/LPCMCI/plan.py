@@ -82,7 +82,7 @@ def has_measured_cross_dependencies_on_target_var(scm, unmeasured_labels_ints):
         return True
 
 
-def get_measured_labels(n_vars_all, random_state, frac_latents, scm):
+def get_measured_labels(n_vars_all, random_state, n_latents, scm):
     """ get measured and unmeasured vars. if there is no measured cross-dependency on target var, resample"""
     unmeasured_labels_ints = None  # ini
     measured_labels = None  # ini
@@ -90,9 +90,7 @@ def get_measured_labels(n_vars_all, random_state, frac_latents, scm):
     cross_dependencies_on_target_var = False
     while not cross_dependencies_on_target_var:
         measured_labels = np.sort(random_state.choice(all_labels_ints,  # e.g. [1,4,5,...]
-                                                      size=math.ceil(
-                                                          (1. - frac_latents) *
-                                                          n_vars_all),
+                                                      size=n_vars_all - n_latents,
                                                       replace=False)).tolist()
         measured_labels = ensure_0_in_measured_labels(measured_labels)
 
@@ -170,21 +168,21 @@ def store_interv(was_intervened, intervention_variable, n_samples_per_generation
     return was_intervened
 
 
-def calculate_parameters(n_vars_measured, frac_latents, n_ini_obs):
+def calculate_parameters(n_vars_measured, n_latents, n_ini_obs):
     n_measured_links = n_vars_measured
-    n_vars_all = math.floor((n_vars_measured / (1. - frac_latents)))  # 11
+    n_vars_all = n_vars_measured + n_latents  # 11
     labels_strs = [str(i) for i in range(n_vars_all)]
     n_ini_obs = int(n_ini_obs)
     return n_measured_links, n_vars_all, labels_strs, n_ini_obs
 
 
 def simulation_study_with_one_scm(sim_study_input):
-    n_ini_obs, n_vars_measured, frac_latents, pc_alpha, n_samples_per_generation = sim_study_input[0]
+    n_ini_obs, n_vars_measured, n_latents, pc_alpha, n_samples_per_generation = sim_study_input[0]
     random_seed = sim_study_input[1]
     print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
 
     n_measured_links, n_vars_all, labels_strs, n_ini_obs = calculate_parameters(n_vars_measured,
-                                                                                              frac_latents,
+                                                                                              n_latents,
                                                                                               n_ini_obs)
 
     interv_alpha = 0.95
@@ -198,7 +196,7 @@ def simulation_study_with_one_scm(sim_study_input):
 
     # variable randomly decide which variables are measured vs latent
     measured_labels, measured_label_as_idx, unmeasured_labels_strs, unintervenable_vars = get_measured_labels(
-        n_vars_all, random_state, frac_latents, scm)
+        n_vars_all, random_state, n_latents, scm)
 
     # ini ts
     ts_generated_actual = np.zeros((0, n_vars_all))
@@ -308,8 +306,6 @@ def simulation_study_with_one_scm(sim_study_input):
                 external_independencies=None,
                 external_dependencies=None,
             )
-
-
 
         # if no intervention is scheduled
         else:

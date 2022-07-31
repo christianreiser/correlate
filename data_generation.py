@@ -54,11 +54,15 @@ def get_edgemarks_and_effect_sizes(scm):
             tau = incoming_link[0][1]
             # effect size
             effect_size = incoming_link[1]
-
-            edgemarks[affected_var, causal_var, -tau] = '<--'
+            if edgemarks[causal_var, affected_var, -tau] != '':
+                print("edgemark already exists:", edgemarks[causal_var, affected_var, -tau])
             edgemarks[causal_var, affected_var, -tau] = '-->'
-            effect_sizes[affected_var, causal_var, -tau] = effect_size
             effect_sizes[causal_var, affected_var, -tau] = effect_size
+            if tau == 0:
+                if edgemarks[affected_var, causal_var, -tau] != '':
+                    print("edgemark already exists:", edgemarks[causal_var, affected_var, -tau])
+                edgemarks[affected_var, causal_var, -tau] = '<--'
+                effect_sizes[affected_var, causal_var, -tau] = effect_size
     return edgemarks, effect_sizes
 
 

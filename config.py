@@ -3,7 +3,7 @@ config parameters
 """
 
 verbosity = 0
-verbosity_thesis = 0 # 1 regret, 2
+verbosity_thesis = 990 # 1 regret, 2
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
@@ -52,7 +52,6 @@ remove_link_threshold = 0.01
 
 # scm_config
 # n_vars_measured = 6
-# frac_latents = 0.3
 contemp_fraction = 0.6
 coeff = 0.5
 min_coeff = 0.2

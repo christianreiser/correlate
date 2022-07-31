@@ -15,8 +15,8 @@ def define_settings():
         # n measured vars
         'n_vars_measured': [5, np.arange(5, 11, 2)],
 
-        # fraction of additional latents
-        'frac_latents': [0.3, np.arange(0.0, 0.61, 0.2)],
+        # number of additional latents
+        'n_latents': [2, np.arange(0, 4, 1)],
 
         # significance threshold to keep an adjacency
         'alpha': [0.5, np.arange(0.05, 0.96, 0.3)],
@@ -33,7 +33,7 @@ def define_settings():
     #     'n_vars_measured': [5, [5]],
     #
     #     # fraction of additional latents
-    #     'frac_latents': [0.3, [0.3]],
+    ##     'frac_latents': [0.3, [0.3]],
     #
     #     # significance threshold to keep an adjacency
     #     'alpha': [0.5, [0.5]],
@@ -72,10 +72,9 @@ def define_settings():
         all_param_study_settings.append(np.array(one_param_study_settings, dtype=object))
     print('total_scms in settings:', total_scms * n_scms)
 
-    # #ini obs, #vars, frac latents, alpha, n_samples_per_generation
-    # all_param_study_settings = [[
-    #     np.array([15, 5, 0.3, 0.05, 1], dtype=object),
-    #     np.array([15, 5, 0.3, 0.26, 1], dtype=object),
-    # ]]  # todo remove after testing alpha
+    # #ini obs, #vars, n_latents, alpha, n_samples_per_generation
+    all_param_study_settings = [[
+        np.array([50, 5, 2, 0.5, 1], dtype=object),
+    ]]  # todo remove after testing alpha
 
     return all_param_study_settings
