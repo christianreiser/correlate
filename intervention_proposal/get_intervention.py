@@ -502,16 +502,22 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                 plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic', make_redundant=True)
 
             # get intervention value
+            this_choice = np.random.RandomState(random_seed_day).choice([True, False])
+            # print('median intervention = ', this_choice, 'extreme =', not this_choice)
             if most_extreme_coeff > 0:
-                intervention_value = np.random.RandomState(random_seed_day).choice([
-                    intervention_value_median[best_intervention_var_name],
-                    intervention_value_high[best_intervention_var_name]
-                ])
+                if this_choice:
+                    intervention_value = intervention_value_median[best_intervention_var_name]
+                elif not this_choice:
+                    intervention_value = intervention_value_high[best_intervention_var_name]
+                else:
+                    raise ValueError('most_extreme_coeff must be 1 or 0')
             elif most_extreme_coeff < 0:
-                intervention_value = np.random.RandomState(random_seed_day).choice([
-                    intervention_value_median[best_intervention_var_name],
-                    intervention_value_low[best_intervention_var_name]
-                ])
+                if this_choice:
+                    intervention_value = intervention_value_median[best_intervention_var_name]
+                elif not this_choice:
+                    intervention_value = intervention_value_low[best_intervention_var_name]
+                else:
+                    raise ValueError('most_extreme_coeff must be 1 or 0')
             else:
                 raise ValueError('most extreme value is 0')
 

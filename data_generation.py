@@ -19,7 +19,7 @@ def sample_nonzero_cross_dependencies(coeff, min_coeff):
     return couplings
 
 
-def nonstationary_check(scm, random_seed, labels_strs):
+def nonstationary_check(scm, random_seed, labels_strs, tau_max):
     """
     check if scm is stationary
     """
@@ -28,7 +28,9 @@ def nonstationary_check(scm, random_seed, labels_strs):
                               labels=labels_strs,
                               noise_type='gaussian')
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
-    return nonstationary
+    # get last tau_max elements of ts_check
+    last_of_ts = ts_check[-tau_max:]
+    return nonstationary, last_of_ts
 
 
 def get_edgemarks_and_effect_sizes(scm):
@@ -103,7 +105,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measu
             contemp_fraction=contemp_fraction,
             random_state=random_state)  # MT19937(random_state)
         cross_dependency_on_target_var = is_cross_dependent_on_target_var(scm)
-        nonstationary = nonstationary_check(scm, random_seed, labels_strs)
+        nonstationary, last_of_ts = nonstationary_check(scm, random_seed, labels_strs, tau_max)
         if verbosity_thesis > 1 and counter > 4:
             print("nonstationary / cross_dependency_on_target_var:", nonstationary, '/', cross_dependency_on_target_var,
                   "counter:", counter)
@@ -114,7 +116,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measu
 
     # plot scm
     plot_scm(edgemarks_true, effect_sizes_true)
-    return scm, edgemarks_true, effect_sizes_true
+    return scm, edgemarks_true, effect_sizes_true, last_of_ts
 
 
 def plot_scm(original_graph, original_vals):

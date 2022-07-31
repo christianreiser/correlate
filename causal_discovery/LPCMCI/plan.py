@@ -187,12 +187,12 @@ def simulation_study_with_one_scm(sim_study_input):
                                                                                               frac_latents,
                                                                                               n_ini_obs)
 
-    interv_alpha = 0.9
+    interv_alpha = 0.95
 
     random_state = np.random.RandomState(random_seed)
 
     # generate stationary scm
-    scm, edgemarks_true, effect_sizes_true = generate_stationary_scm(coeff, min_coeff, random_seed, random_state,
+    scm, edgemarks_true, effect_sizes_true, last_of_ts = generate_stationary_scm(coeff, min_coeff, random_seed, random_state,
                                                                      n_measured_links, n_vars_measured, n_vars_all,
                                                                      labels_strs)
 
@@ -222,12 +222,13 @@ def simulation_study_with_one_scm(sim_study_input):
         scm=scm,
         intervention_variable=None,
         intervention_value=None,
-        ts_old=ts_generated_actual,
+        ts_old=last_of_ts,
         random_seed=random_seed,
-        n_samples=n_ini_obs,
+        n_samples=n_ini_obs+100,
         labels=labels_strs,
         noise_type='gaussian',
     )
+    ts_generated_actual = ts_generated_actual[-n_ini_obs:]
     ts_generated_optimal = ts_generated_actual
 
     # measure new data (hide latents)

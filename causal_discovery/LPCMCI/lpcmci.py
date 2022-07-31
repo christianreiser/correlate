@@ -310,7 +310,7 @@ class LPCMCI():
         """
         chrei:
         for all items in interv_independencies, remove ancestry of corresponding links
-        also the link from B to A is written as the reverse
+                If A and B are contemporaneous, also the link from B to A is written as the reverse
 
         """
         # independencies
@@ -322,11 +322,12 @@ class LPCMCI():
                 (var_eff, lag_eff) = eff
                 # if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] != "":
                 if self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0] in ["o"]:
-                    self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = str(
-                        self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][:2]) + ">"
-                    # the link from B to A is written as the reverse
-                    self.graph_dict[var_cause][(var_eff, 0)] = str(
-                        self.graph_dict[var_cause][(var_eff, 0)][:2]) + ">"
+                    self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "<" + str(
+                        self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1:])
+                    # If A and B are contemporaneous, also the link from B to A is written as the reverse
+                    if lag_eff == 0:
+                        self.graph_dict[var_cause][(var_eff, 0)] = str(
+                            self.graph_dict[var_cause][(var_eff, 0)][:2]) + ">"
                 else:
                     raise ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
                                self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])
@@ -344,8 +345,9 @@ class LPCMCI():
                     self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)] = "-" + str(
                         self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][1] + ">")
                     # If A and B are contemporaneous, also the link from B to A is written as the reverse
-                    self.graph_dict[var_cause][(var_eff, 0)] = "<"+ str(
-                        self.graph_dict[var_cause][(var_eff, 0)][1]) + "-"
+                    if lag_eff == 0:
+                        self.graph_dict[var_cause][(var_eff, 0)] = "<"+ str(
+                            self.graph_dict[var_cause][(var_eff, 0)][1]) + "-"
                 else:
                     raise ValueError("orient with_interv_data: unexpected edgemark. expected o but is:",
                                self.graph_dict[var_eff][(var_cause, lag_cause - lag_eff)][0])

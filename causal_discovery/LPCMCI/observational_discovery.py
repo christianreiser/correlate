@@ -113,19 +113,23 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
             """test if works as expected""" # todo test for dependencies
             for exi in external_independencies:
                 exi = list(exi)
-                backward_arrow = graph[exi[0], exi[1], exi[2]]
                 forward_arrow = graph[exi[1], exi[0], exi[2]]
-                assert backward_arrow == "" or backward_arrow[2] == ">"
                 assert forward_arrow == "" or forward_arrow[0] == "<"
+                # symmetric for contemporaneous links
+                if exi[2] == 0:
+                    backward_arrow = graph[exi[0], exi[1], exi[2]]
+                    assert backward_arrow == "" or backward_arrow[2] == ">"
+
             for exi in external_dependencies:
                 exi = list(exi)
-                backward_arrow = graph[exi[0], exi[1], exi[2]]
                 forward_arrow = graph[exi[1], exi[0], exi[2]]
-                plot_graph(val_min, graph, df.columns, 'test', make_redundant=False)
-                assert backward_arrow == "" or backward_arrow[2] == "-"
-                assert backward_arrow == "" or backward_arrow[0] == "<"
                 assert forward_arrow == "" or forward_arrow[0] == "-"
                 assert forward_arrow == "" or forward_arrow[2] == ">"
+                # symmetric for contemporaneous links
+                if exi[2] == 0:
+                    backward_arrow = graph[exi[0], exi[1], exi[2]]
+                    assert backward_arrow == "" or backward_arrow[2] == "-"
+                    assert backward_arrow == "" or backward_arrow[0] == "<"
 
 
 

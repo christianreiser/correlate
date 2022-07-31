@@ -76,8 +76,9 @@ class TestLPCMCI:
             df, _, _, _ = pickle.load(f)
             pc_alpha = 0.05
             tau_max = 1
+        # (effect, cause, tau, p-val)
         external_independencies = [(0, 3, 0), (0, 3, 1), (1, 3, 0), (1, 3, 1), (2, 3, 0), (2, 3, 1)]
-        external_dependencies = [(4, 2, 1)]
+        external_dependencies = [ (4, 2, 1)]
 
         # run lpcmci
         lpcmci = LPCMCI(
@@ -97,28 +98,32 @@ class TestLPCMCI:
             verbosity=0)
         graph = lpcmci.graph
 
-        tp.plot_graph(
-            val_matrix=lpcmci.val_min_matrix,
-            link_matrix=graph,
-            var_names=["0", "2", "3", "4", "5"],
-            link_colorbar_label='current LPCMCI estimate. day',
-            node_colorbar_label='auto-MCI',
-            figsize=(10, 6),
-        )
-        plt.show()
+        # tp.plot_graph(
+        #     val_matrix=lpcmci.val_min_matrix,
+        #     link_matrix=graph,
+        #     var_names=["0", "2", "3", "4", "5"],
+        #     link_colorbar_label='current LPCMCI estimate. day',
+        #     node_colorbar_label='auto-MCI',
+        #     figsize=(10, 6),
+        # )
+        # plt.show()
 
         for exi in external_independencies:
             exi = list(exi)
-            backward_arrow = graph[exi[0], exi[1], exi[2]]
             forward_arrow = graph[exi[1], exi[0], exi[2]]
-            assert backward_arrow == "" or backward_arrow[2] == ">"
             assert forward_arrow == "" or forward_arrow[0] == "<"
+            # symmetric for contemporaneous links
+            if exi[2] == 0:
+                backward_arrow = graph[exi[0], exi[1], exi[2]]
+                assert backward_arrow == "" or backward_arrow[2] == ">"
 
         for exi in external_dependencies:
             exi = list(exi)
-            backward_arrow = graph[exi[0], exi[1], exi[2]]
             forward_arrow = graph[exi[1], exi[0], exi[2]]
-            assert backward_arrow == "" or backward_arrow[2] == "-"
-            assert backward_arrow == "" or backward_arrow[0] == "<"
             assert forward_arrow == "" or forward_arrow[0] == "-"
             assert forward_arrow == "" or forward_arrow[2] == ">"
+            # symmetric for contemporaneous links
+            if exi[2] == 0:
+                backward_arrow = graph[exi[0], exi[1], exi[2]]
+                assert backward_arrow == "" or backward_arrow[2] == "-"
+                assert backward_arrow == "" or backward_arrow[0] == "<"

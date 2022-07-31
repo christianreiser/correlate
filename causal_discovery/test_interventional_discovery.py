@@ -105,7 +105,7 @@ class TestInterventionalDiscovery:
                                                                                                      pag_edgemarks,
                                                                                                      measured_labels)
         # Then
-        true_indepdendencies = [('3', '0', 1,0.404), ('3', '4', 0,0.817), ('3', '4', 1,0.993), ('3', '5', 0,0.664), ('3', '5', 1,0.87)]
+        true_indepdendencies = [('0', '3', 1,0.404), ('4', '3', 0,0.817), ('4', '3', 1,0.993), ('5', '3', 0,0.664), ('5', '3', 1,0.87)]
         assert np.array_equal(true_indepdendencies, indepdendencies)
 
     def test_remove_weaker_links_of_contempt_cycles(self):

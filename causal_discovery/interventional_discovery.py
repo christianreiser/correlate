@@ -202,7 +202,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
     """
     orient links with interventional data.
     test conditional independence for each var to each other var for all taus.
-    output: (causing intervened var, independent var, tau)
+    output: (effect, cause or intervened, tau, p-val)
     """
 
     # get interventional data per variable
@@ -277,18 +277,18 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                 if p_val > interv_alpha:
 
                                     # save independency information
-                                    independencies_from_interv_data.append((cause, effect, tau, p_val))
+                                    independencies_from_interv_data.append((effect, cause, tau, p_val))
                                     if verbosity_thesis > 2:
-                                        print("independency in interventional data: intervened var ", cause,
-                                              " is independent of var", effect, "with lag=", tau, ", p-value=",
+                                        print("independency in interventional data:", cause,
+                                              " -X>", effect, "with lag=", tau, ", p-value=",
                                               p_val)
                                     elif verbosity_thesis > 0:
                                         if effect == target_label:
                                             print("interv discovery: ", cause,
-                                                  " is independent of target with lag", tau, "\t, p-value=",
+                                                  " -X> target with lag", tau, "\t, p-value=",
                                                   p_val)
-                                elif p_val < 1-interv_alpha:
-                                    dependencies_from_interv_data.append((cause, effect, tau, p_val))
+                                elif p_val < (1-interv_alpha)*3:
+                                    dependencies_from_interv_data.append((effect, cause, tau, p_val))
 
     # if contemporaneus cycle in dependencies_from_interv_data, remove link with weaker p-value
     dependencies_from_interv_data = remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data)
@@ -296,13 +296,13 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
     # print
     for dependency in dependencies_from_interv_data:
         if verbosity_thesis > 2:
-            print("independency in interventional data: intervened var ", dependency[0],
-                  " is dependent of var", dependency[1], "with lag=", dependency[2], ", p-value=",
+            print("dependency in interventional data: intervened var ", dependency[1],
+                  " -->", dependency[0], "with lag=", dependency[2], ", p-value=",
                   dependency[3])
         elif verbosity_thesis > 0:
             if dependency[1] == target_label:
-                print("interv discovery: ", dependency[0],
-                      " is dependent of target with lag", dependency[2], "\t, p-value=",
+                print("interv discovery: ", dependency[1],
+                      " --> target with lag", dependency[2], "\t, p-value=",
                       dependency[3])
     return independencies_from_interv_data, dependencies_from_interv_data
 
