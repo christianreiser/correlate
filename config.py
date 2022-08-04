@@ -3,11 +3,12 @@ config parameters
 """
 
 verbosity = 0
-verbosity_thesis = 990 # 1 regret, 2
+verbosity_thesis = 0 # 1 regret, 2
 
 # paths
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 checkpoint_path = '/home/chrei/PycharmProjects/correlate/checkpoints/'
+plots_path = '/home/chrei/PycharmProjects/correlate/plots/thesis_plots/'
 
 # target
 target_label = '0'  # 'Mood'  # label of interest # must be a string

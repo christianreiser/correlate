@@ -8,7 +8,7 @@ from tqdm import tqdm
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
-from config import target_label, coeff, min_coeff, n_days, nth, checkpoint_path, n_scms
+from config import target_label, coeff, min_coeff, n_days, checkpoint_path, n_scms
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
 from regret import compute_regret, cost_function
@@ -119,7 +119,7 @@ def get_measured_labels(n_vars_all, random_state, n_latents, scm):
     return measured_labels, measured_label_as_idx, unmeasured_labels_strs, unintervenable_vars
 
 
-def obs_or_intervene():
+def obs_or_intervene(nth):
     """
     first n_ini_obs samples are observational
     then for n_days samples, very nth sample is an intervention
@@ -127,11 +127,11 @@ def obs_or_intervene():
     true: intervention
     """
     is_mixed = np.zeros(n_days).astype(bool)
-    for i in range(len(is_mixed)):
+    for i in range(1,len(is_mixed)+1):
         if i % nth == 0:
-            is_mixed[i] = True
+            is_mixed[i-1] = True
         else:
-            is_mixed[i] = False
+            is_mixed[i-1] = False
     # is_intervention_list = np.append(is_obs, is_mixed)
     return is_mixed
 
@@ -177,7 +177,7 @@ def calculate_parameters(n_vars_measured, n_latents, n_ini_obs):
 
 
 def simulation_study_with_one_scm(sim_study_input):
-    n_ini_obs, n_vars_measured, n_latents, pc_alpha, n_samples_per_generation = sim_study_input[0]
+    _, n_ini_obs, n_vars_measured, n_latents, pc_alpha, interv_alpha, n_samples_per_generation, nth = sim_study_input[0]
     random_seed = sim_study_input[1]
     print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
 
@@ -185,7 +185,6 @@ def simulation_study_with_one_scm(sim_study_input):
                                                                                               n_latents,
                                                                                               n_ini_obs)
 
-    interv_alpha = 0.95
 
     random_state = np.random.RandomState(random_seed)
 
@@ -211,8 +210,7 @@ def simulation_study_with_one_scm(sim_study_input):
     interv_var, interv_val, pag_edgemarks, independencies_from_interv_data = None, None, None, None
 
     # schedule when to intervene
-    is_intervention_list = obs_or_intervene()  # 500 obs + 500 with every 4th intervention
-    # n_samples = n_samples_per_generation
+    is_intervention_list = obs_or_intervene(nth)  # 500 obs + 500 with every 4th intervention
 
     """ generate first n_ini_obs samples without intervention"""
     # generate observational data
@@ -381,6 +379,7 @@ def run_all_experiments():
     # run parameter studies
     for simulation_study_idx, simulation_study in enumerate(all_param_study_settings):
         regret_list_over_simulation_study = []
+        study_name = simulation_study[0][0]
 
         # run one parameter setting
         for one_param_setting in simulation_study:
@@ -397,7 +396,7 @@ def run_all_experiments():
             regret_list_over_simulation_study.append(regret_list_over_scms)
 
         # save results of one parameter setting
-        with open(checkpoint_path + str(simulation_study_idx) + 'regret_list_over_simulation_study.pickle', 'wb') as f:
+        with open(checkpoint_path + str(simulation_study_idx) + study_name +'_regret_list_over_simulation_study.pickle', 'wb') as f:
             pickle.dump([regret_list_over_simulation_study, simulation_study], f)
     print('all done')
 

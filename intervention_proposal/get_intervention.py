@@ -458,6 +458,8 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
 
             elif health == 'cyclic contemporaneous scm':
                 mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
+                if verbosity_thesis >0:
+                    print('cyclic contemporaneous scm detected for graph: ' + str(mygraph_without_lagged))
                 plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection',
                            make_redundant=True)
                 print('skipped because cyclic contemporaneous scm')
