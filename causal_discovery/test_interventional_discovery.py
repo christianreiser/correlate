@@ -3,11 +3,96 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 from causal_discovery import interventional_discovery
-from causal_discovery.interventional_discovery import remove_weaker_links_of_contempt_cycles
+from causal_discovery.interventional_discovery import remove_weaker_links_of_contempt_cycles, \
+    get_interv_tau_aligned_cause_eff_df
 from config import checkpoint_path
 
 
 class TestInterventionalDiscovery:
+
+    def test_get_interv_tau_aligned_cause_eff_df(self):
+        d = pd.DataFrame([
+            [1.0, 4.0, 9.0],
+            [2.0, 5.0, 9.0],
+            [3.0, 6.0, 9.0],
+        ],columns=['0', '1', '2'])
+        w =pd.DataFrame([
+            [False, True, False],
+            [False, True, False],
+            [False, False, True],
+        ],columns=['0', '1', '2'])
+
+        cause, eff, tau = '1', '0', 0
+        assert_frame_equal(get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau),(pd.DataFrame([
+            [4.0, 1.0],
+            [5.0, 2.0],
+        ],columns=[cause, eff+'_'+str(tau)])))
+
+        cause, eff, tau = '1', '0', 1
+        assert_frame_equal(get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau), (pd.DataFrame([
+            [4.0, 2.0],
+            [5.0, 3.0],
+        ],columns=[cause, eff+'_'+str(tau)])))
+
+        cause, eff, tau = '1', '2', 0
+        assert_frame_equal(get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau), (pd.DataFrame([
+            [4.0, 9.0],
+            [5.0, 9.0],
+        ],columns=[cause, eff+'_'+str(tau)])))
+
+        cause, eff, tau = '1', '2', 1
+        assert_frame_equal(get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau), (pd.DataFrame([
+            [4.0, 9.0],
+        ],columns=[cause, eff+'_'+str(tau)])))
+
+        cause, eff, tau = '2', '0', 0
+        assert_frame_equal(get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau), (pd.DataFrame([
+            [9.0, 3.0],
+        ],columns=[cause, eff+'_'+str(tau)])))
+
+        cause, eff, tau = '2', '0', 1
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
+        cause, eff, tau = '2', '1', 0
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([
+            [9.0, 6.0],
+        ],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
+        cause, eff, tau = '2', '1', 1
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([
+        ],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
+        cause, eff, tau = '1', '1', 0
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([
+        ],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
+        cause, eff, tau = '1', '1', 1
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([
+            [5.0,6.0],
+        ],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
+        cause, eff, tau = '2', '2', 0
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([
+        ],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
+        cause, eff, tau = '2', '2', 1
+        res=get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau)
+        sol = pd.DataFrame([
+        ],columns=[cause, eff+'_'+str(tau)])
+        assert_frame_equal(res, sol)
+
     def test_get_probable_parents(self):
         # Given
         effect = '0'
@@ -138,5 +223,3 @@ class TestInterventionalDiscovery:
             ('4', '0', 1, 0.1), ('0', '4', 1, 0.2),
             ('4', '1', 0, 0.1)
         ]
-
-

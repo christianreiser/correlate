@@ -26,7 +26,7 @@ def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samp
     #           '\nintervention_variable:', interv_var)
     #     ValueError("Regret is negative! See prints above")
     regret_list = np.append(regret_list, new_regret)
-    return regret_list
+    return regret_list, outcome_actual[0]
 
 
 def test_compute_regret():

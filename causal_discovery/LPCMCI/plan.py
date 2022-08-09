@@ -219,7 +219,7 @@ def simulation_study_with_one_scm(sim_study_input):
         intervention_variable=None,
         intervention_value=None,
         ts_old=last_of_ts,
-        random_seed=random_seed,
+        random_seed=2**10,
         n_samples=n_ini_obs+100,
         labels=labels_strs,
         noise_type='gaussian',
@@ -284,33 +284,31 @@ def simulation_study_with_one_scm(sim_study_input):
                 val=pag_effect_sizes.copy(),
                 ts=ts_measured_actual,  # only first n_ini_obs samples, to have the same ts as optimal
                 unintervenable_vars=unintervenable_vars,
-                random_seed_scm=random_seed,
                 random_seed_day=day,
                 label='actual_data',
                 external_independencies=independencies_from_interv_data,
                 external_dependencies=dependencies_from_interv_data,
             )
 
-            # from true SCM
-            interv_var_opti, interv_val_opti = find_optimistic_intervention(
-                edgemarks_true.copy(),
-                effect_sizes_true.copy(),
-                ts=pd.DataFrame(ts_generated_actual, columns=labels_strs),
-                # needed for 1. percentile from mu, std 2. simulation start 3. labels
-                unintervenable_vars=unintervenable_vars,
-                random_seed_scm=random_seed,
-                random_seed_day=day,
-                label='true_scm',
-                external_independencies=None,
-                external_dependencies=None,
-            )
-
         # if no intervention is scheduled
         else:
-            interv_var, interv_val, interv_var_opti, interv_val_opti = None, None, None, None
+            interv_var, interv_val = None, None
 
         # keep track of if and where in the ts the intervention is
         was_intervened = store_interv(was_intervened, interv_var, n_samples_per_generation, n_vars_measured)
+
+        # from true SCM
+        interv_var_opti, interv_val_opti = find_optimistic_intervention(
+            edgemarks_true.copy(),
+            effect_sizes_true.copy(),
+            ts=pd.DataFrame(ts_generated_actual, columns=labels_strs),
+            # needed for 1. percentile from mu, std 2. simulation start 3. labels
+            unintervenable_vars=unintervenable_vars,
+            random_seed_day=day,
+            label='true_scm',
+            external_independencies=None,
+            external_dependencies=None,
+        )
 
         """
         intervene as proposed and generate new data.
@@ -322,7 +320,7 @@ def simulation_study_with_one_scm(sim_study_input):
             intervention_variable=interv_var,
             intervention_value=interv_val,
             ts_old=ts_generated_actual,
-            random_seed=random_seed,
+            random_seed=day,
             n_samples=n_samples_per_generation,
             labels=labels_strs,
             noise_type='gaussian',
@@ -333,7 +331,7 @@ def simulation_study_with_one_scm(sim_study_input):
             intervention_variable=interv_var_opti,
             intervention_value=interv_val_opti,
             ts_old=ts_generated_optimal,
-            random_seed=random_seed,
+            random_seed=day,
             n_samples=n_samples_per_generation,
             labels=labels_strs,
             noise_type='gaussian',
@@ -350,20 +348,20 @@ def simulation_study_with_one_scm(sim_study_input):
         regret
         """
         # only if it was an intervention
-        regret_list = compute_regret(ts_measured_actual, ts_generated_optimal,
+        regret_list, outcome_actual = compute_regret(ts_measured_actual, ts_generated_optimal,
                                      regret_list, n_samples_per_generation)
 
         if interv_val_opti is not None and interv_val is not None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
-                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs,  '\to.cme',format(outcome_actual, ".3f"), '\tr', format(regret_list[-1], ".3f"), '\to var',
+                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
                   interv_var, '\ta val', format(interv_val, ".3f"), '\tind',independencies_from_interv_data, '\tdep', dependencies_from_interv_data)
         elif interv_val_opti is not None and interv_val is None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
-                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\t\ta var',
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs,  '\to.cme',format(outcome_actual, ".3f"), '\tr', format(regret_list[-1], ".3f"), '\to var',
+                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
                   interv_var, '\ta val', interv_val)
         elif interv_val_opti is None and interv_val is not None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\tr', format(regret_list[-1], ".3f"), '\t\to var',
-                  interv_var_opti, '\to val', interv_val_opti, '\t\ta var',
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs,  '\to.cme',format(outcome_actual, ".3f"), '\tr', format(regret_list[-1], ".3f"), '\to var',
+                  interv_var_opti, '\to val', interv_val_opti, '\ta var',
                   interv_var, '\ta val', interv_val)
 
     regret_sum = sum(regret_list)

@@ -364,7 +364,7 @@ def create_all_graph_combinations(graph, ambiguous_locations):
         return graph_combinations
 
 
-def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed_scm, random_seed_day,
+def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed_day,
                                  label, external_independencies, external_dependencies
                                  ):
     """
@@ -391,14 +391,18 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
     # get intervention value from fitted gaussian percentile
     intervention_value_low = {}
     intervention_value_high = {}
-    intervention_value_median = {}
+    intervention_value_low_mid = {}
+    intervention_value_high_mid = {}
+    # intervention_value_median = {}
     for var_name in ts.columns:
         # Fit a normal distribution to the data:
         mu, std = norm.fit(ts[var_name])
         # get 95th percentile from normal distribution
         intervention_value_low[var_name] = norm.ppf(1 - percentile / 100, loc=mu, scale=std)
         intervention_value_high[var_name] = norm.ppf(percentile / 100, loc=mu, scale=std)
-        intervention_value_median[var_name] = norm.ppf(0.5, loc=mu, scale=std)
+        intervention_value_low_mid[var_name] = norm.ppf(np.mean([0.5]), loc=mu, scale=std) # (1 - percentile / 100),
+        intervention_value_high_mid[var_name] = norm.ppf(np.mean([0.5]), loc=mu, scale=std) # (percentile / 100),
+        # intervention_value_median[var_name] = norm.ppf(0.5, loc=mu, scale=std)
 
     largest_abs_coeff = 0
     best_intervention_var_name = None
@@ -417,7 +421,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                 intervention_variable=intervention_var,
                 intervention_value=intervention_value_low[intervention_var],
                 ts_old=ts,
-                random_seed=random_seed_scm,
+                random_seed=random_seed_day,
                 n_samples=n_half_samples,
                 labels=ts.columns,
                 noise_type='without'
@@ -435,7 +439,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
                     intervention_variable=intervention_var,
                     intervention_value=intervention_value_high[intervention_var],
                     ts_old=ts,
-                    random_seed=random_seed_scm,
+                    random_seed=random_seed_day,
                     n_samples=n_half_samples,
                     labels=ts.columns,
                     noise_type='without',
@@ -508,14 +512,14 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
             # print('median intervention = ', this_choice, 'extreme =', not this_choice)
             if most_extreme_coeff > 0:
                 if this_choice:
-                    intervention_value = intervention_value_median[best_intervention_var_name]
+                    intervention_value = intervention_value_high_mid[best_intervention_var_name]
                 elif not this_choice:
                     intervention_value = intervention_value_high[best_intervention_var_name]
                 else:
                     raise ValueError('most_extreme_coeff must be 1 or 0')
             elif most_extreme_coeff < 0:
                 if this_choice:
-                    intervention_value = intervention_value_median[best_intervention_var_name]
+                    intervention_value = intervention_value_low_mid[best_intervention_var_name]
                 elif not this_choice:
                     intervention_value = intervention_value_low[best_intervention_var_name]
                 else:

@@ -107,7 +107,7 @@ class TestGetIntervention:
             my_graph, val, var_names, ts, unintervenable_vars, random_seed, old_intervention, label, external_independencies = pickle.load(
                 f)
         # When
-        ans = find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed, random_seed,
+        ans = find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
                                            label, external_independencies=external_independencies,
                                            external_dependencies=[])
         # Then

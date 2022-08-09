@@ -74,7 +74,7 @@ def define_settings():
 
     # save_str, ini obs, #vars, n_latents, obs_alpha, interv_alpha,  n_samples_per_generation,nth
 
-    # alpha study
+    # alpha
     # all_param_study_settings = [[
     #     np.array(['alpha',50, 5, 2, 0.01, 0.01, 1, 4], dtype=object),
     #     np.array(['alpha',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
@@ -84,27 +84,35 @@ def define_settings():
     # ]]
 
     # # intervene very nth time
-    # all_param_study_settings = [[
-    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 1], dtype=object),
-    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 8], dtype=object),
-    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, np.inf], dtype=object),
-    # ]]
+    all_param_study_settings = [[
+        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 1], dtype=object),
+        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 2], dtype=object),
+        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, np.inf], dtype=object),
+    ]]
 
     # # n ini obs
     # all_param_study_settings = [[
-    #     np.array(['n_ini_obs',10, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['n_ini_obs',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['n_ini_obs',250, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['n_ini_obs',1250, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_ini_obs',5, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_ini_obs',25, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_ini_obs',125, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_ini_obs',625, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
     # ]]
     #
     # n latents
-    all_param_study_settings = [[
-        np.array(['n_obs_vars',50, 5, 0, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 5, 4, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 5, 6, 0.05, 0.05, 1, 4], dtype=object),
-    ]]
+    # all_param_study_settings = [[
+    #     np.array(['latents',50, 5, 0, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['latents',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['latents',50, 5, 4, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['latents',50, 5, 6, 0.05, 0.05, 1, 4], dtype=object),
+    # ]]
+
+    # n observables
+    # all_param_study_settings = [[
+    #     np.array(['n_obs_vars',50, 2, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars',50, 8, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars',50, 11, 2, 0.05, 0.05, 1, 4], dtype=object),
+    # ]]
 
     return all_param_study_settings
