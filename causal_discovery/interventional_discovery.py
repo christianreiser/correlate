@@ -309,7 +309,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                 if p_val > 0.95: #interv_alpha:
 
                     # save independency information # (effect == '4' and tau == 0) or (effect == '2' and tau == 1) or (effect == '0' and tau == 0) or (effect == '3' and tau == 1)
-                    independencies_from_interv_data.append((effect, cause, tau, p_val))
+                    independencies_from_interv_data.append((effect, cause, tau, p_val.round(4)))
                     if verbosity_thesis > 2:
                         print("interv discovery:", cause,
                               " -X>", effect, "with lag=", tau, ", p-value=",
@@ -321,7 +321,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                                   p_val)
                 # if significantly dependent:
                 elif p_val < 0.2:#(1-interv_alpha)*3:
-                    dependencies_from_interv_data.append((effect, cause, tau, p_val))
+                    dependencies_from_interv_data.append((effect, cause, tau, p_val.round(4)))
 
     # if contemporaneus cycle in dependencies_from_interv_data, remove link with weaker p-value
     dependencies_from_interv_data = remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data)

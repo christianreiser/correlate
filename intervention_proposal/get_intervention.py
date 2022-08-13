@@ -1,4 +1,5 @@
 import itertools
+from multiprocessing import Pool
 
 from matplotlib import pyplot as plt
 from scipy.stats import norm
@@ -364,6 +365,66 @@ def create_all_graph_combinations(graph, ambiguous_locations):
         return graph_combinations
 
 
+def compute_coeffs(multiprocessing_input):
+    unique_graph, unique_graph_idx, val, ts, unintervenable_vars, intervention_value_low, my_graph, random_seed_day, n_half_samples, intervention_value_high= multiprocessing_input
+    model = graph_to_scm(unique_graph, val)
+
+    most_extreme_coeff = 0
+    most_extreme_interv_var = None
+
+    # for all measured vars except unintervenable intervention_vars
+    for intervention_var in list(set(ts.columns) - set(unintervenable_vars)):
+
+        # intervene on intervention_var with low and high values
+        simulated_low_interv, health = data_generator(
+            scm=model,
+            intervention_variable=intervention_var,
+            intervention_value=intervention_value_low[intervention_var],
+            ts_old=ts,
+            random_seed=random_seed_day,
+            n_samples=n_half_samples,
+            labels=ts.columns,
+            noise_type='without'
+        )
+
+        # skip: cyclic contemporaneous graph (none) and 'max_lag == 0'
+        if health == 'good':
+            simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=ts.columns)
+            target_low_interv = simulated_low_interv[target_label]
+
+            # same for high intervention value
+            simulated_high_interv, health = data_generator(
+                scm=model,
+                intervention_variable=intervention_var,
+                intervention_value=intervention_value_high[intervention_var],
+                ts_old=ts,
+                random_seed=random_seed_day,
+                n_samples=n_half_samples,
+                labels=ts.columns,
+                noise_type='without',
+            )
+            simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=ts.columns)
+            target_high_interv = simulated_high_interv[target_label]
+
+            # get relative difference between low and high intervention
+            coeff = (target_high_interv - target_low_interv).mean()
+
+            if abs(coeff) > abs(most_extreme_coeff):
+                most_extreme_coeff = coeff
+                most_extreme_interv_var = intervention_var
+
+        elif health == 'cyclic contemporaneous scm':
+            mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
+            if verbosity_thesis > 1:
+                print('cyclic contemporaneous scm detected for graph: ' + str(mygraph_without_lagged))
+                plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection',
+                           make_redundant=True)
+                print('skipped because cyclic contemporaneous scm')
+        else:
+            raise ValueError('health must be either good or cyclic contemporaneous scm')
+    return most_extreme_coeff, most_extreme_interv_var, unique_graph_idx
+
+
 def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed_day,
                                  label, external_independencies, external_dependencies
                                  ):
@@ -404,71 +465,34 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
         intervention_value_high_mid[var_name] = norm.ppf(np.mean([0.5]), loc=mu, scale=std) # (percentile / 100),
         # intervention_value_median[var_name] = norm.ppf(0.5, loc=mu, scale=std)
 
-    largest_abs_coeff = 0
+
+
+    multiprocessing_inputs = []
+    for graph_idx in range(len(graph_combinations)):
+        multiprocessing_inputs.append([graph_combinations[graph_idx], graph_idx, val, ts, unintervenable_vars, intervention_value_low, my_graph, random_seed_day, n_half_samples, intervention_value_high])
+
+
+    with Pool() as pool:
+        results = pool.map(compute_coeffs, multiprocessing_inputs)#, position=0, leave=True, delay=0)
+
+    # results = []
+    # for input_m in multiprocessing_inputs:
+    #     results.append(compute_coeffs(input_m))
+
+
+    # for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True, delay=10)):
     best_intervention_var_name = None
     most_optimistic_graph = my_graph
-    most_extreme_coeff= None
+    most_extreme_coeff = 0
+    for result in results:
+        coeff, interv_var, unique_graph_idx = result
+        unique_graph = graph_combinations[unique_graph_idx]
 
-    for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True, delay=10)):
-        model = graph_to_scm(unique_graph, val)
-
-        # for all measured vars except unintervenable intervention_vars
-        for intervention_var in list(set(ts.columns) - set(unintervenable_vars)):
-
-            # intervene on intervention_var with low and high values
-            simulated_low_interv, health = data_generator(
-                scm=model,
-                intervention_variable=intervention_var,
-                intervention_value=intervention_value_low[intervention_var],
-                ts_old=ts,
-                random_seed=random_seed_day,
-                n_samples=n_half_samples,
-                labels=ts.columns,
-                noise_type='without'
-            )
-
-            # skip: cyclic contemporaneous graph (none) and 'max_lag == 0'
-            if health == 'good':
-
-                simulated_low_interv = pd.DataFrame(simulated_low_interv, columns=ts.columns)
-                target_low_interv = simulated_low_interv[target_label]
-
-                # same for high intervention value
-                simulated_high_interv, health = data_generator(
-                    scm=model,
-                    intervention_variable=intervention_var,
-                    intervention_value=intervention_value_high[intervention_var],
-                    ts_old=ts,
-                    random_seed=random_seed_day,
-                    n_samples=n_half_samples,
-                    labels=ts.columns,
-                    noise_type='without',
-                )
-                simulated_high_interv = pd.DataFrame(simulated_high_interv, columns=ts.columns)
-                target_high_interv = simulated_high_interv[target_label]
-
-                # get relative difference between low and high intervention
-                coeff = (target_high_interv - target_low_interv).mean()
-
-                # get absolute difference between low and high intervention
-                abs_coeff = np.abs(coeff)
-
-                # if abs_coeff > largest_abs_coeff:
-                if abs_coeff > largest_abs_coeff:
-                    largest_abs_coeff = abs_coeff
-                    most_extreme_coeff = coeff
-                    best_intervention_var_name = intervention_var
-                    most_optimistic_graph = unique_graph
-
-            elif health == 'cyclic contemporaneous scm':
-                mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
-                if verbosity_thesis >0:
-                    print('cyclic contemporaneous scm detected for graph: ' + str(mygraph_without_lagged))
-                plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection',
-                           make_redundant=True)
-                print('skipped because cyclic contemporaneous scm')
-            else:
-                raise ValueError('health must be either good or cyclic contemporaneous scm')
+        # if abs_coeff > largest_abs_coeff:
+        if np.abs(coeff) > abs(most_extreme_coeff):
+            most_extreme_coeff = coeff
+            best_intervention_var_name = interv_var
+            most_optimistic_graph = unique_graph
 
     # from true SCM
     if label == 'true_scm':

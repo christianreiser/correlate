@@ -40,10 +40,10 @@ def main():
     # save_name = 'alpha2'
     # setting_loc = 4
 
-    file_name = 'n_ini_obs2'
+    file_name = 'nth'
     x_label = 'number of initial observations'
     y_label = 'average daily regret'
-    setting_loc = 1
+    setting_loc = 7
     save_name = file_name
 
     # load

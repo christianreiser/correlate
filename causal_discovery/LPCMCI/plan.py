@@ -1,4 +1,3 @@
-import math
 import pickle
 
 import numpy as np
@@ -127,11 +126,11 @@ def obs_or_intervene(nth):
     true: intervention
     """
     is_mixed = np.zeros(n_days).astype(bool)
-    for i in range(1,len(is_mixed)+1):
+    for i in range(1, len(is_mixed) + 1):
         if i % nth == 0:
-            is_mixed[i-1] = True
+            is_mixed[i - 1] = True
         else:
-            is_mixed[i-1] = False
+            is_mixed[i - 1] = False
     # is_intervention_list = np.append(is_obs, is_mixed)
     return is_mixed
 
@@ -182,23 +181,21 @@ def simulation_study_with_one_scm(sim_study_input):
     print('setting:', sim_study_input[0], 'random_seed:', sim_study_input[1])
 
     n_measured_links, n_vars_all, labels_strs, n_ini_obs = calculate_parameters(n_vars_measured,
-                                                                                              n_latents,
-                                                                                              n_ini_obs)
-
+                                                                                n_latents,
+                                                                                n_ini_obs)
 
     random_state = np.random.RandomState(random_seed)
 
     # generate stationary scm
-    scm, edgemarks_true, effect_sizes_true, last_of_ts = generate_stationary_scm(coeff, min_coeff, random_seed, random_state,
-                                                                     n_measured_links, n_vars_measured, n_vars_all,
-                                                                     labels_strs)
+    scm, edgemarks_true, effect_sizes_true, last_of_ts = generate_stationary_scm(coeff, min_coeff, random_seed,
+                                                                                 random_state,
+                                                                                 n_measured_links, n_vars_measured,
+                                                                                 n_vars_all,
+                                                                                 labels_strs)
 
     # variable randomly decide which variables are measured vs latent
     measured_labels, measured_label_as_idx, unmeasured_labels_strs, unintervenable_vars = get_measured_labels(
         n_vars_all, random_state, n_latents, scm)
-
-    # ini ts
-    ts_generated_actual = np.zeros((0, n_vars_all))
 
     # ini var that keeps track of where the intervention is
     was_intervened = pd.DataFrame(np.zeros((n_ini_obs, n_vars_measured), dtype=bool), columns=measured_labels)
@@ -214,13 +211,13 @@ def simulation_study_with_one_scm(sim_study_input):
 
     """ generate first n_ini_obs samples without intervention"""
     # generate observational data
-    ts_generated_actual, health = data_generator(
+    ts_generated_actual, _ = data_generator(
         scm=scm,
         intervention_variable=None,
         intervention_value=None,
         ts_old=last_of_ts,
-        random_seed=2**10,
-        n_samples=n_ini_obs+100,
+        random_seed=2 ** 10,
+        n_samples=n_ini_obs + 100,
         labels=labels_strs,
         noise_type='gaussian',
     )
@@ -315,7 +312,7 @@ def simulation_study_with_one_scm(sim_study_input):
         Interv might be none
         """
         # actual
-        ts_new_actual, health = data_generator(
+        ts_new_actual, _ = data_generator(
             scm=scm,
             intervention_variable=interv_var,
             intervention_value=interv_val,
@@ -326,7 +323,7 @@ def simulation_study_with_one_scm(sim_study_input):
             noise_type='gaussian',
         )
         # optimal
-        ts_new_optimal, health = data_generator(
+        ts_new_optimal, _ = data_generator(
             scm=scm,
             intervention_variable=interv_var_opti,
             intervention_value=interv_val_opti,
@@ -349,18 +346,22 @@ def simulation_study_with_one_scm(sim_study_input):
         """
         # only if it was an intervention
         regret_list, outcome_actual = compute_regret(ts_measured_actual, ts_generated_optimal,
-                                     regret_list, n_samples_per_generation)
+                                                     regret_list, n_samples_per_generation)
 
         if interv_val_opti is not None and interv_val is not None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs,  '\to.cme',format(outcome_actual, ".3f"), '\tr', format(regret_list[-1], ".3f"), '\to var',
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
+                  format(regret_list[-1], ".3f"), '\to var',
                   interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
-                  interv_var, '\ta val', format(interv_val, ".3f"), '\tind',independencies_from_interv_data, '\tdep', dependencies_from_interv_data)
+                  interv_var, '\ta val', format(interv_val, ".3f"), '\tind', independencies_from_interv_data, '\tdep',
+                  dependencies_from_interv_data)
         elif interv_val_opti is not None and interv_val is None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs,  '\to.cme',format(outcome_actual, ".3f"), '\tr', format(regret_list[-1], ".3f"), '\to var',
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
+                  format(regret_list[-1], ".3f"), '\to var',
                   interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
                   interv_var, '\ta val', interv_val)
         elif interv_val_opti is None and interv_val is not None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs,  '\to.cme',format(outcome_actual, ".3f"), '\tr', format(regret_list[-1], ".3f"), '\to var',
+            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
+                  format(regret_list[-1], ".3f"), '\to var',
                   interv_var_opti, '\to val', interv_val_opti, '\ta var',
                   interv_var, '\ta val', interv_val)
 
@@ -394,7 +395,9 @@ def run_all_experiments():
             regret_list_over_simulation_study.append(regret_list_over_scms)
 
         # save results of one parameter setting
-        with open(checkpoint_path + str(simulation_study_idx) + study_name +'_regret_list_over_simulation_study.pickle', 'wb') as f:
+        with open(
+                checkpoint_path + str(simulation_study_idx) + study_name + '_regret_list_over_simulation_study.pickle',
+                'wb') as f:
             pickle.dump([regret_list_over_simulation_study, simulation_study], f)
     print('all done')
 

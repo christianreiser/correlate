@@ -84,12 +84,12 @@ def define_settings():
     # ]]
 
     # # intervene very nth time
-    all_param_study_settings = [[
-        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 1], dtype=object),
-        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 2], dtype=object),
-        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['nth',50, 5, 2, 0.05, 0.05, 1, np.inf], dtype=object),
-    ]]
+    # all_param_study_settings = [[
+    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 1], dtype=object),
+    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 2], dtype=object),
+    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['nth',50, 5, 2, 0.05, 0.05, 1, np.inf], dtype=object),
+    # ]]
 
     # # n ini obs
     # all_param_study_settings = [[
@@ -108,11 +108,11 @@ def define_settings():
     # ]]
 
     # n observables
-    # all_param_study_settings = [[
-    #     np.array(['n_obs_vars',50, 2, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['n_obs_vars',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['n_obs_vars',50, 8, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['n_obs_vars',50, 11, 2, 0.05, 0.05, 1, 4], dtype=object),
-    # ]]
+    all_param_study_settings = [[
+        np.array(['n_obs_vars',50, 2, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars',50, 8, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars',50, 11, 2, 0.05, 0.05, 1, 4], dtype=object),
+    ]]
 
     return all_param_study_settings
