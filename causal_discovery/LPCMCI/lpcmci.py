@@ -409,7 +409,6 @@ class LPCMCI():
         # Return
         return True
 
-    # chr: alpha
     def _run_ancestral_removal_phase(self, prelim=False):
         """Run an ancestral edge removal phase, this is Algorithm S2"""
 
@@ -573,7 +572,6 @@ class LPCMCI():
                             self._update_val_min(X, Y, val)
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))
-                            # chr: pvalalpha
                             # Check whether test result was significant
                             if pval > self.pc_alpha:
                                 # Mark the edge from X to Y for removal and save sepset
@@ -612,7 +610,6 @@ class LPCMCI():
                             self._update_pval_max(X, Y, pval)
                             self._update_cardinality(X, Y, len(Z))
                             # Check whether test result was significant
-                            # chr: pvalalpha
                             if pval > self.pc_alpha:
 
                                 # Mark the edge from X to Y for removal and save sepset
@@ -721,7 +718,6 @@ class LPCMCI():
         # Return
         return True
 
-    # chr: alpha
     def _run_non_ancestral_removal_phase(self):
         """Run the non-ancestral edge removal phase, this is Algorithm S3"""
 
@@ -927,7 +923,6 @@ class LPCMCI():
                         self._update_pval_max(X, Y, pval)
                         self._update_cardinality(X, Y, len(Z))
 
-                        # chr: pvalalpha
                         # Check whether test result was significant
                         if pval > self.pc_alpha:
 
@@ -1605,7 +1600,6 @@ class LPCMCI():
         self._na_pds_t[A][B] = na_pds_t_1.union(na_pds_t_2).difference({A, B})
         return self._na_pds_t[A][B]
 
-    # chr: alpha
     def _make_sepset_weakly_minimal(self, X, Y, Z_list, ancs):
         """
         X and Y are conditionally independent given Z in Z_list However, it is not yet clear whether any of these Z are minimal separating set.
@@ -1652,7 +1646,6 @@ class LPCMCI():
                     print("MakeMin:    %s _|_ %s  |  Z_A = %s: val = %.2f / pval = % .4f" %
                           (X, Y, ' '.join([str(z) for z in list(Z_A)]), val, pval))
 
-                # chr: pvalalpha
                 # Check whether the test result was significant
                 if pval > self.pc_alpha:
                     new_sepsets.append(frozenset(Z_A))
@@ -1682,7 +1675,6 @@ class LPCMCI():
         else:
             return None
 
-    # chr: alpha
     def _B_not_in_SepSet_AC(self, A, B, C):
         """Is B in less than half of the sets in SepSets(A, C)?"""
 
@@ -1745,7 +1737,6 @@ class LPCMCI():
                           (X, Y, ' '.join([str(z) for z in Z_add]),
                            ' '.join([str(z) for z in {node for node in Z_raw if node != X and node != Y}]), val, pval))
 
-                # chr: pvalalpha
                 # Check whether test result was significant
                 if pval > self.pc_alpha:
                     all_sepsets.add(frozenset(Z))
@@ -1775,7 +1766,6 @@ class LPCMCI():
                            ' '.join([str(z) for z in {node for node in Z_raw if node != X and node != Y}]), val, pval))
 
                 # Check whether test result was significant
-                # chr: pvalalpha
                 if pval > self.pc_alpha:
                     all_sepsets.add(frozenset(Z))
 
@@ -1788,7 +1778,6 @@ class LPCMCI():
 
         return True if 2 * n_sepsets_with_B < n_sepsets else False
 
-    # chr: alpha
     def _B_in_SepSet_AC(self, A, B, C):
         """Is B in more than half of the sets in SepSets(A, C)?"""
 
@@ -1871,7 +1860,6 @@ class LPCMCI():
                                pval))
 
                     # Check whether test result was significant
-                    # chr: pvalalpha
                     if pval > self.pc_alpha:
                         all_sepsets.add(frozenset(Z))
 
@@ -1901,7 +1889,6 @@ class LPCMCI():
                                pval))
 
                     # Check whether test result was significant
-                    # chr: pvalalpha
                     if pval > self.pc_alpha:
                         all_sepsets.add(frozenset(Z))
 
@@ -2446,7 +2433,6 @@ class LPCMCI():
         # Return the output list
         return out
 
-    # chr: alpha
     def _apply_ER00a(self, only_lagged):
         """Return all orientations implied by orientation rule R0^prime a"""
 
@@ -2612,7 +2598,6 @@ class LPCMCI():
         # Return the output list
         return out
 
-    # chr: alpha
     def _apply_ER00b(self, only_lagged):
         """Return all orientations implied by orientation rule R0^prime b"""
 

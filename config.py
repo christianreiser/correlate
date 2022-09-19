@@ -65,7 +65,7 @@ tau_max = 1
 
 # sampling config dict n_ini_obs=500, n_days=500, nth=4
 n_days = 200 # todo 300
-n_scms = 50 # todo 50
+n_scms = 1000 # todo 50
 nth = 4
 n_samples_per_generation = 1
 

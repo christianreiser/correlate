@@ -232,11 +232,11 @@ def simulation_study_with_one_scm(sim_study_input):
     for day, is_intervention in enumerate(is_intervention_list):
 
         # safe all local variables file
-        filename = checkpoint_path + 'global_save1.pkl'
-        with open(filename, 'wb') as f:
-            pickle.dump([day, is_intervention, ts_generated_actual, regret_list,
-                         interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
-                         pag_edgemarks, interv_var, is_intervention_list], f)
+        # filename = checkpoint_path + 'global_save1.pkl'
+        # with open(filename, 'wb') as f:
+        #     pickle.dump([day, is_intervention, ts_generated_actual, regret_list,
+        #                  interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened,
+        #                  pag_edgemarks, interv_var, is_intervention_list], f)
         # load
         # with open(filename, 'rb') as f:
         #     day, is_intervention, ts_generated_actual, regret_list, interv_val, ts_measured_actual, ts_generated_optimal, regret_list, was_intervened, pag_edgemarks, interv_var, is_intervention_list = pickle.load(
@@ -386,7 +386,7 @@ def run_all_experiments():
 
             # repeat each parameter setting for 100 randomly sampled scms
 
-            for i_th_scm in tqdm(range(0, n_scms)):  # n people or scms
+            for i_th_scm in tqdm(range(0, n_scms)):  # n people or scms todo
                 ## run experiment ###
                 regret_list_over_scms.append(
                     simulation_study_with_one_scm((one_param_setting, i_th_scm)))
@@ -394,11 +394,12 @@ def run_all_experiments():
 
             regret_list_over_simulation_study.append(regret_list_over_scms)
 
-        # save results of one parameter setting
-        with open(
-                checkpoint_path + str(simulation_study_idx) + study_name + '_regret_list_over_simulation_study.pickle',
-                'wb') as f:
-            pickle.dump([regret_list_over_simulation_study, simulation_study], f)
+            # save results of one parameter setting
+            with open(
+                    checkpoint_path + str(simulation_study_idx) + study_name + '_regret_list_over_simulation_study.pickle',
+                    'wb') as f:
+                pickle.dump([regret_list_over_simulation_study, simulation_study], f)
+            print('saved')
     print('all done')
 
 

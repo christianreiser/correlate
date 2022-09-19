@@ -8,22 +8,22 @@ def define_settings():
     generate settings for simulation study
     """
 
-    # settings_default_and_list = {
-    #     # n obs before first intervention
-    #     'n_ini_obs': [50, [10, 50, 100]],
-    #
-    #     # n measured vars
-    #     'n_vars_measured': [5, np.arange(5, 11, 2)],
-    #
-    #     # number of additional latents
-    #     'n_latents': [2, np.arange(0, 4, 1)],
-    #
-    #     # significance threshold to keep an adjacency
-    #     'alpha': [0.5, [0.01,0.05,0.1,0.2,0.4]],
-    #
-    #     # how often in a row should the same intervention be applied?
-    #     'n_samples_per_generation': [1, np.arange(0, 5, 2)]
-    # }
+    settings_default_and_list = {
+        # n obs before first intervention
+        'n_ini_obs': [50, [10, 50, 100]],
+
+        # n measured vars
+        'n_vars_measured': [5, np.arange(5, 11, 2)],
+
+        # number of additional latents
+        'n_latents': [2, np.arange(0, 4, 1)],
+
+        # significance threshold to keep an adjacency
+        'alpha': [0.5, [0.01,0.05,0.1,0.2,0.4]],
+
+        # how often in a row should the same intervention be applied?
+        'n_samples_per_generation': [1, np.arange(0, 5, 2)]
+    }
     #
     # # settings_default_and_list = {
     # #     # n obs before first intervention
@@ -110,9 +110,16 @@ def define_settings():
     # n observables
     all_param_study_settings = [[
         np.array(['n_obs_vars',50, 2, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars',50, 4, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars',50, 6, 2, 0.05, 0.05, 1, 4], dtype=object),
         np.array(['n_obs_vars',50, 8, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 11, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars', 50, 10, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['n_obs_vars', 50, 12, 2, 0.05, 0.05, 1, 4], dtype=object),
     ]]
+
+    # default
+    # all_param_study_settings = [[
+    #     np.array(['default',50, 5, 2, 0.1, 0.1, 1, 4], dtype=object),
+    # ]]
 
     return all_param_study_settings

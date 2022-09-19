@@ -18,11 +18,14 @@ def boxplot_from_df(regret_of_setting_df, x_label, y_label, save_name):
     for i, setting in enumerate(regret_of_setting_df.columns):
         data_settings[i * n_scms:(1 + i) * n_scms] = setting * np.ones(n_scms)
 
+    if x_label == 'fraction of interventions':
+        data_settings = 1/data_settings
+
     data_all = np.hstack((data_settings.reshape(-1, 1), data_values.reshape(-1, 1)))
+
     data_all = pd.DataFrame(data_all, columns=[x_label, y_label])
 
-    ax = sns.boxplot(x=x_label, y=y_label, data=data_all)
-    # ax = sns.swarmplot(x=x_label, y=y_label, data=data_all, color=".25")
+    ax = sns.boxenplot(x=x_label, y=y_label, data=data_all)
 
     plt.tight_layout()
     # ave to file
@@ -34,17 +37,36 @@ def boxplot_from_df(regret_of_setting_df, x_label, y_label, save_name):
 
 
 def main():
-    # file_name = 'alpha_regret_list_over_simulation_study'
-    # x_label = r'$\alpha$'
-    # y_label = 'average daily regret'
-    # save_name = 'alpha2'
-    # setting_loc = 4
-
-    file_name = 'nth'
-    x_label = 'number of initial observations'
+    file_name = 'alpha_regret_list_over_simulation_study'
+    x_label = r'$\alpha$'
     y_label = 'average daily regret'
-    setting_loc = 7
-    save_name = file_name
+    save_name = 'alpha2'
+    setting_loc = 4
+
+    # file_name = 'nth'
+    # x_label = 'fraction of interventions'
+    # y_label = 'average daily regret'
+    # setting_loc = 7
+    # save_name = file_name
+    #
+    # file_name = 'latents'
+    # x_label = 'number of latents'
+    # y_label = 'average daily regret'
+    # setting_loc = 3
+    # save_name = file_name
+    #
+    # file_name = 'n_ini_obs'
+    # x_label = 'number initial observations'
+    # y_label = 'average daily regret'
+    # setting_loc = 1
+    # save_name = file_name
+    #
+    #
+    # file_name = 'n_obs_vars'
+    # x_label = 'number of observed variables'
+    # y_label = 'average daily regret'
+    # setting_loc = 2
+    # save_name = file_name
 
     # load
     # regret_list_over_simulation_study

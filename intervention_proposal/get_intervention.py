@@ -135,7 +135,7 @@ def get_all_tau_external_independencies_wrt_target(external_independencies, var_
     # external_independencies to list without lag
     external_independencies_str = []
     for external_independency in external_independencies:
-        external_independencies_str.append(list(external_independency[0:-1]))
+        external_independencies_str.append(list(external_independency[0:-1])) # todo why is that needed?
 
     # external_independencies to string labels
     for external_independency_idx in range(len(external_independencies_str)):
@@ -432,7 +432,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
     Optimal control to find the most optimistic intervention.
     """
     # don't intervene on variables that where independent of target var in interventional data for all taus,
-    # by add them to unintervenable_vars
+    # by add them to unintervenable_vars # todo: if this essential? try without it
     external_independencies_wrt_target = get_all_tau_external_independencies_wrt_target(external_independencies,
                                                                                         ts.columns)
     if len(external_independencies_wrt_target) > 0:

@@ -237,6 +237,8 @@ def generate_nonlinear_contemp_timeseries(links, T, noises=None, random_state=No
 
 
 def check_stationarity_chr(X, links):
+    if X is None:
+        return True # nonstationary = True
     if (check_stationarity(links)[0] == False or
             np.any(np.isnan(X)) or
             np.any(np.isinf(X)) or

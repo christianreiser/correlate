@@ -28,6 +28,8 @@ def nonstationary_check(scm, random_seed, labels_strs, tau_max):
                               labels=labels_strs,
                               noise_type='gaussian')
     nonstationary = mod.check_stationarity_chr(ts_check, scm)
+    if nonstationary:
+        return True, None
     # get last tau_max elements of ts_check
     last_of_ts = ts_check[-tau_max:]
     return nonstationary, last_of_ts
@@ -235,7 +237,7 @@ def data_generator(scm,
 
     # if ts contains NaNs, value error
     if np.isnan(ts).any():
-        raise ValueError("NaN in ts")
+        return None, 'NaNs in ts'
 
     # ts to pandas dataframe and set labels_strs as headers
     ts_df = pd.DataFrame(ts, columns=labels)
