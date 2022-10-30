@@ -7,7 +7,7 @@ from tigramite import plotting as tp
 
 import causal_discovery.LPCMCI.generate_data_mod as mod
 # Imports from code inside directory
-from config import noise_sigma, tau_max, contemp_fraction, verbosity_thesis
+from config import noise_sigma, tau_max, contemp_fraction, verbosity_thesis, show_plots
 
 
 def sample_nonzero_cross_dependencies(coeff, min_coeff):
@@ -127,7 +127,7 @@ def generate_stationary_scm(coeff, min_coeff, random_seed, random_state, n_measu
 
 def plot_scm(original_graph, original_vals):
     n_vars_all = len(original_graph)
-    if verbosity_thesis > 0:
+    if verbosity_thesis > 0 and show_plots:
         # ts_df = pp.DataFrame(ts)
 
         # save data to file

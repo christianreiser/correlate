@@ -185,10 +185,8 @@ class TestInterventionalDiscovery:
         measured_labels = ['0', '2', '3', '4', '5']
         # When
         indepdendencies, dependencies = interventional_discovery.get_independencies_from_interv_data(df, was_intervened,
-                                                                                                     interv_alpha,
-                                                                                                     n_ini_obs,
-                                                                                                     pag_edgemarks,
-                                                                                                     measured_labels)
+                                                                                                     interv_alpha
+                                                                                                     )
         # Then
         true_indepdendencies = [('0', '3', 1, 0.404), ('4', '3', 0, 0.817), ('4', '3', 1, 0.993), ('5', '3', 0, 0.664),
                                 ('5', '3', 1, 0.87)]

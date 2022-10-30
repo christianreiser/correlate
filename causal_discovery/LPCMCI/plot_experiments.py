@@ -25,12 +25,8 @@ import matplotlib.cm as cm
 mpl.rcParams.update(params)
 
 
-import sys, os
-import numpy as np
-import pylab
-import matplotlib.pyplot as plt
+import sys
 import pickle
-import scipy
 
 import matplotlib.pyplot as plt
 

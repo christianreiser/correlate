@@ -108,18 +108,18 @@ def define_settings():
     # ]]
 
     # n observables
-    all_param_study_settings = [[
-        np.array(['n_obs_vars',50, 2, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 4, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 6, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars',50, 8, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars', 50, 10, 2, 0.05, 0.05, 1, 4], dtype=object),
-        np.array(['n_obs_vars', 50, 12, 2, 0.05, 0.05, 1, 4], dtype=object),
-    ]]
+    # all_param_study_settings = [[
+    #     np.array(['n_obs_vars',50, 2, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars',50, 4, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars',50, 6, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars',50, 8, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars', 50, 10, 2, 0.05, 0.05, 1, 4], dtype=object),
+    #     np.array(['n_obs_vars', 50, 12, 2, 0.05, 0.05, 1, 4], dtype=object),
+    # ]]
 
     # default
-    # all_param_study_settings = [[
-    #     np.array(['default',50, 5, 2, 0.1, 0.1, 1, 4], dtype=object),
-    # ]]
+    all_param_study_settings = [[
+        np.array(['wo-interv',50, 5, 2, 0.05, 0.5, 1, 4], dtype=object),
+    ]]
 
     return all_param_study_settings

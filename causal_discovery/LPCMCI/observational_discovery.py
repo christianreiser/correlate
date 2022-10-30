@@ -7,8 +7,8 @@ from tigramite.pcmci import PCMCI
 from tigramite import plotting as tp
 import matplotlib.pyplot as plt
 from causal_discovery.LPCMCI.lpcmci import LPCMCI
-from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, remove_link_threshold, verbosity, verbosity_thesis
-
+from config import causal_discovery_on, tau_max, private_folder_path, LPCMCI_or_PCMCI, remove_link_threshold, verbosity, \
+    verbosity_thesis, show_plots
 
 # function that saves val_min, graph, and var_names to a file
 from intervention_proposal.get_intervention import plot_graph
@@ -111,25 +111,27 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
             graph = lpcmci.graph
             val_min = lpcmci.val_min_matrix
             """test if works as expected""" # todo test for dependencies
-            for exi in external_independencies:
-                exi = list(exi)
-                forward_arrow = graph[exi[1], exi[0], exi[2]]
-                assert forward_arrow == "" or forward_arrow[0] == "<"
-                # symmetric for contemporaneous links
-                if exi[2] == 0:
-                    backward_arrow = graph[exi[0], exi[1], exi[2]]
-                    assert backward_arrow == "" or backward_arrow[2] == ">"
+            if external_independencies is not None and len(external_independencies) > 0:
+                for exi in external_independencies:
+                    exi = list(exi)
+                    forward_arrow = graph[exi[1], exi[0], exi[2]]
+                    assert forward_arrow == "" or forward_arrow[0] == "<"
+                    # symmetric for contemporaneous links
+                    if exi[2] == 0:
+                        backward_arrow = graph[exi[0], exi[1], exi[2]]
+                        assert backward_arrow == "" or backward_arrow[2] == ">"
 
-            for exi in external_dependencies:
-                exi = list(exi)
-                forward_arrow = graph[exi[1], exi[0], exi[2]]
-                assert forward_arrow == "" or forward_arrow[0] == "-"
-                assert forward_arrow == "" or forward_arrow[2] == ">"
-                # symmetric for contemporaneous links
-                if exi[2] == 0:
-                    backward_arrow = graph[exi[0], exi[1], exi[2]]
-                    assert backward_arrow == "" or backward_arrow[2] == "-"
-                    assert backward_arrow == "" or backward_arrow[0] == "<"
+            if external_dependencies is not None and len(external_dependencies) > 0:
+                for exi in external_dependencies:
+                    exi = list(exi)
+                    forward_arrow = graph[exi[1], exi[0], exi[2]]
+                    assert forward_arrow == "" or forward_arrow[0] == "-"
+                    assert forward_arrow == "" or forward_arrow[2] == ">"
+                    # symmetric for contemporaneous links
+                    if exi[2] == 0:
+                        backward_arrow = graph[exi[0], exi[1], exi[2]]
+                        assert backward_arrow == "" or backward_arrow[2] == "-"
+                        assert backward_arrow == "" or backward_arrow[0] == "<"
 
 
 
@@ -152,7 +154,7 @@ def observational_causal_discovery(df, was_intervened, external_independencies, 
         val_min[graph == ""] = 0
 
         # plot predicted PAG
-        if verbosity_thesis > 0:
+        if verbosity_thesis > 0 and show_plots == True:
             tp.plot_graph(
                 val_matrix=val_min,
                 link_matrix=graph,

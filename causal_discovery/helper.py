@@ -1,6 +1,5 @@
 import numpy as np
-import scipy.optimize
-from matplotlib import pyplot as plt
+
 
 def parabola(x, a, b, c):
     x = np.array(x)

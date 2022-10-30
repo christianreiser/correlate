@@ -7,7 +7,7 @@ from tqdm import tqdm
 from causal_discovery.LPCMCI.observational_discovery import observational_causal_discovery
 from causal_discovery.gen_configs import define_settings
 from causal_discovery.interventional_discovery import get_independencies_from_interv_data
-from config import target_label, coeff, min_coeff, n_days, checkpoint_path, n_scms
+from config import target_label, coeff, min_coeff, n_days, checkpoint_path, n_scms, overwrite_scm
 from data_generation import data_generator, generate_stationary_scm, measure
 from intervention_proposal.get_intervention import find_optimistic_intervention
 from regret import compute_regret, cost_function
@@ -138,7 +138,7 @@ def obs_or_intervene(nth):
 def store_interv(was_intervened, intervention_variable, n_samples_per_generation, n_vars_measured):
     """
     add data to boolean array of measured variables indicating if they were intervened upon
-    input: requires that intervention_variable is a string of the form 'char char int' e.g. 'u_0'
+    input: requires that intervention_variable is a string of the form 'char int' e.g. 'u_0'
     """
 
     new_series = pd.Series(np.zeros(n_vars_measured, dtype=bool), index=was_intervened.columns)
@@ -193,6 +193,29 @@ def simulation_study_with_one_scm(sim_study_input):
                                                                                  n_vars_all,
                                                                                  labels_strs)
 
+    if overwrite_scm:
+        def lin_f(x):
+            return x
+        scm = {
+            0: [((0, -1), 0.5, lin_f), ((1, 0), 0.5, lin_f)],
+            1: [((1, -1), 0.5, lin_f)],
+            2: [((2, -1), 0.5, lin_f), ((0, 0), 0.5, lin_f)]}
+        n_latents = 0
+        n_vars_all = 3
+        n_vars_measured = 3
+        n_measured_links = 3
+        edgemarks_true = np.array([[['', '-->'], ['<--', ''], ['-->', '']],
+                                  [['-->', ''], ['', '-->'], ['', '']],
+                                  [['<--', ''], ['', ''], ['', '-->']]])
+
+        effect_sizes_true = np.array([[[0, .5], [.5, 0], [1.0, 0]],
+                                  [[.5,0 ], [0, .5], [0,0 ]],
+                                  [[2.0,0 ], [0, 0], [0, .5]]])
+        labels_strs = ['0', '1', '2']
+        last_of_ts = pd.DataFrame([[4, 1, -1]], columns=['0', '1', '2'])
+
+
+
     # variable randomly decide which variables are measured vs latent
     measured_labels, measured_label_as_idx, unmeasured_labels_strs, unintervenable_vars = get_measured_labels(
         n_vars_all, random_state, n_latents, scm)
@@ -204,7 +227,7 @@ def simulation_study_with_one_scm(sim_study_input):
     regret_list = []
 
     # ini
-    interv_var, interv_val, pag_edgemarks, independencies_from_interv_data = None, None, None, None
+    interv_var, interv_val, pag_edgemarks, independencies_from_interv_data, dependencies_from_interv_data, eps = None, None, None, None, None, 0.5
 
     # schedule when to intervene
     is_intervention_list = obs_or_intervene(nth)  # 500 obs + 500 with every 4th intervention
@@ -252,14 +275,11 @@ def simulation_study_with_one_scm(sim_study_input):
             causal discovery
             """
             # interventional discovery
-            independencies_from_interv_data, dependencies_from_interv_data = get_independencies_from_interv_data(
-                ts_measured_actual.copy(),
-                was_intervened,
-                interv_alpha,
-                n_ini_obs,
-                pag_edgemarks,
-                measured_labels,
-            )
+            # independencies_from_interv_data, dependencies_from_interv_data = get_independencies_from_interv_data(
+            #     ts_measured_actual.copy(),
+            #     was_intervened,
+            #     pc_alpha
+            # )
 
             # observational discovery
             pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
@@ -284,28 +304,31 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed_day=day,
                 label='actual_data',
                 external_independencies=independencies_from_interv_data,
-                external_dependencies=dependencies_from_interv_data,
+                eps=eps*0.99,
+            )
+
+            # from true SCM
+            interv_var_opti, interv_val_opti = find_optimistic_intervention(
+                edgemarks_true.copy(),
+                effect_sizes_true.copy(),
+                ts=pd.DataFrame(ts_generated_actual, columns=labels_strs),
+                # needed for 1. percentile from mu, std 2. simulation start 3. labels
+                unintervenable_vars=unintervenable_vars,
+                random_seed_day=day,
+                label='true_scm',
+                external_independencies=None,
+                eps=None,
             )
 
         # if no intervention is scheduled
         else:
             interv_var, interv_val = None, None
+            interv_var_opti, interv_val_opti = None, None
 
         # keep track of if and where in the ts the intervention is
         was_intervened = store_interv(was_intervened, interv_var, n_samples_per_generation, n_vars_measured)
 
-        # from true SCM
-        interv_var_opti, interv_val_opti = find_optimistic_intervention(
-            edgemarks_true.copy(),
-            effect_sizes_true.copy(),
-            ts=pd.DataFrame(ts_generated_actual, columns=labels_strs),
-            # needed for 1. percentile from mu, std 2. simulation start 3. labels
-            unintervenable_vars=unintervenable_vars,
-            random_seed_day=day,
-            label='true_scm',
-            external_independencies=None,
-            external_dependencies=None,
-        )
+
 
         """
         intervene as proposed and generate new data.
@@ -345,25 +368,26 @@ def simulation_study_with_one_scm(sim_study_input):
         regret
         """
         # only if it was an intervention
-        regret_list, outcome_actual = compute_regret(ts_measured_actual, ts_generated_optimal,
-                                                     regret_list, n_samples_per_generation)
+        if is_intervention and interv_var is not None:
+            regret_list, outcome_actual = compute_regret(ts_measured_actual, ts_generated_optimal,
+                                                         regret_list, n_samples_per_generation)
 
-        if interv_val_opti is not None and interv_val is not None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
-                  format(regret_list[-1], ".3f"), '\to var',
-                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
-                  interv_var, '\ta val', format(interv_val, ".3f"), '\tind', independencies_from_interv_data, '\tdep',
-                  dependencies_from_interv_data)
-        elif interv_val_opti is not None and interv_val is None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
-                  format(regret_list[-1], ".3f"), '\to var',
-                  interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
-                  interv_var, '\ta val', interv_val)
-        elif interv_val_opti is None and interv_val is not None:
-            print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
-                  format(regret_list[-1], ".3f"), '\to var',
-                  interv_var_opti, '\to val', interv_val_opti, '\ta var',
-                  interv_var, '\ta val', interv_val)
+            if interv_val_opti is not None and interv_val is not None:
+                print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
+                      format(regret_list[-1], ".3f"), '\to var',
+                      interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
+                      interv_var, '\ta val', format(interv_val, ".3f"), '\tind', independencies_from_interv_data, '\tdep',
+                      dependencies_from_interv_data)
+            elif interv_val_opti is not None and interv_val is None:
+                print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
+                      format(regret_list[-1], ".3f"), '\to var',
+                      interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
+                      interv_var, '\ta val', interv_val)
+            elif interv_val_opti is None and interv_val is not None:
+                print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
+                      format(regret_list[-1], ".3f"), '\to var',
+                      interv_var_opti, '\to val', interv_val_opti, '\ta var',
+                      interv_var, '\ta val', interv_val)
 
     regret_sum = sum(regret_list)
     cost = cost_function(regret_list, was_intervened, n_ini_obs)
@@ -386,7 +410,7 @@ def run_all_experiments():
 
             # repeat each parameter setting for 100 randomly sampled scms
 
-            for i_th_scm in tqdm(range(0, n_scms)):  # n people or scms todo
+            for i_th_scm in tqdm(range(37, n_scms)):  # n people or scms todo 0, n_scms
                 ## run experiment ###
                 regret_list_over_scms.append(
                     simulation_study_with_one_scm((one_param_setting, i_th_scm)))

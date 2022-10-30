@@ -196,22 +196,22 @@ def remove_weaker_links_of_contempt_cycles(dependencies_from_interv_data):
 
 def get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau):
     """
-    inout:
+    input:
     d: dataframe with cause and effect
     w: was intervened df
     cause: cause variable
     eff: effect variable
     tau: time delay
     """
-    # return empty df if eff == cause and tau == 0
+    # ignore contemporaneous auto dependencies: return empty df if eff == cause and tau == 0
     if (eff == cause and tau == 0) or (w[cause]==False).all():
         return pd.DataFrame([], columns=[cause, eff+'_'+str(tau)])
 
     # get indices where w[cause] == True
-    cause_dates = d.loc[:, cause].copy().loc[w[cause]].index
+    interv_cause_dates = d.loc[:, cause].copy().loc[w[cause]].index
 
     cause_eff_df = []
-    for date in cause_dates:
+    for date in interv_cause_dates:
         # pass effect val is interv value. if w at column eff and index date + tau is true
         if date + tau > d.index[-1]:
             continue
@@ -228,7 +228,7 @@ def get_interv_tau_aligned_cause_eff_df(d, w, cause, eff, tau):
 
 
 
-def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_obs, pag_edgemarks, measured_labels):
+def get_independencies_from_interv_data(df, was_intervened, pc_alpha):
     """
     orient links with interventional data.
     test conditional independence for each var to each other var for all taus.
@@ -306,7 +306,7 @@ def get_independencies_from_interv_data(df, was_intervened, interv_alpha, n_ini_
                 r, p_val = pearsonr(interv_tau_aligned_cause_eff_df[cause],
                                                       interv_tau_aligned_cause_eff_df[effect+'_'+str(tau)])
                 # if significantly independent:
-                if p_val > 0.95: #interv_alpha:
+                if p_val > 1-pc_alpha: #interv_alpha:
 
                     # save independency information # (effect == '4' and tau == 0) or (effect == '2' and tau == 1) or (effect == '0' and tau == 0) or (effect == '3' and tau == 1)
                     independencies_from_interv_data.append((effect, cause, tau, p_val.round(4)))

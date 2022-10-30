@@ -1,5 +1,5 @@
 numpy==1.21.5
-scipy==1.8.1
+scipy==1.9.2
 scikit-learn==1.1.1
 networkx==2.8.5
 tigramite~=4.2.2.1

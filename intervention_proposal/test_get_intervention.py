@@ -109,7 +109,7 @@ class TestGetIntervention:
         # When
         ans = find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed,
                                            label, external_independencies=external_independencies,
-                                           external_dependencies=[])
+                                           eps=None)
         # Then
         solution = ('3', -2.1165126341215634)
         assert ans == solution

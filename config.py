@@ -3,9 +3,9 @@ config parameters
 """
 
 verbosity = 0
-verbosity_thesis = 0 # 1 regret, 2
+verbosity_thesis = 990 # 1 regret, 2
 
-# paths
+# path
 private_folder_path = '/home/chrei/code/quantifiedSelfData/'
 checkpoint_path = '/home/chrei/PycharmProjects/correlate/checkpoints/'
 plots_path = '/home/chrei/PycharmProjects/correlate/plots/thesis_plots/'
@@ -14,7 +14,7 @@ plots_path = '/home/chrei/PycharmProjects/correlate/plots/thesis_plots/'
 target_label = '0'  # 'Mood'  # label of interest # must be a string
 
 # plots
-show_plots = False  # corr matrix
+show_plots = True  # corr matrix
 histograms_on = False
 
 # autocorrelation
@@ -52,6 +52,7 @@ LPCMCI_or_PCMCI = True  # True for LPCMCI, False for PCMCI
 remove_link_threshold = 0.01
 
 # scm_config
+overwrite_scm = False
 # n_vars_measured = 6
 contemp_fraction = 0.6
 coeff = 0.5
@@ -64,13 +65,13 @@ tau_max = 1
 
 
 # sampling config dict n_ini_obs=500, n_days=500, nth=4
-n_days = 200 # todo 300
-n_scms = 1000 # todo 50
-nth = 4
+n_days = 200 #
+n_scms = 100 #
+# nth = 4
 n_samples_per_generation = 1
 
 # action simulation
-n_samples_simulation = 50
+n_samples_simulation = 100
 
 percentile = 95 # for actual, optimal and simulated intervention
 

@@ -6,7 +6,7 @@ from scipy.stats import norm
 from tigramite import plotting as tp
 from tqdm import tqdm
 
-from config import private_folder_path
+from config import private_folder_path, show_plots
 import numpy as np
 import pandas as pd
 
@@ -415,7 +415,7 @@ def compute_coeffs(multiprocessing_input):
 
         elif health == 'cyclic contemporaneous scm':
             mygraph_without_lagged = drop_edges_for_cycle_detection(my_graph)
-            if verbosity_thesis > 1:
+            if verbosity_thesis > 1 and show_plots:
                 print('cyclic contemporaneous scm detected for graph: ' + str(mygraph_without_lagged))
                 plot_graph(val, mygraph_without_lagged, ts.columns, 'contemp graph for cycle detection',
                            make_redundant=True)
@@ -426,7 +426,7 @@ def compute_coeffs(multiprocessing_input):
 
 
 def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_seed_day,
-                                 label, external_independencies, external_dependencies
+                                 label, external_independencies, eps
                                  ):
     """
     Optimal control to find the most optimistic intervention.
@@ -472,12 +472,12 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
         multiprocessing_inputs.append([graph_combinations[graph_idx], graph_idx, val, ts, unintervenable_vars, intervention_value_low, my_graph, random_seed_day, n_half_samples, intervention_value_high])
 
 
-    with Pool() as pool:
-        results = pool.map(compute_coeffs, multiprocessing_inputs)#, position=0, leave=True, delay=0)
+    # with Pool() as pool:
+    #     results = pool.map(compute_coeffs, multiprocessing_inputs)#, position=0, leave=True, delay=0)
 
-    # results = []
-    # for input_m in multiprocessing_inputs:
-    #     results.append(compute_coeffs(input_m))
+    results = []
+    for input_m in multiprocessing_inputs:
+        results.append(compute_coeffs(input_m))
 
 
     # for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True, delay=10)):
@@ -494,65 +494,57 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
             best_intervention_var_name = interv_var
             most_optimistic_graph = unique_graph
 
-    # from true SCM
-    if label == 'true_scm':
-        if most_extreme_coeff > 0:
-            intervention_value = intervention_value_high[best_intervention_var_name]
-        else:
-            intervention_value = intervention_value_low[best_intervention_var_name]
-    # from measured data
-    elif label == 'actual_data':
-        # no intervention found
+
+
+    # no intervention found
+    if best_intervention_var_name is None:
+        assert label == 'actual_data'
+        # ignoring directions
+        print('no intervention found. trying again ignoring scm directions')
+        most_extreme_coeff, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
+                                                                                                    target_label,
+                                                                                                    labels_as_str=ts.columns,
+                                                                                                    external_independencies_wrt_target=external_independencies_wrt_target,
+                                                                                                    ignore_external_independencies=False)
+        # still no intervention found: ignore external independencies
         if best_intervention_var_name is None:
-            # ignoring directions
-            print('no intervention found. trying again ignoring scm directions')
+            print('again no intervention found. now also ignore_external_independencies')
+
             most_extreme_coeff, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
                                                                                                         target_label,
                                                                                                         labels_as_str=ts.columns,
                                                                                                         external_independencies_wrt_target=external_independencies_wrt_target,
-                                                                                                        ignore_external_independencies=False)
-            # still no intervention found: ignore external independencies
-            if (most_extreme_coeff, best_intervention_var_name) == (None, None):
-                print('again no intervention found. now also ignore_external_independencies')
+                                                                                                        ignore_external_independencies=True)
 
-                most_extreme_coeff, best_intervention_var_name = get_intervention_ignoring_directionalities(val.copy(),
-                                                                                                            target_label,
-                                                                                                            labels_as_str=ts.columns,
-                                                                                                            external_independencies_wrt_target=external_independencies_wrt_target,
-                                                                                                            ignore_external_independencies=True)
-
-        # still no intervention found:
+        # cant find intervention:
         if best_intervention_var_name is None:
-            best_intervention_var_name, intervention_value = None, None
+            return None, None
 
-        # intervention found
-        else:
-            # plot most optimistic graph
-            if verbosity_thesis > 1:
-                plot_graph(val, most_optimistic_graph, ts.columns, 'most optimistic', make_redundant=True)
+    # intervention found
+    # plot most optimistic graph
+    if verbosity_thesis > 1 and show_plots:
+        plot_graph(val, most_optimistic_graph, ts.columns, label+': most optimistic', make_redundant=True)
 
-            # get intervention value
-            this_choice = np.random.RandomState(random_seed_day).choice([True, False])
-            # print('median intervention = ', this_choice, 'extreme =', not this_choice)
-            if most_extreme_coeff > 0:
-                if this_choice:
-                    intervention_value = intervention_value_high_mid[best_intervention_var_name]
-                elif not this_choice:
-                    intervention_value = intervention_value_high[best_intervention_var_name]
-                else:
-                    raise ValueError('most_extreme_coeff must be 1 or 0')
-            elif most_extreme_coeff < 0:
-                if this_choice:
-                    intervention_value = intervention_value_low_mid[best_intervention_var_name]
-                elif not this_choice:
-                    intervention_value = intervention_value_low[best_intervention_var_name]
-                else:
-                    raise ValueError('most_extreme_coeff must be 1 or 0')
-            else:
-                raise ValueError('most extreme value is 0')
-
+    if label == 'actual_data':
+        # get intervention value
+        # take_alternative = np.random.RandomState(random_seed_day).choice([True, False])
+        take_alternative = bool(np.random.binomial(1, 1-eps, 1))
+        print('take_alternative: check that not const', take_alternative)
+    elif label == 'true_scm':
+        take_alternative = False
     else:
         raise ValueError('label must be either true_scm or actual_data')
+
+    # print('median intervention = ', take_alternative, 'extreme =', not take_alternative)
+    if take_alternative:
+        intervention_value = intervention_value_high_mid[best_intervention_var_name]
+    else: # take opt
+        if most_extreme_coeff > 0:
+            intervention_value = intervention_value_high[best_intervention_var_name]
+        elif most_extreme_coeff < 0:
+            intervention_value = intervention_value_low[best_intervention_var_name]
+        else:
+            raise ValueError('most_extreme_coeff is 0')
 
     return best_intervention_var_name, intervention_value
 
