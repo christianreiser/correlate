@@ -12,7 +12,7 @@ def get_last_outcome(ts_measured_actual, n_samples_per_generation):
     return outcome_last
 
 
-def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samples_per_generation):
+def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samples_per_generation, interv_var_optil, interv_var, interv_var_correct_list):
     outcome_actual = get_last_outcome(ts_measured_actual, n_samples_per_generation)
     outcome_optimal = get_last_outcome(ts_generated_optimal, n_samples_per_generation)
     new_regret = sum(outcome_optimal - outcome_actual)
@@ -26,7 +26,13 @@ def compute_regret(ts_measured_actual, ts_generated_optimal, regret_list, n_samp
     #           '\nintervention_variable:', interv_var)
     #     ValueError("Regret is negative! See prints above")
     regret_list = np.append(regret_list, new_regret)
-    return regret_list, outcome_actual[0]
+
+    # if interv_var_opti == interv_var then add 1 to ts_interv_var_correct else add 0
+    if interv_var_optil == interv_var:
+        interv_var_correct_list = np.append(interv_var_correct_list, 1)
+    else:
+        interv_var_correct_list = np.append(interv_var_correct_list, 0)
+    return regret_list, outcome_actual[0], interv_var_correct_list
 
 
 def test_compute_regret():

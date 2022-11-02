@@ -1,3 +1,4 @@
+import math
 import pickle
 
 import numpy as np
@@ -8,15 +9,16 @@ from matplotlib import pyplot as plt
 from config import checkpoint_path, n_scms, plots_path
 
 
+
 def boxplot_from_df(regret_of_setting_df, x_label, y_label, save_name):
     n_settings = regret_of_setting_df.shape[1]
     data_values = np.zeros((n_settings * n_scms))
     for column_idx, column in enumerate(regret_of_setting_df.columns):
         data_values[column_idx * n_scms:(1 + column_idx) * n_scms] = regret_of_setting_df[column]
 
-    data_settings = np.zeros((n_settings * n_scms))
+    data_settings = np.zeros((n_settings * n_scms), dtype=object)
     for i, setting in enumerate(regret_of_setting_df.columns):
-        data_settings[i * n_scms:(1 + i) * n_scms] = setting * np.ones(n_scms)
+        data_settings[i * n_scms:(1 + i) * n_scms] = [setting for i in range(n_scms)] # setting * np.ones(n_scms)
 
     if x_label == 'fraction of interventions':
         data_settings = 1/data_settings
@@ -39,10 +41,10 @@ def boxplot_from_df(regret_of_setting_df, x_label, y_label, save_name):
 
 def get_regret_of_setting_df(file_name):
     # file_name = 'wo-causality'
-    x_label = r'$\withIntervDiscov'
-    y_label = 'average daily regret'
+    x_label = 'Regret'
+    y_label = 'average regret per timestep'
     save_name = file_name
-    setting_loc = 4
+    setting_loc = 1
 
     # file_name = 'nth'
     # x_label = 'fraction of interventions'
@@ -70,8 +72,8 @@ def get_regret_of_setting_df(file_name):
     # save_name = file_name
 
     # load
-    # regret_list_over_simulation_study
-    with open(checkpoint_path + str(0) + file_name + '_regret_list_over_simulation_study.pickle', 'rb') as f:
+    # regret_list_over_simulation_study 'archive2/' +
+    with open(checkpoint_path+ str(0) + file_name + '_regret_list_over_simulation_study.pickle', 'rb') as f:
         regret_list_over_simulation_studies, simulation_studies = pickle.load(f)
 
     # for regret_loss, setting in zip(regret_list_over_simulation_studies, simulation_studies):
@@ -92,17 +94,23 @@ def get_regret_of_setting_df(file_name):
     regret_of_setting_df = []
     regret_of_setting_95ile = []
     cost_of_setting = []
+    correct_interv_vars_mean_setting = []
+
     for simulation_study, regret_list_over_simulation_studies in zip(simulation_studies,
                                                                      regret_list_over_simulation_studies):
         settings.append(simulation_study[setting_loc])
         regret_over_scm = np.zeros(n_scms)
         cost_over_scm = np.zeros(n_scms)
+        n_correct_interv_vars_mean = np.zeros(n_scms)
         for scm_i in range(n_scms):
             regret_over_scm[scm_i] = np.mean(regret_list_over_simulation_studies[scm_i][0])
             cost_over_scm[scm_i] = regret_list_over_simulation_studies[scm_i][1]
+            n_correct_interv_vars_mean[scm_i] = np.mean(regret_list_over_simulation_studies[scm_i][2])
         regret_of_setting_df.append(regret_over_scm)
         # regret_of_setting_95ile.append(np.percentile(a=regret_over_scm, q=95))
         cost_of_setting.append(cost_over_scm)
+        correct_interv_vars_mean_setting.append(n_correct_interv_vars_mean)
+
     regret_of_setting_df = pd.DataFrame(np.array(regret_of_setting_df).T, columns=settings)
 
     # plot regret_list_over_simulation_studies[0][0] as timeline
@@ -122,6 +130,8 @@ def get_regret_of_setting_df(file_name):
 
     # get mean of each column in regret_of_setting_df
     print('mean_regret_of_setting_df:', regret_of_setting_df.mean(axis=0))
+    print('mean_cost_of_setting:', np.mean(cost_of_setting, axis=1))
+    print('mean_correct_interv_vars_mean:', np.mean(correct_interv_vars_mean_setting, axis=1))
 
     boxplot_from_df(
         regret_of_setting_df,
@@ -129,40 +139,55 @@ def get_regret_of_setting_df(file_name):
         y_label=y_label,
         save_name=save_name
     )
-    return regret_of_setting_df, regret_list_over_simulation_studies
+    return regret_of_setting_df, regret_list_over_simulation_studies, correct_interv_vars_mean_setting
 
 
-regret_of_setting_df_1, regret_list_over_simulation_studies_1 = get_regret_of_setting_df('wo-causality')
-regret_of_setting_df_2, regret_list_over_simulation_studies_2 = get_regret_of_setting_df('wo-interv')
-regret_of_setting_df_3, regret_list_over_simulation_studies_3 = get_regret_of_setting_df('w-interv')
+regret_of_setting_df_1, regret_list_over_simulation_studies_1, correct_interv_vars_mean_setting_1 = get_regret_of_setting_df('default3')
+regret_of_setting_df_2, regret_list_over_simulation_studies_2, correct_interv_vars_mean_setting_2 = get_regret_of_setting_df('no-interv-discov1')
 
+# get all indices where correct_interv_vars_mean_setting_1 > correct_interv_vars_mean_setting_2
+indices = np.where(correct_interv_vars_mean_setting_1[0] < correct_interv_vars_mean_setting_2[0])
+print('indices:', indices)
+
+# add regret_of_setting_df_2 to regret_of_setting_df_1 as new column with name 'no-interv-discov'
+regret_of_setting_df_1['without interventional discovery'] = regret_of_setting_df_2.mean(axis=1)
+# rename first column '50' to 'with interventional discovery'
+regret_of_setting_df_1.rename(columns={50: 'default'}, inplace=True)
+boxplot_from_df(
+    regret_of_setting_df_1,
+    x_label = 'extended LPCMCI vs original LPCMCI ',
+    y_label = 'average regret per timestep',
+    save_name='w-wo-interv-discov'
+)
+# # regret_of_setting_df_3, regret_list_over_simulation_studies_3 = get_regret_of_setting_df('w-interv')
+#
 diff_1_2 = regret_of_setting_df_1 - regret_of_setting_df_2
-diff_2_3 = regret_of_setting_df_2 - regret_of_setting_df_3
-
-
-
-# elementwise addition of diff_1_2 and diff_2_3
-diff_1_2_3 = diff_1_2 + diff_2_3
-
-# argmax of diff_2_3
+# diff_2_3 = regret_of_setting_df_2 - regret_of_setting_df_3
+#
+#
+#
+# # elementwise addition of diff_1_2 and diff_2_3
+# diff_1_2_3 = diff_1_2 + diff_2_3
+#
+# # argmax of diff_2_3
 print('argmax of diff_1_2:', np.array(diff_1_2).argmax())
-print('argmax of diff_2_3:', np.array(diff_2_3).argmax())
-print('argmax of diff_1_2_3:', np.array(diff_1_2_3).argmax())
-
-
-def cumulator(input_list):
-    return np.cumsum(input_list)
-
-
-cum_1 = cumulator(regret_list_over_simulation_studies_1[37][0])
-cum_2 = cumulator(regret_list_over_simulation_studies_2[37][0])
-cum_3 = cumulator(regret_list_over_simulation_studies_3[37][0])
-
-# plot regret_of_setting_df_1[0], regret_of_setting_df_2[0], regret_of_setting_df_3[0]
-plt.plot(cum_1, label='wo-causality')
-plt.plot(cum_2, label='wo-interv')
-plt.plot(cum_3, label='w-interv')
-plt.legend()
-
-plt.show()
-pass
+# print('argmax of diff_2_3:', np.array(diff_2_3).argmax())
+# print('argmax of diff_1_2_3:', np.array(diff_1_2_3).argmax())
+#
+#
+# def cumulator(input_list):
+#     return np.cumsum(input_list)
+#
+#
+# cum_1 = cumulator(regret_list_over_simulation_studies_1[37][0])
+# cum_2 = cumulator(regret_list_over_simulation_studies_2[37][0])
+# cum_3 = cumulator(regret_list_over_simulation_studies_3[37][0])
+#
+# # plot regret_of_setting_df_1[0], regret_of_setting_df_2[0], regret_of_setting_df_3[0]
+# plt.plot(cum_1, label='default')
+# plt.plot(cum_2, label='no-interv-discov')
+# # plt.plot(cum_3, label='w-interv')
+# plt.legend()
+#
+# plt.show()
+# pass

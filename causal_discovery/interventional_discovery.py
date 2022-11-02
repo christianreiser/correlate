@@ -3,7 +3,7 @@ import pandas as pd
 import pingouin as pg
 from scipy.stats import pearsonr
 
-from config import verbosity_thesis, tau_max, target_label
+from config import verbosity_thesis, tau_max, target_label, interventional_discovery_on
 from data_generation import labels_to_ints
 
 
@@ -234,6 +234,9 @@ def get_independencies_from_interv_data(df, was_intervened, pc_alpha):
     test conditional independence for each var to each other var for all taus.
     output: (effect, cause or intervened, tau, p-val)
     """
+    if interventional_discovery_on == False:
+        return [], []
+
     independencies_from_interv_data = []
     dependencies_from_interv_data = []
     # iterate over all taus
@@ -320,7 +323,7 @@ def get_independencies_from_interv_data(df, was_intervened, pc_alpha):
                                   " -X> target with lag", tau, "\t, p-value=",
                                   p_val)
                 # if significantly dependent:
-                elif p_val < 0.2:#(1-interv_alpha)*3:
+                elif p_val < pc_alpha:#(1-interv_alpha)*3:
                     dependencies_from_interv_data.append((effect, cause, tau, p_val.round(4)))
 
     # if contemporaneus cycle in dependencies_from_interv_data, remove link with weaker p-value

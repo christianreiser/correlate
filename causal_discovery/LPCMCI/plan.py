@@ -196,6 +196,7 @@ def simulation_study_with_one_scm(sim_study_input):
     if overwrite_scm:
         def lin_f(x):
             return x
+
         scm = {
             0: [((0, -1), 0.5, lin_f), ((1, 0), 0.5, lin_f)],
             1: [((1, -1), 0.5, lin_f)],
@@ -205,16 +206,14 @@ def simulation_study_with_one_scm(sim_study_input):
         n_vars_measured = 3
         n_measured_links = 3
         edgemarks_true = np.array([[['', '-->'], ['<--', ''], ['-->', '']],
-                                  [['-->', ''], ['', '-->'], ['', '']],
-                                  [['<--', ''], ['', ''], ['', '-->']]])
+                                   [['-->', ''], ['', '-->'], ['', '']],
+                                   [['<--', ''], ['', ''], ['', '-->']]])
 
         effect_sizes_true = np.array([[[0, .5], [.5, 0], [1.0, 0]],
-                                  [[.5,0 ], [0, .5], [0,0 ]],
-                                  [[2.0,0 ], [0, 0], [0, .5]]])
+                                      [[.5, 0], [0, .5], [0, 0]],
+                                      [[2.0, 0], [0, 0], [0, .5]]])
         labels_strs = ['0', '1', '2']
         last_of_ts = pd.DataFrame([[4, 1, -1]], columns=['0', '1', '2'])
-
-
 
     # variable randomly decide which variables are measured vs latent
     measured_labels, measured_label_as_idx, unmeasured_labels_strs, unintervenable_vars = get_measured_labels(
@@ -227,7 +226,7 @@ def simulation_study_with_one_scm(sim_study_input):
     regret_list = []
 
     # ini
-    interv_var, interv_val, pag_edgemarks, independencies_from_interv_data, dependencies_from_interv_data, eps = None, None, None, None, None, 0.5
+    pag_edgemarks, independencies_from_interv_data, dependencies_from_interv_data, eps = None, None, None, 0.5
 
     # schedule when to intervene
     is_intervention_list = obs_or_intervene(nth)  # 500 obs + 500 with every 4th intervention
@@ -246,6 +245,7 @@ def simulation_study_with_one_scm(sim_study_input):
     )
     ts_generated_actual = ts_generated_actual[-n_ini_obs:]
     ts_generated_optimal = ts_generated_actual
+    interv_var_correct_list = []
 
     # measure new data (hide latents)
     ts_measured_actual = measure(ts_generated_actual, obs_vars=measured_labels)
@@ -275,18 +275,18 @@ def simulation_study_with_one_scm(sim_study_input):
             causal discovery
             """
             # interventional discovery
-            # independencies_from_interv_data, dependencies_from_interv_data = get_independencies_from_interv_data(
-            #     ts_measured_actual.copy(),
-            #     was_intervened,
-            #     pc_alpha
-            # )
+            independencies_from_interv_data, dependencies_from_interv_data = get_independencies_from_interv_data(
+                ts_measured_actual.copy(),
+                was_intervened,
+                pc_alpha
+            )
 
             # observational discovery
             pag_effect_sizes, pag_edgemarks = observational_causal_discovery(
                 df=ts_measured_actual.copy(),
                 was_intervened=was_intervened.copy(),
-                external_independencies=independencies_from_interv_data,
-                external_dependencies=dependencies_from_interv_data,
+                external_independencies=independencies_from_interv_data.copy(),
+                external_dependencies=dependencies_from_interv_data.copy(),
                 measured_label_to_idx=measured_label_as_idx,
                 pc_alpha=pc_alpha,
             )
@@ -304,7 +304,7 @@ def simulation_study_with_one_scm(sim_study_input):
                 random_seed_day=day,
                 label='actual_data',
                 external_independencies=independencies_from_interv_data,
-                eps=eps*0.99,
+                eps=eps * 0.99,
             )
 
             # from true SCM
@@ -327,8 +327,6 @@ def simulation_study_with_one_scm(sim_study_input):
 
         # keep track of if and where in the ts the intervention is
         was_intervened = store_interv(was_intervened, interv_var, n_samples_per_generation, n_vars_measured)
-
-
 
         """
         intervene as proposed and generate new data.
@@ -369,14 +367,20 @@ def simulation_study_with_one_scm(sim_study_input):
         """
         # only if it was an intervention
         if is_intervention and interv_var is not None:
-            regret_list, outcome_actual = compute_regret(ts_measured_actual, ts_generated_optimal,
-                                                         regret_list, n_samples_per_generation)
+            regret_list, outcome_actual, interv_var_correct_list = compute_regret(ts_measured_actual,
+                                                                                  ts_generated_optimal,
+                                                                                  regret_list,
+                                                                                  n_samples_per_generation,
+                                                                                  interv_var_opti,
+                                                                                  interv_var,
+                                                                                  interv_var_correct_list)
 
             if interv_val_opti is not None and interv_val is not None:
                 print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
                       format(regret_list[-1], ".3f"), '\to var',
                       interv_var_opti, '\to val', format(interv_val_opti, ".3f"), '\ta var',
-                      interv_var, '\ta val', format(interv_val, ".3f"), '\tind', independencies_from_interv_data, '\tdep',
+                      interv_var, '\ta val', format(interv_val, ".3f"), '\tind', independencies_from_interv_data,
+                      '\tdep',
                       dependencies_from_interv_data)
             elif interv_val_opti is not None and interv_val is None:
                 print('rdms:', random_seed, '\tday:', day + n_ini_obs, '\to.cme', format(outcome_actual, ".3f"), '\tr',
@@ -391,8 +395,9 @@ def simulation_study_with_one_scm(sim_study_input):
 
     regret_sum = sum(regret_list)
     cost = cost_function(regret_list, was_intervened, n_ini_obs)
-    print('regret_sum:', regret_sum, '\n\n')
-    return [regret_list, cost]
+    print('regret_sum:', regret_sum)
+    print('interv_var_correct_list_sum:', sum(interv_var_correct_list), '\n\n')
+    return [regret_list, cost, interv_var_correct_list]
 
 
 def run_all_experiments():
@@ -410,7 +415,7 @@ def run_all_experiments():
 
             # repeat each parameter setting for 100 randomly sampled scms
 
-            for i_th_scm in tqdm(range(37, n_scms)):  # n people or scms todo 0, n_scms
+            for i_th_scm in tqdm(range(0, n_scms)):  # n people or scms todo 0, n_scms
                 ## run experiment ###
                 regret_list_over_scms.append(
                     simulation_study_with_one_scm((one_param_setting, i_th_scm)))
@@ -420,7 +425,8 @@ def run_all_experiments():
 
             # save results of one parameter setting
             with open(
-                    checkpoint_path + str(simulation_study_idx) + study_name + '_regret_list_over_simulation_study.pickle',
+                    checkpoint_path + str(
+                        simulation_study_idx) + study_name + '_regret_list_over_simulation_study.pickle',
                     'wb') as f:
                 pickle.dump([regret_list_over_simulation_study, simulation_study], f)
             print('saved')

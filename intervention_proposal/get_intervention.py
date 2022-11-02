@@ -472,12 +472,12 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
         multiprocessing_inputs.append([graph_combinations[graph_idx], graph_idx, val, ts, unintervenable_vars, intervention_value_low, my_graph, random_seed_day, n_half_samples, intervention_value_high])
 
 
-    # with Pool() as pool:
-    #     results = pool.map(compute_coeffs, multiprocessing_inputs)#, position=0, leave=True, delay=0)
+    with Pool() as pool:
+        results = pool.map(compute_coeffs, multiprocessing_inputs)#, position=0, leave=True, delay=0)
 
-    results = []
-    for input_m in multiprocessing_inputs:
-        results.append(compute_coeffs(input_m))
+    # results = []
+    # for input_m in multiprocessing_inputs:
+    #     results.append(compute_coeffs(input_m))
 
 
     # for unique_graph_idx, unique_graph in enumerate(tqdm(graph_combinations, position=0, leave=True, delay=10)):
@@ -522,7 +522,7 @@ def find_optimistic_intervention(my_graph, val, ts, unintervenable_vars, random_
 
     # intervention found
     # plot most optimistic graph
-    if verbosity_thesis > 1 and show_plots:
+    if verbosity_thesis > 5 and show_plots:
         plot_graph(val, most_optimistic_graph, ts.columns, label+': most optimistic', make_redundant=True)
 
     if label == 'actual_data':

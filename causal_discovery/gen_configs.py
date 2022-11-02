@@ -75,13 +75,13 @@ def define_settings():
     # save_str, ini obs, #vars, n_latents, obs_alpha, interv_alpha,  n_samples_per_generation,nth
 
     # alpha
-    # all_param_study_settings = [[
-    #     np.array(['alpha',50, 5, 2, 0.01, 0.01, 1, 4], dtype=object),
-    #     np.array(['alpha',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
-    #     np.array(['alpha',50, 5, 2, 0.1, 0.1, 1, 4], dtype=object),
-    #     np.array(['alpha',50, 5, 2, 0.2, 0.2, 1, 4], dtype=object),
-    #     np.array(['alpha',50, 5, 2, 0.4, 0.4, 1, 4], dtype=object),
-    # ]]
+    all_param_study_settings = [[
+        np.array(['alpha',50, 5, 2, 0.01, 0.01, 1, 4], dtype=object),
+        np.array(['alpha',50, 5, 2, 0.05, 0.05, 1, 4], dtype=object),
+        np.array(['alpha',50, 5, 2, 0.1, 0.1, 1, 4], dtype=object),
+        # np.array(['alpha',50, 5, 2, 0.2, 0.2, 1, 4], dtype=object),
+        # np.array(['alpha',50, 5, 2, 0.4, 0.4, 1, 4], dtype=object),
+    ]]
 
     # # intervene very nth time
     # all_param_study_settings = [[
@@ -119,7 +119,10 @@ def define_settings():
 
     # default
     all_param_study_settings = [[
-        np.array(['wo-interv',50, 5, 2, 0.05, 0.5, 1, 4], dtype=object),
+        np.array(['no-interv-discov1',50, 5, 2, 0.05, 0.5, 1, 4], dtype=object),
     ]]
+    # all_param_study_settings = [[
+    #     np.array(['default3',50, 5, 2, 0.05, 0.5, 1, 4], dtype=object),
+    # ]]
 
     return all_param_study_settings
